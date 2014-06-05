@@ -5,6 +5,7 @@
 bin/
 tmp/
 target/
+build/
 *.tmp
 *.bak
 *.swp
@@ -25,3 +26,4 @@ local.properties
 
 # PDT-specific
 .buildpath
+
