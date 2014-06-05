@@ -1,7 +1,7 @@
 all:
 	rm -rf build
 	mkdir build
-	bash -c "cd build; ../configure; make clean; make"
+	cd build; ../configure; make clean; make
 
 clean:
 	rm -rf build
