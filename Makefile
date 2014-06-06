@@ -1,8 +1,10 @@
-all:
-	rm -rf build
-	mkdir build
-	cd build; ../configure; make clean; make
+.PHONY : clean all
 
 clean:
 	rm -rf build
+
+build:
+	mkdir -p build
+	cd build; ../configure --enable-load-extension; make clean; make
 	
+all: | clean build
