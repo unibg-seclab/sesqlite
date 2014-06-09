@@ -689,6 +689,25 @@ AC_SUBST(USE_GCOV)
 
 
 #########
+# See whether we should allow selinux extensions
+AC_ARG_ENABLE(selinux, AC_HELP_STRING([--enable-selinux],
+      [Enable using selinux]),
+      [use_selinux=$enableval],[use_selinux=no])
+if test "${use_selinux}" = "yes" ; then
+  USE_SELINUX=1
+#check libselinux
+  AC_SEARCH_LIBS([selinux_check_access], [selinux], [], [
+  AC_MSG_ERROR([unable to find the selinux_check_access function],[$?])])
+ #check headers
+  AC_CHECK_HEADERS([selinux.h avc.h], [selinux_found_headers=yes; break;])
+	AS_IF([test "x$selinux_found_headers" != "xyes"],
+	[AC_MSG_ERROR([Unable to find the selinux headers],[$?])])
+else
+  USE_SELINUX=0
+fi
+AC_SUBST(USE_SELINUX)
+
+#########
 # Output the config header
 AC_CONFIG_HEADERS(config.h)
 
