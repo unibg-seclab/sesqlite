@@ -26,7 +26,8 @@ BCC = @BUILD_CC@ @BUILD_CFLAGS@
 # will run on the target platform.  (BCC and TCC are usually the
 # same unless your are cross-compiling.)
 #
-TCC = @CC@ @CPPFLAGS@ @CFLAGS@ -I. -I${TOP}/src -I${TOP}/ext/rtree
+TCC = @CC@ @CPPFLAGS@ @CFLAGS@ -I. -I${TOP}/src -I${TOP}/ext/rtree \
+	-I${TOP}/ext/selinux
 
 # Define this for the autoconf-based build, so that the code knows it can
 # include the generated config.h
@@ -131,6 +132,22 @@ USE_GCOV = @USE_GCOV@
 LTCOMPILE_EXTRAS += $(GCOV_CFLAGS$(USE_GCOV))
 LTLINK_EXTRAS += $(GCOV_LDFLAGS$(USE_GCOV))
 
+# If selinux support was enabled by the configure script, add the appropriate
+# flags here. See:
+#
+# http://userspace.selinuxproject.org/trac
+#
+# for more info.
+#
+
+USE_SELINUX = @USE_SELINUX@
+#compile time
+SELINUX_CFLAGS1 = -DSQLITE_ENABLE_SELINUX
+LTCOMPILE_EXTRAS += $(SELINUX_CFLAGS$(USE_SELINUX))
+#link time
+SELINUX_LDFLAGS1 = -lselinux
+LTLINK_EXTRAS += $(SELINUX_LDFLAGS$(USE_SELINUX))
+
 
 # The directory into which to store package information for
 
@@ -178,7 +195,8 @@ LIBOBJS0 = alter.lo analyze.lo attach.lo auth.lo \
          table.lo tokenize.lo trigger.lo \
          update.lo util.lo vacuum.lo \
          vdbe.lo vdbeapi.lo vdbeaux.lo vdbeblob.lo vdbemem.lo vdbesort.lo \
-         vdbetrace.lo wal.lo walker.lo where.lo utf.lo vtab.lo
+         vdbetrace.lo wal.lo walker.lo where.lo utf.lo vtab.lo \
+         selinux.lo
 
 # Object files for the amalgamation.
 #
@@ -325,6 +343,10 @@ SRC += \
   $(TOP)/ext/rtree/rtree.h \
   $(TOP)/ext/rtree/rtree.c
 
+# Include selinux.c
+SRC += \
+  $(TOP)/ext/selinux/selinux.h \
+  $(TOP)/ext/selinux/selinux.c
 
 # Generated source code files
 #
@@ -472,6 +494,8 @@ EXTHDR += \
   $(TOP)/ext/icu/sqliteicu.h
 EXTHDR += \
   $(TOP)/ext/rtree/sqlite3rtree.h
+EXTHDR += \
+  $(TOP)/ext/selinux/selinux.h
 
 # This is the default Makefile target.  The objects listed here
 # are what get build when you type just "make" with no arguments.
@@ -861,6 +885,9 @@ fts3_write.lo:	$(TOP)/ext/fts3/fts3_write.c $(HDR) $(EXTHDR)
 
 rtree.lo:	$(TOP)/ext/rtree/rtree.c $(HDR) $(EXTHDR)
 	$(LTCOMPILE) -DSQLITE_CORE -c $(TOP)/ext/rtree/rtree.c
+	
+selinux.lo:	$(TOP)/ext/selinux/selinux.c $(HDR) $(EXTHDR)
+	$(LTCOMPILE) -DSQLITE_CORE -c $(TOP)/ext/selinux/selinux.c
 
 
 # Rules to build the 'testfixture' application.
