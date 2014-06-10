@@ -117,6 +117,7 @@ foreach hdr {
    vdbe.h
    vdbeInt.h
    wal.h
+   selinux.h
 } {
   set available_hdr($hdr) 1
 }
@@ -320,6 +321,8 @@ foreach file {
    rtree.c
    icu.c
    fts3_icu.c
+   
+   selinux.c
 } {
   copy_file tsrc/$file
 }

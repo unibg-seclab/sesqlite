@@ -342,8 +342,6 @@ SRC += \
 SRC += \
   $(TOP)/ext/rtree/rtree.h \
   $(TOP)/ext/rtree/rtree.c
-
-# Include selinux.c
 SRC += \
   $(TOP)/ext/selinux/selinux.h \
   $(TOP)/ext/selinux/selinux.c

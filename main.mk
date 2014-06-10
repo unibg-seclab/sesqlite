@@ -45,8 +45,9 @@
 # This is how we compile
 #
 TCCX =  $(TCC) $(OPTS) -I. -I$(TOP)/src -I$(TOP) 
-TCCX += -I$(TOP)/ext/rtree -I$(TOP)/ext/icu -I$(TOP)/ext/fts3
+TCCX += -I$(TOP)/ext/rtree -I$(TOP)/ext/icu -I$(TOP)/ext/fts3 
 TCCX += -I$(TOP)/ext/async
+TCCX += -I$(TOP)/ext/selinux
 
 # Object files for the SQLite library.
 #
@@ -66,7 +67,8 @@ LIBOBJ+= alter.o analyze.o attach.o auth.o \
          table.o tokenize.o trigger.o \
          update.o util.o vacuum.o \
          vdbe.o vdbeapi.o vdbeaux.o vdbeblob.o vdbemem.o vdbesort.o \
-	 vdbetrace.o wal.o walker.o where.o utf.o vtab.o
+	 vdbetrace.o wal.o walker.o where.o utf.o vtab.o \
+	 selinux.o
 
 
 
@@ -205,7 +207,9 @@ SRC += \
 SRC += \
   $(TOP)/ext/rtree/rtree.h \
   $(TOP)/ext/rtree/rtree.c
-
+SRC += \
+  $(TOP)/ext/selinux/selinux.h \
+  $(TOP)/ext/selinux/selinux.c
 
 # Generated source code files
 #
@@ -347,6 +351,8 @@ EXTHDR += \
   $(TOP)/ext/rtree/rtree.h
 EXTHDR += \
   $(TOP)/ext/icu/sqliteicu.h
+EXTHDR += \
+  $(TOP)/ext/selinux/selinux.h
 
 # This is the default Makefile target.  The objects listed here
 # are what get build when you type just "make" with no arguments.
@@ -514,6 +520,8 @@ fts3_write.o:	$(TOP)/ext/fts3/fts3_write.c $(HDR) $(EXTHDR)
 rtree.o:	$(TOP)/ext/rtree/rtree.c $(HDR) $(EXTHDR)
 	$(TCCX) -DSQLITE_CORE -c $(TOP)/ext/rtree/rtree.c
 
+selinux.o:	$(TOP)/ext/selinux/selinux.c $(HDR) $(EXTHDR)
+	$(LTCOMPILE) -DSQLITE_CORE -c $(TOP)/ext/selinux/selinux.c
 
 # Rules for building test programs and for running tests
 #
