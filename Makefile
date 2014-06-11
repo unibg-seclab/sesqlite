@@ -3,8 +3,6 @@
 clean:
 	rm -rf build
 
-build:
+all build:
 	mkdir -p build
-	cd build; ../configure --enable-option-checking=fatal --enable-load-extension --enable-selinux; make clean; make
-	
-all: | clean build
+	cd build; ../configure --enable-option-checking=fatal --enable-load-extension --enable-selinux; make
