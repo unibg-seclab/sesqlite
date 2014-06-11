@@ -17,9 +17,21 @@
 __declspec(dllexport)
 #endif
 
+char *source_context;
+
 int selinux_authorizer(void *pUserData, int type, const char *arg1,
 		const char *arg2, const char *dbname, const char *source) {
 	int rc = SQLITE_OK;
+
+
+
+	switch(type){
+	case SQLITE_CREATE_TABLE:
+
+
+		break;
+	}
+
 	return rc;
 }
 
@@ -39,11 +51,19 @@ static void selinuxCheckAccessFunction(sqlite3_context *context, int argc,
 int sqlite3SelinuxInit(sqlite3 *db) {
 	int rc = SQLITE_OK;
 
+	rc = getcon(&source_context);
+	if(rc == -1){
+		fprintf(stderr, "Error: unable to retrieve the current security context.\n");
+		return -1;
+	}
+
 	sqlite3_create_function(db, "selinux_check_access", 4,
 			SQLITE_UTF8 /* | SQLITE_DETERMINISTIC */, 0,
 			selinuxCheckAccessFunction, 0, 0);
 
 	sqlite3_set_authorizer(db, selinux_authorizer, NULL);
+
+	//retrieve current security context
 
 	//sqlite3_create_module(db, "");
 
