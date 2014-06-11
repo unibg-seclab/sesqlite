@@ -192,11 +192,12 @@ void sqlite3BeginTrigger(
   }
 
   /* Do not create a trigger on a system table */
+  /* TODO find a more elegant way to enable sesqlite triggers on sqlite_master
   if( sqlite3StrNICmp(pTab->zName, "sqlite_", 7)==0 ){
     sqlite3ErrorMsg(pParse, "cannot create trigger on system table");
     pParse->nErr++;
     goto trigger_cleanup;
-  }
+  } */
 
   /* INSTEAD of triggers are only for views and views only support INSTEAD
   ** of triggers.
