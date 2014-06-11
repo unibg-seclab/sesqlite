@@ -13,9 +13,11 @@
 #include <selinux/selinux.h>
 #include "selinux.h"
 
+/* SELinux classes */
 const char *SELINUX_TABLE   = "db_table";
 const char *SELINUX_COLUMN  = "db_column";
 
+/* SELinux permissions */
 const char *SELINUX_SELECT  = "select";
 const char *SELINUX_UPDATE  = "update";
 const char *SELINUX_INSERT  = "insert";
@@ -27,6 +29,40 @@ const char *SELINUX_SETATTR = "setattr";
 /* source (process) security context */
 char *scon;
 
+/* default target security context */
+const char *default_tcon = "sesqlite_public";
+
+/*
+ * Get the column context from sesqlite for the specified table.
+ * Returns 1 if a context is defined for the table, 0 otherwise. The string
+ * representing the context is allocated using sqlite3_mprintf in *con only
+ * if the result is 1. The caller has to free the allocated space after usage.
+ */
+int getColumnContext(
+  char **con
+){
+	int rc = 0;
+	return rc;
+}
+
+/*
+ * Get the table context from sesqlite (the column should be '*', '' or NULL).
+ * Returns 1 if a context is defined for the table, 0 otherwise. The string
+ * representing the context is allocated using sqlite3_mprintf in *con only
+ * if the result is 1. The caller has to free the allocated space after usage.
+ */
+int getTableContext(
+  char **con
+){
+	int rc = 0;
+	return rc;
+}
+
+/*
+ * Checks whether the source context has been granted the specified permission
+ * for the class 'db_table' and the target context associated with the table.
+ * Returns 1 if the access has been granted, 0 otherwise.
+ */
 int checkTableAccess(
   const char *dbname,
   const char *table,
@@ -37,6 +73,11 @@ int checkTableAccess(
 	return 0 == selinux_check_access(scon, tcon, SELINUX_TABLE, permission, NULL);
 }
 
+/*
+ * Checks whether the source context has been granted the specified permission
+ * for the class 'db_column' and the target context associated with the column
+ * in the table. Returns 1 if the access has been granted, 0 otherwise.
+ */
 int checkColumnAccess(
   const char *dbname,
   const char *table,
@@ -48,6 +89,10 @@ int checkColumnAccess(
 	return 0 == selinux_check_access(scon, tcon, SELINUX_COLUMN, permission, NULL);
 }
 
+/*
+ * Authorizer to be set with sqlite3_set_authorizer that checks the SELinux
+ * permission at schema level (tables and columns).
+ */
 int selinuxAuthorizer(
   void *pUserData,
   int type,
@@ -195,6 +240,9 @@ int selinuxAuthorizer(
 	return rc;
 }
 
+/*
+ * Function invoked when using the SQL function selinux_check_access
+ */
 static void selinuxCheckAccessFunction(
   sqlite3_context *context,
   int argc,
@@ -211,8 +259,12 @@ static void selinuxCheckAccessFunction(
 	sqlite3_result_int(context, rc == 0);
 }
 
-/*  Initialization */
-
+/*
+ * Inizialize the database objects used by SeSqlite:
+ * 1. SeSqlite master table that keeps the permission for the schema level
+ * 2. Trigger to delete unused SELinux contexts after a drop table statement
+ * 3. Trigger to update SELinux contexts after table rename
+ */
 int initializeSeSqliteObjects(
   sqlite3 *db
 ){
@@ -233,7 +285,7 @@ int initializeSeSqliteObjects(
 	// TODO experiments on why triggers are disabled for sqlite_* tables are required
 	//      the easy solution is to allow them.
 
-	// create trigger to delete unused selinux contexts after table drop
+	// create trigger to delete unused SELinux contexts after table drop
 	if (rc == SQLITE_OK) {
 		rc = sqlite3_exec(db,
 			"CREATE TRIGGER IF NOT EXISTS delete_contexts_after_table_drop "
@@ -244,7 +296,7 @@ int initializeSeSqliteObjects(
 			0, 0, 0);
 	}
 
-  	// create trigger to update selinux contexts after table rename
+  	// create trigger to update SELinux contexts after table rename
   	if (rc == SQLITE_OK) {
   		rc = sqlite3_exec(db,
   			"CREATE TRIGGER IF NOT EXISTS update_contexts_after_rename "
@@ -258,6 +310,11 @@ int initializeSeSqliteObjects(
   	return rc;
 }
 
+/*
+ * Initialize SeSqlite and register objects, authorizer and functions.
+ * This function is called by the SQLite core in case the SQLITE_CORE
+ * compile flag has been enabled or at runtime when the extension is loaded.
+ */
 int sqlite3SelinuxInit(
   sqlite3 *db
 ){
@@ -285,6 +342,8 @@ int sqlite3SelinuxInit(
 
 	return rc;
 }
+
+/* Runtime-loading extension support */
 
 #if !SQLITE_CORE
 int sqlite3_extension_init(
