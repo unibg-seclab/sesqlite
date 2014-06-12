@@ -137,10 +137,10 @@ int selinuxAuthorizer(
 	    break;
 
 	case SQLITE_DROP_INDEX:            /* Index Name    | Table Name      */
-		if ( !checkTableAccess(dbname, arg2, SELINUX_DROP)) {
+		if ( !checkTableAccess(dbname, arg2, SELINUX_SETATTR)) {
 			rc = SQLITE_DENY;
 		}
-		/* no break -- check also index name (arg1) */
+		break;
 
 	case SQLITE_DROP_TABLE:            /* Table Name    | NULL            */
 		if ( !checkTableAccess(dbname, arg1, SELINUX_DROP)) {
@@ -161,10 +161,10 @@ int selinuxAuthorizer(
 	    break;
 
 	case SQLITE_DROP_TRIGGER:          /* Trigger Name  | Table Name      */
-		if ( !checkTableAccess(dbname, arg2, SELINUX_DROP)) {
+		if ( !checkTableAccess(dbname, arg2, SELINUX_SETATTR)) {
 			rc = SQLITE_DENY;
 		}
-		/* no break -- check also trigger name (arg1) */
+		break;
 
 	case SQLITE_DROP_VIEW:             /* View Name     | NULL            */
 		if ( !checkTableAccess(dbname, arg1, SELINUX_DROP)) {
@@ -297,7 +297,8 @@ int initializeSeSqliteObjects(
 	if (rc == SQLITE_OK) {
 		rc = sqlite3_exec(db,
 			"CREATE TRIGGER IF NOT EXISTS delete_contexts_after_table_drop "
-			"AFTER DELETE ON sqlite_master FOR EACH ROW "
+			"AFTER DELETE ON sqlite_master "
+			"FOR EACH ROW WHEN OLD.type IN ('table', 'view') "
 			"BEGIN "
 			" DELETE FROM sesqlite_master WHERE name = OLD.name; "
 			"END;",
@@ -308,9 +309,10 @@ int initializeSeSqliteObjects(
   	if (rc == SQLITE_OK) {
   		rc = sqlite3_exec(db,
   			"CREATE TRIGGER IF NOT EXISTS update_contexts_after_rename "
-  			"AFTER UPDATE OF name ON sqlite_master FOR EACH ROW "
+  			"AFTER UPDATE OF name ON sqlite_master "
+  			"FOR EACH ROW WHEN NEW.type IN ('table', 'view') "
   			"BEGIN "
-  			" UPDATE sesqlite_master SET name = NEW.name WHERE name = OLD.name;"
+  			" UPDATE sesqlite_master SET name = NEW.name WHERE name = OLD.name; "
   			"END;",
   			0, 0, 0);
   	}
@@ -344,8 +346,8 @@ int sqlite3SelinuxInit(
 	// create the SQL function selinux_check_access
 	if (rc == SQLITE_OK) {
 		rc = sqlite3_create_function(db, "selinux_check_access", 4,
-			SQLITE_UTF8 /* | SQLITE_DETERMINISTIC */, 0,
-			selinuxCheckAccessFunction, 0, 0);
+			SQLITE_UTF8 /* | SQLITE_DETERMINISTIC */,
+			0, selinuxCheckAccessFunction, 0, 0);
 	}
 
 	return rc;
