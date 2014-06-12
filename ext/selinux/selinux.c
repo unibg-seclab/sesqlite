@@ -46,7 +46,7 @@ int getColumnContext(
 }
 
 /*
- * Get the table context from sesqlite (the column should be '*', '' or NULL).
+ * Get the table context from sesqlite (the column should be NULL).
  * Returns 1 if a context is defined for the table, 0 otherwise. The string
  * representing the context is allocated using sqlite3_mprintf in *con only
  * if the result is 1. The caller has to free the allocated space after usage.
@@ -180,6 +180,10 @@ int selinuxAuthorizer(
 		break;
 
 	case SQLITE_PRAGMA:                /* Pragma Name   | 1st arg or NULL */
+		if (0 == sqlite3_stricmp(arg1, "writable_schema")) {
+			fprintf(stderr, "Pragma disabled to guarantee SeSqlite checks.");
+			rc = SQLITE_DENY;
+		}
 	    break;
 
 	case SQLITE_READ:                  /* Table Name    | Column Name     */
@@ -276,14 +280,18 @@ int initializeSeSqliteObjects(
 
 	rc = sqlite3_exec(db,
 		"CREATE TABLE IF NOT EXISTS sesqlite_master ( "
-  		"name TEXT, "
-  		"column TEXT, "
-  		"security_context TEXT "
+		"security_context TEXT NOT NULL, "
+  		"name TEXT NOT NULL, "
+  		"column TEXT DEFAULT NULL, "
+  		"PRIMARY KEY (name, column) "
   		");",
   		0, 0, 0);
 
 	// TODO experiments on why triggers are disabled for sqlite_* tables are required
-	//      the easy solution is to allow them.
+	//      the easy solution is to allow them. Indexes are also disables, and
+	//      enabling them causes the execution to interrupt, so imposing a UNIQUE
+	//      or PRIMARY KEY constraint for column 'name' in sqlite_master in order
+	//      to use it as foreign key in sesqlite_master is not feasible.
 
 	// create trigger to delete unused SELinux contexts after table drop
 	if (rc == SQLITE_OK) {
