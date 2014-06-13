@@ -40,8 +40,7 @@ security_context_t scon;
 #define DEFAULT_TCON          "sesqlite_public"
 
 /* prepared statements to query schema sesqlite_master (bind it before use) */
-sqlite3_stmt *sesqlite_table_stmt;
-sqlite3_stmt *sesqlite_column_stmt;
+sqlite3_stmt *sesqlite_stmt;
 
 /* indices to bind paramteres in sesqlite_stmt */
 #define SESQLITE_IDX_NAME     1
@@ -79,14 +78,8 @@ int getColumnContext(const char *dbname, const char *table, const char *column,
 
 	// TODO use dbname when multiple databases are supported by SeSqlite.
 
-	sqlite3_stmt *sesqlite_stmt = sesqlite_table_stmt;
-
-	if (column) {
-		sesqlite_stmt = sesqlite_column_stmt;
-		sqlite3_bind_text(sesqlite_stmt, SESQLITE_IDX_COLUMN, column, -1, NULL);
-	}
-
 	sqlite3_bind_text(sesqlite_stmt, SESQLITE_IDX_NAME, table, -1, NULL);
+	sqlite3_bind_text(sesqlite_stmt, SESQLITE_IDX_COLUMN, column, -1, NULL);
 	int res = sqlite3_step(sesqlite_stmt);
 
 	if (res == SQLITE_ROW) {
@@ -380,24 +373,23 @@ int initializeSeSqliteObjects(sqlite3 *db) {
 	// create trigger to delete unused SELinux contexts after table drop
 	if (rc == SQLITE_OK) {
 		rc = sqlite3_exec(db,
-				"CREATE TRIGGER IF NOT EXISTS delete_contexts_after_table_drop "
-						"AFTER DELETE ON sqlite_master "
-						"FOR EACH ROW WHEN OLD.type IN ('table', 'view') "
-						"BEGIN "
-						" DELETE FROM sesqlite_master WHERE name = OLD.name; "
-						"END;", 0, 0, 0);
+			"CREATE TRIGGER IF NOT EXISTS delete_contexts_after_table_drop "
+			"AFTER DELETE ON sqlite_master "
+			"FOR EACH ROW WHEN OLD.type IN ('table', 'view') "
+			"BEGIN "
+			" DELETE FROM sesqlite_master WHERE name = OLD.name; "
+			"END;", 0, 0, 0);
 	}
 
 	// create trigger to update SELinux contexts after table rename
 	if (rc == SQLITE_OK) {
-		rc =
-				sqlite3_exec(db,
-						"CREATE TRIGGER IF NOT EXISTS update_contexts_after_rename "
-								"AFTER UPDATE OF name ON sqlite_master "
-								"FOR EACH ROW WHEN NEW.type IN ('table', 'view') "
-								"BEGIN "
-								" UPDATE sesqlite_master SET name = NEW.name WHERE name = OLD.name; "
-								"END;", 0, 0, 0);
+		rc = sqlite3_exec(db,
+			"CREATE TRIGGER IF NOT EXISTS update_contexts_after_rename "
+			"AFTER UPDATE OF name ON sqlite_master "
+			"FOR EACH ROW WHEN NEW.type IN ('table', 'view') "
+			"BEGIN "
+			" UPDATE sesqlite_master SET name = NEW.name WHERE name = OLD.name; "
+			"END;", 0, 0, 0);
 	}
 
 	return rc;
@@ -412,8 +404,7 @@ int sqlite3SelinuxInit(sqlite3 *db) {
 	//retrieve current security context
 	int rc = getcon(&scon);
 	if (rc == -1) {
-		fprintf(stderr,
-				"Error: unable to retrieve the current security context.\n");
+		fprintf(stderr, "Error: unable to retrieve the current security context.\n");
 		return -1;
 	}
 
@@ -424,12 +415,8 @@ int sqlite3SelinuxInit(sqlite3 *db) {
 	if (rc == SQLITE_OK) {
 		rc = sqlite3_prepare_v2(db,
 				"SELECT security_context FROM sesqlite_master "
-						"WHERE name = ?1 AND column IS NULL LIMIT 1", -1,
-				&sesqlite_table_stmt, NULL)
-				|| sqlite3_prepare_v2(db,
-						"SELECT security_context FROM sesqlite_master "
-								"WHERE name = ?1 AND column = ?2 LIMIT 1", -1,
-						&sesqlite_column_stmt, NULL);
+				"WHERE name IS ?1 AND column IS ?2 LIMIT 1",
+				-1, &sesqlite_stmt, NULL);
 	}
 
 	// create the SQL function selinux_check_access
