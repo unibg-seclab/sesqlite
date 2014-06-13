@@ -5,4 +5,4 @@ clean:
 
 all build:
 	mkdir -p build
-	cd build; ../configure --enable-option-checking=fatal --enable-load-extension --enable-selinux; make
+	cd build; ../configure --enable-option-checking=fatal --enable-load-extension --enable-selinux --enable-debug; make
