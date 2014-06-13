@@ -68,10 +68,11 @@ int getColumnContext(
   const char *column,
   char **con
 ){
-	// TODO use dbname when multiple databases are supported by SeSqlite.
-
+	// TODO another way would be to use a virtual table and query its structure.
 	auth_enabled = 0;
 	int rc = 0;
+
+	// TODO use dbname when multiple databases are supported by SeSqlite.
 
 	sqlite3_stmt *sesqlite_stmt = sesqlite_table_stmt;
 
