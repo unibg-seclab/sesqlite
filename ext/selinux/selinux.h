@@ -38,7 +38,7 @@ extern "C" {
 #define SELINUX_LOAD_MODULE 		10
 
 /* default target security context */
-#define DEFAULT_TCON          "unconfined_u:object_r:sesqlite_public:s0"
+#define DEFAULT_TCON          "unconfined_u:object_r:sesqlite_public:s0-s0:c0.c1023"
 
 /* indices to bind paramteres in sesqlite_stmt */
 #define SESQLITE_IDX_NAME     1
