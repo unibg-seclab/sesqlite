@@ -32,12 +32,16 @@ char *scon;
 /* default target security context */
 #define DEFAULT_TCON          "sesqlite_public"
 
-/* prepared statement to query schema sesqlite_master (bind it before use) */
-sqlite3_stmt *sesqlite_stmt;
+/* prepared statements to query schema sesqlite_master (bind it before use) */
+sqlite3_stmt *sesqlite_table_stmt;
+sqlite3_stmt *sesqlite_column_stmt;
 
 /* indices to bind paramteres in sesqlite_stmt */
 #define SESQLITE_IDX_NAME     1
 #define SESQLITE_IDX_COLUMN   2
+
+/* 0 to disable authorizer checks, 1 otherwise */
+int auth_enabled = 1;
 
 /* authorizer type */
 const char *authtype[] = {
@@ -64,12 +68,19 @@ int getColumnContext(
   const char *column,
   char **con
 ){
-	int rc = 0;
 	// TODO use dbname when multiple databases are supported by SeSqlite.
 
-	sqlite3_bind_text(sesqlite_stmt, SESQLITE_IDX_NAME, table, -1, NULL);
-	sqlite3_bind_text(sesqlite_stmt, SESQLITE_IDX_COLUMN, column, -1, NULL);
+	auth_enabled = 0;
+	int rc = 0;
 
+	sqlite3_stmt *sesqlite_stmt = sesqlite_table_stmt;
+
+	if (column) {
+		sesqlite_stmt = sesqlite_column_stmt;
+		sqlite3_bind_text(sesqlite_stmt, SESQLITE_IDX_COLUMN, column, -1, NULL);
+	}
+
+	sqlite3_bind_text(sesqlite_stmt, SESQLITE_IDX_NAME, table, -1, NULL);
 	int res = sqlite3_step(sesqlite_stmt);
 
 	if (res == SQLITE_ROW) {
@@ -78,11 +89,12 @@ int getColumnContext(
 		rc = 1;  /* security_context found */
 	}
 
-	printf("getcontext: table=%s column=%s -> res=%d (%sfound)\n", table,
-			(column ? column : "NULL"), res, (rc ? "" : "not "));
+	printf("getcontext: table=%s column=%s -> %sfound (%d)\n", table,
+			(column ? column : "NULL"), (rc ? "" : "not "), res);
 
 	sqlite3_reset(sesqlite_stmt);
 	sqlite3_clear_bindings(sesqlite_stmt);
+	auth_enabled = 1;
 	return rc;
 }
 
@@ -171,6 +183,10 @@ int selinuxAuthorizer(
   const char *source
 ){
 	int rc = SQLITE_OK;
+
+	if (!auth_enabled)
+		return rc;
+
 	printf("authorizer: type=%s arg1=%s arg2=%s\n", authtype[type],
 			(arg1 ? arg1 : "NULL"), (arg2 ? arg2 : "NULL"));
 
@@ -420,15 +436,12 @@ int sqlite3SelinuxInit(
 	// initialize sesqlite table and trigger
 	rc = initializeSeSqliteObjects(db);
 
-	// prepare sesqlite query statement
+	// prepare sesqlite query statements
 	if (rc == SQLITE_OK) {
-		rc = sqlite3_prepare(db, "SELECT security_context FROM sesqlite_master "
-			"WHERE name = ?1 AND column = ?2 LIMIT 1", -1, &sesqlite_stmt, NULL);
-	}
-
-	// set the authorizer
-	if (rc == SQLITE_OK) {
-		rc = sqlite3_set_authorizer(db, selinuxAuthorizer, NULL);
+		rc = sqlite3_prepare_v2(db, "SELECT security_context FROM sesqlite_master "
+			"WHERE name = ?1 AND column IS NULL LIMIT 1", -1, &sesqlite_table_stmt, NULL)
+		  || sqlite3_prepare_v2(db, "SELECT security_context FROM sesqlite_master "
+			"WHERE name = ?1 AND column = ?2 LIMIT 1", -1, &sesqlite_column_stmt, NULL);
 	}
 
 	// create the SQL function selinux_check_access
@@ -436,6 +449,11 @@ int sqlite3SelinuxInit(
 		rc = sqlite3_create_function(db, "selinux_check_access", 4,
 			SQLITE_UTF8 /* | SQLITE_DETERMINISTIC */,
 			0, selinuxCheckAccessFunction, 0, 0);
+	}
+
+	// set the authorizer
+	if (rc == SQLITE_OK) {
+		rc = sqlite3_set_authorizer(db, selinuxAuthorizer, NULL);
 	}
 
 	return rc;
