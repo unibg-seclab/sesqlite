@@ -296,6 +296,8 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 		break;
 
 	case SQLITE_READ: /* Table Name    | Column Name     */
+
+
 		if (!checkAccess(dbname, arg1, arg2, SELINUX_DB_COLUMN,
 				SELINUX_SELECT)) {
 			rc = SQLITE_DENY;
@@ -303,6 +305,7 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 		break;
 
 	case SQLITE_SELECT: /* NULL          | NULL            */
+		//check the table
 		break;
 
 	case SQLITE_TRANSACTION: /* Operation     | NULL            */

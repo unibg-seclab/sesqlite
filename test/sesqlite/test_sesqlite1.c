@@ -164,7 +164,7 @@ void test_insert_table(void) {
 	CU_ASSERT(
 			sqlite3_exec(db, "CREATE TABLE t1(a TEXT,b TEXT);", 0, 0, 0) == SQLITE_OK);
 	CU_ASSERT(
-			sqlite3_exec(db, "CREATE TABLE t2(ad TEXT,e TEXT);", 0, 0, 0) == SQLITE_OK);
+			sqlite3_exec(db, "CREATE TABLE t2(d TEXT,e TEXT);", 0, 0, 0) == SQLITE_OK);
 	CU_ASSERT(
 			sqlite3_exec(db, "CREATE TABLE t3(f TEXT,g TEXT);", 0, 0, 0) == SQLITE_OK);
 
@@ -180,28 +180,30 @@ void test_insert_table(void) {
 
 void test_select_table(void) {
 
+	char *pzErrMsg;
+
 	CU_ASSERT(sqlite3_exec(db, "SELECT * FROM t1;", 0, 0, 0) == SQLITE_OK);
 
-	CU_ASSERT(sqlite3_exec(db, "SELECT d FROM t2;", 0, 0, 0) == SQLITE_ABORT);
-	CU_ASSERT(sqlite3_exec(db, "SELECT e FROM t2;", 0, 0, 0) == SQLITE_ABORT);
+	CU_ASSERT(sqlite3_exec(db, "SELECT d FROM t2;", 0, 0, 0) == SQLITE_AUTH);
+	CU_ASSERT(sqlite3_exec(db, "SELECT e FROM t2;", 0, 0, 0) == SQLITE_AUTH);
 
-	CU_ASSERT(sqlite3_exec(db, "SELECT * FROM t3;", 0, 0, 0) == SQLITE_ABORT);
+	CU_ASSERT(sqlite3_exec(db, "SELECT * FROM t3;", 0, 0, 0) == SQLITE_AUTH);
 }
 
 void test_update_table(void) {
 
 	CU_ASSERT(
-			sqlite3_exec(db, "UPDATE t1 SET a='z' WHERE b='b';", 0, 0, 0) == SQLITE_ABORT);
+			sqlite3_exec(db, "UPDATE t1 SET a='z';", 0, 0, 0) == SQLITE_AUTH);
 
 	CU_ASSERT(
-			sqlite3_exec(db, "UPDATE t2 SET d='z' WHERE d='d'", 0, 0, 0) == SQLITE_ABORT);
+			sqlite3_exec(db, "UPDATE t2 SET d='z';", 0, 0, 0) == SQLITE_AUTH);
 	CU_ASSERT(
-			sqlite3_exec(db, "UPDATE t2 SET e='z' WHERE e='e'", 0, 0, 0) == SQLITE_ABORT);
+			sqlite3_exec(db, "UPDATE t2 SET e='z';", 0, 0, 0) == SQLITE_AUTH);
 
 	CU_ASSERT(
-			sqlite3_exec(db, "UPDATE t3 SET f='z' WHERE f='f'", 0, 0, 0) == SQLITE_ABORT);
+			sqlite3_exec(db, "UPDATE t3 SET f='z';", 0, 0, 0) == SQLITE_AUTH);
 	CU_ASSERT(
-			sqlite3_exec(db, "UPDATE t3 SET g='z' WHERE g='g'", 0, 0, 0) == SQLITE_ABORT);
+			sqlite3_exec(db, "UPDATE t3 SET g='z';", 0, 0, 0) == SQLITE_AUTH);
 }
 
 void test_delete_table(void) {
