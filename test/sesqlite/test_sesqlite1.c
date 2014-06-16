@@ -108,7 +108,7 @@ void test_insert_sesqlite_master(void) {
 
 	rc =
 			sqlite3_exec(db,
-					"INSERT INTO sesqlite_master(security_context, name) values('app_data_db_t', 't1');",
+					"INSERT INTO sesqlite_master(security_context, name) values('unconfined_u:object_r:app_data_db_t:s0', 't1');",
 					0, 0, &pzErrMsg);
 	CU_ASSERT(rc == SQLITE_OK);
 	if (rc != SQLITE_OK)
@@ -117,7 +117,7 @@ void test_insert_sesqlite_master(void) {
 	sqlite3_free(pzErrMsg);
 	rc =
 			sqlite3_exec(db,
-					"INSERT INTO sesqlite_master(security_context, name) values('app_data_db_t', 't2');",
+					"INSERT INTO sesqlite_master(security_context, name) values('unconfined_u:object_r:app_data_db_t:s0', 't2');",
 					0, 0, &pzErrMsg);
 	CU_ASSERT(rc == SQLITE_OK);
 	if (rc != SQLITE_OK)
@@ -125,7 +125,7 @@ void test_insert_sesqlite_master(void) {
 
 	sqlite3_free(pzErrMsg);
 	rc = sqlite3_exec(db,
-			"INSERT INTO sesqlite_master values('app_data_db_c', 't2', 'd');",
+			"INSERT INTO sesqlite_master values('unconfined_u:object_r:app_data_db_c:s0', 't2', 'd');",
 			0, 0, &pzErrMsg);
 	CU_ASSERT(rc == SQLITE_OK);
 	if (rc != SQLITE_OK)
@@ -133,7 +133,7 @@ void test_insert_sesqlite_master(void) {
 
 	sqlite3_free(pzErrMsg);
 	rc = sqlite3_exec(db,
-			"INSERT INTO sesqlite_master values('app_data_db_c', 't2', 'e');",
+			"INSERT INTO sesqlite_master values('unconfined_u:object_r:app_data_db_c:s0', 't2', 'e');",
 			0, 0, &pzErrMsg);
 	CU_ASSERT(rc == SQLITE_OK);
 	if (rc != SQLITE_OK)
@@ -142,7 +142,7 @@ void test_insert_sesqlite_master(void) {
 	sqlite3_free(pzErrMsg);
 	rc =
 			sqlite3_exec(db,
-					"INSERT INTO sesqlite_master(security_context, name) values('app_data_db_t', 't3');",
+					"INSERT INTO sesqlite_master(security_context, name) values('unconfined_u:object_r:app_data_db_t:s0', 't3');",
 					0, 0, &pzErrMsg);
 	CU_ASSERT(rc == SQLITE_OK);
 	if (rc != SQLITE_OK)
@@ -150,7 +150,7 @@ void test_insert_sesqlite_master(void) {
 
 	sqlite3_free(pzErrMsg);
 	rc = sqlite3_exec(db,
-			"INSERT INTO sesqlite_master values('app_data_db_c', 't3', 'g');",
+			"INSERT INTO sesqlite_master values('unconfined_u:object_r:app_data_db_c:s0', 't3', 'g');",
 			0, 0, &pzErrMsg);
 	CU_ASSERT(rc == SQLITE_OK);
 	if (rc != SQLITE_OK)
