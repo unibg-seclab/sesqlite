@@ -182,26 +182,26 @@ void test_select_table(void) {
 
 	CU_ASSERT(sqlite3_exec(db, "SELECT * FROM t1;", 0, 0, 0) == SQLITE_OK);
 
-	CU_ASSERT(sqlite3_exec(db, "SELECT d FROM t2;", 0, 0, 0) == SQLITE_DENY);
-	CU_ASSERT(sqlite3_exec(db, "SELECT e FROM t2;", 0, 0, 0) == SQLITE_DENY);
+	CU_ASSERT(sqlite3_exec(db, "SELECT d FROM t2;", 0, 0, 0) == SQLITE_ABORT);
+	CU_ASSERT(sqlite3_exec(db, "SELECT e FROM t2;", 0, 0, 0) == SQLITE_ABORT);
 
-	CU_ASSERT(sqlite3_exec(db, "SELECT * FROM t3;", 0, 0, 0) == SQLITE_DENY);
+	CU_ASSERT(sqlite3_exec(db, "SELECT * FROM t3;", 0, 0, 0) == SQLITE_ABORT);
 }
 
 void test_update_table(void) {
 
 	CU_ASSERT(
-			sqlite3_exec(db, "UPDATE t1 SET a='z' WHERE b='b';", 0, 0, 0) == SQLITE_DENY);
+			sqlite3_exec(db, "UPDATE t1 SET a='z' WHERE b='b';", 0, 0, 0) == SQLITE_ABORT);
 
 	CU_ASSERT(
-			sqlite3_exec(db, "UPDATE t2 SET d='z' WHERE d='d'", 0, 0, 0) == SQLITE_DENY);
+			sqlite3_exec(db, "UPDATE t2 SET d='z' WHERE d='d'", 0, 0, 0) == SQLITE_ABORT);
 	CU_ASSERT(
-			sqlite3_exec(db, "UPDATE t2 SET e='z' WHERE e='e'", 0, 0, 0) == SQLITE_DENY);
+			sqlite3_exec(db, "UPDATE t2 SET e='z' WHERE e='e'", 0, 0, 0) == SQLITE_ABORT);
 
 	CU_ASSERT(
-			sqlite3_exec(db, "UPDATE t3 SET f='z' WHERE f='f'", 0, 0, 0) == SQLITE_DENY);
+			sqlite3_exec(db, "UPDATE t3 SET f='z' WHERE f='f'", 0, 0, 0) == SQLITE_ABORT);
 	CU_ASSERT(
-			sqlite3_exec(db, "UPDATE t3 SET g='z' WHERE g='g'", 0, 0, 0) == SQLITE_DENY);
+			sqlite3_exec(db, "UPDATE t3 SET g='z' WHERE g='g'", 0, 0, 0) == SQLITE_ABORT);
 }
 
 void test_delete_table(void) {
