@@ -405,6 +405,10 @@ int initializeSeSqliteObjects(sqlite3 *db) {
 			"PRIMARY KEY (name, column) "
 			");", 0, 0, 0);
 
+#ifdef SQLITE_DEBUG
+	fprintf(stdout, "sesqlite_master created.\n");
+#endif
+
 	// TODO experiments on why triggers are disabled for sqlite_* tables are required
 	//      the easy solution is to allow them. Indexes are also disables, and
 	//      enabling them causes the execution to interrupt, so imposing a UNIQUE
@@ -421,6 +425,10 @@ int initializeSeSqliteObjects(sqlite3 *db) {
 						" DELETE FROM sesqlite_master WHERE name = OLD.name; "
 						"END;", 0, 0, 0);
 	}
+
+#ifdef SQLITE_DEBUG
+	fprintf(stdout, "delete_contexts_after_table_drop created.\n");
+#endif
 
 	// create trigger to update SELinux contexts after table rename
 	if (rc == SQLITE_OK) {
