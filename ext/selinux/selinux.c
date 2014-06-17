@@ -290,7 +290,7 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 
 	case SQLITE_PRAGMA: /* Pragma Name   | 1st arg or NULL */
 		if (0 == sqlite3_stricmp(arg1, "writable_schema")) {
-			fprintf(stderr, "Pragma disabled to guarantee SeSqlite checks.");
+			fprintf(stderr, "Pragma disabled to guarantee SeSqlite checks. pragma command: %s\n", arg1);
 			rc = SQLITE_DENY;
 		}
 		break;
@@ -320,13 +320,13 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 
 	case SQLITE_ATTACH: /* Filename      | NULL            */
 		// TODO change when multiple databases are supported by SeSqlite.
-		fprintf(stderr, "SeSqlite does not support multiple databases yet.");
+		fprintf(stderr, "SeSqlite does not support multiple databases yet. db file name: %s\n", arg1);
 		rc = SQLITE_DENY;
 		break;
 
 	case SQLITE_DETACH: /* Database Name | NULL            */
 		// TODO change when multiple databases are supported by SeSqlite.
-		fprintf(stderr, "SeSqlite does not support multiple databases yet.");
+		fprintf(stderr, "SeSqlite does not support multiple databases yet. db file name: %s\n", arg1);
 		rc = SQLITE_DENY;
 		break;
 
