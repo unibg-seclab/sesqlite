@@ -148,6 +148,9 @@ LTCOMPILE_EXTRAS += $(SELINUX_CFLAGS$(USE_SELINUX))
 SELINUX_LDFLAGS1 = -lselinux
 LTLINK_EXTRAS += $(SELINUX_LDFLAGS$(USE_SELINUX))
 
+# Get the git describe output in GIT_VERSION
+GIT_VERSION := $(shell git describe --abbrev=4 --dirty --always)
+TCC += -DGIT_VERSION=\"$(GIT_VERSION)\"
 
 # The directory into which to store package information for
 

@@ -104,7 +104,8 @@ extern "C" {
 */
 #define SQLITE_VERSION        "--VERS--"
 #define SQLITE_VERSION_NUMBER --VERSION-NUMBER--
-#define SQLITE_SOURCE_ID      "--SOURCE-ID--"
+//#define SQLITE_SOURCE_ID      "--SOURCE-ID--"
+#define SQLITE_SOURCE_ID      GIT_VERSION
 
 /*
 ** CAPI3REF: Run-Time Library Version Numbers
