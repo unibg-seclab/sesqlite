@@ -290,7 +290,7 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 
 	case SQLITE_PRAGMA: /* Pragma Name   | 1st arg or NULL */
 		if (0 == sqlite3_stricmp(arg1, "writable_schema")) {
-			fprintf(stderr, "Pragma disabled to guarantee SeSqlite checks. pragma command: %s\n", arg1);
+			fprintf(stderr, "Pragma disabled to guarantee SeSqlite checks. [pragma command: %s]\n", arg1);
 			rc = SQLITE_DENY;
 		}
 		break;
@@ -320,14 +320,18 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 
 	case SQLITE_ATTACH: /* Filename      | NULL            */
 		// TODO change when multiple databases are supported by SeSqlite.
-		fprintf(stderr, "SeSqlite does not support multiple databases yet. db file name: %s\n", arg1);
-		rc = SQLITE_DENY;
+		if ((arg1 != NULL) && (strlen(arg1) != 0)) {
+			fprintf(stderr, "SeSqlite does not support multiple databases yet. [db filename: %s]\n", arg1);
+			rc = SQLITE_DENY;
+		}
 		break;
 
 	case SQLITE_DETACH: /* Database Name | NULL            */
 		// TODO change when multiple databases are supported by SeSqlite.
-		fprintf(stderr, "SeSqlite does not support multiple databases yet. db file name: %s\n", arg1);
-		rc = SQLITE_DENY;
+		if ((arg1 != NULL) && (strlen(arg1) != 0)) {
+			fprintf(stderr, "SeSqlite does not support multiple databases yet. [db filename: %s]\n", arg1);
+			rc = SQLITE_DENY;
+		}
 		break;
 
 	case SQLITE_ALTER_TABLE: /* Database Name | Table Name      */
@@ -364,7 +368,10 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 		break;
 	}
 
+#ifdef SQLITE_DEBUG
 	printf("\n");
+#endif
+
 	return rc;
 }
 
@@ -394,7 +401,7 @@ int initializeSeSqliteObjects(sqlite3 *db) {
 	int rc = SQLITE_OK;
 
 #ifdef SQLITE_DEBUG
-	fprintf(stdout, "initializeSeSqliteObjects\n");
+	fprintf(stdout, "\n == SeSqlite Initialization == \n");
 #endif
 
 	// TODO attached databases could not have the triggers an the table, we should
@@ -409,7 +416,7 @@ int initializeSeSqliteObjects(sqlite3 *db) {
 			");", 0, 0, 0);
 
 #ifdef SQLITE_DEBUG
-	fprintf(stdout, "sesqlite_master created.\n");
+	fprintf(stdout, "Table created: sesqlite_master\n");
 #endif
 
 	// TODO experiments on why triggers are disabled for sqlite_* tables are required
@@ -430,7 +437,7 @@ int initializeSeSqliteObjects(sqlite3 *db) {
 	}
 
 #ifdef SQLITE_DEBUG
-	fprintf(stdout, "delete_contexts_after_table_drop created.\n");
+	fprintf(stdout, "Trigger created: delete_contexts_after_table_drop\n");
 #endif
 
 	// create trigger to update SELinux contexts after table rename
@@ -444,6 +451,11 @@ int initializeSeSqliteObjects(sqlite3 *db) {
 								" UPDATE sesqlite_master SET name = NEW.name WHERE name = OLD.name; "
 								"END;", 0, 0, 0);
 	}
+
+#ifdef SQLITE_DEBUG
+	fprintf(stdout, "Trigger created: update_contexts_after_rename\n");
+	fprintf(stdout, " == SeSqlite Initialized == \n\n");
+#endif
 
 	return rc;
 }
