@@ -117,6 +117,8 @@ foreach hdr {
    vdbe.h
    vdbeInt.h
    wal.h
+   sesqlite_hash.h
+   sesqlite_vtab.h
    selinux.h
 } {
   set available_hdr($hdr) 1
@@ -322,6 +324,8 @@ foreach file {
    icu.c
    fts3_icu.c
    
+   sesqlite_hash.c
+   sesqlite_vtab.c
    selinux.c
 } {
   copy_file tsrc/$file

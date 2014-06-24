@@ -14,6 +14,8 @@ SQLITE_EXTENSION_INIT1
 #include <stdint.h>
 #include <selinux/selinux.h>
 #include "selinux.h"
+#include "sesqlite_vtab.h"
+#include "sesqlite_hash.h"
 
 /* source (process) security context */
 security_context_t scon;
@@ -21,38 +23,73 @@ security_context_t scon;
 /* prepared statements to query schema sesqlite_master (bind it before use) */
 sqlite3_stmt *sesqlite_stmt;
 
+/**
+ * HashMap used by the virtual table implementation
+ */
+static seSQLiteHash hash; /* HashMap*/
+
 /*
  * Get the column context from sesqlite for the specified table.
  * Returns 1 if a context is defined for the table, 0 otherwise. The string
  * representing the context is allocated using sqlite3_mprintf in *con only
  * if the result is 1. The caller has to free the allocated space after usage.
  */
-int getContext(const char *dbname, const char *table, const char *column,
-		char **con) {
-	// TODO another way would be to use a virtual table and query its structure.
+int getContext(const char *dbname, int tclass, const char *table,
+		const char *column, char **con) {
+// TODO another way would be to use a virtual table and query its structure.
 	auth_enabled = 0;
 	int rc = 0;
+	size_t length = 0;
+	char *res = NULL, *key = NULL;
 
-	// TODO use dbname when multiple databases are supported by SeSqlite.
-
-	sqlite3_bind_text(sesqlite_stmt, SESQLITE_IDX_NAME, table, -1, NULL);
-	sqlite3_bind_text(sesqlite_stmt, SESQLITE_IDX_COLUMN, column, -1, NULL);
-	int res = sqlite3_step(sesqlite_stmt);
-
-	if (res == SQLITE_ROW) {
-		const char *security_context = sqlite3_column_text(sesqlite_stmt, 0);
-		*con = sqlite3_mprintf(security_context);
-		rc = 1; /* security_context found */
+	switch (tclass) {
+	case 0: /* database */
+		break;
+	case 1: /* table */
+		key = strdup(table);
+		break;
+	case 2: /* column */
+		length = strlen(table) + strlen(column) + 1;
+		key = sqlite3_malloc(length);
+		strcpy(key, table);
+		strcat(key, column);
+		break;
+	default:
+		break;
 	}
 
+	res = seSQLiteHashFind(&hash, key, strlen(key));
+	if (res != NULL) {
+		*con = strdup(res);
+	} else
+		getDefaultContext(con);
+
 #ifdef SQLITE_DEBUG
-	fprintf(stdout, "getcontext: table=%s column=%s -> %sfound (%d)\n", table,
-			(column ? column : "NULL"), (rc ? "" : "not "), res);
+	fprintf(stdout, "%s: table=%s, column=%s -> %sfound (%s)\n", (res != NULL ? "Hash hint" : "default_context"), table,
+			(column ? column : "NULL"), (res != NULL ? "" : "not "), res);
 #endif
 
-	sqlite3_reset(sesqlite_stmt);
-	sqlite3_clear_bindings(sesqlite_stmt);
+//	// TODO use dbname when multiple databases are supported by SeSqlite.
+//
+//	sqlite3_bind_text(sesqlite_stmt, SESQLITE_IDX_NAME, table, -1, NULL);
+//	sqlite3_bind_text(sesqlite_stmt, SESQLITE_IDX_COLUMN, column, -1, NULL);
+//	int res = sqlite3_step(sesqlite_stmt);
+//
+//	if (res == SQLITE_ROW) {
+//		const char *security_context = sqlite3_column_text(sesqlite_stmt, 0);
+//		*con = sqlite3_mprintf(security_context);
+//		rc = 1; /* security_context found */
+//	}
+//
+//#ifdef SQLITE_DEBUG
+//	fprintf(stdout, "getcontext: table=%s column=%s -> %sfound (%d)\n", table,
+//			(column ? column : "NULL"), (rc ? "" : "not "), res);
+//#endif
+//
+//	sqlite3_reset(sesqlite_stmt);
+//	sqlite3_clear_bindings(sesqlite_stmt);
 	auth_enabled = 1;
+	sqlite3_free(key);
 	return rc;
 }
 
@@ -65,7 +102,6 @@ int getContext(const char *dbname, const char *table, const char *column,
 //int getTableContext(const char *dbname, const char *table, char **con) {
 //	return getColumnContext(dbname, table, NULL, con);
 //}
-
 /*
  * Get the default context from sesqlite. Always return 1. The string
  * representing the context is allocated using sqlite3_mprintf in *con.
@@ -78,45 +114,6 @@ int getDefaultContext(char **con) {
 
 /*
  * Checks whether the source context has been granted the specified permission
- * for the class 'db_table' and the target context associated with the table.
- * Returns 1 if the access has been granted, 0 otherwise.
- */
-//int checkTableAccess(const char *dbname, const char *table,
-//		const char *permission) {
-//	security_context_t tcon;
-//	getTableContext(dbname, table, &tcon) || getDefaultContext(&tcon);
-//
-//	int res = selinux_check_access(scon, tcon, SELINUX_DB_TABLE, permission,
-//	NULL);
-//	printf("selinux_check_access(%s, %s, %s, %s) => %d\n", scon, tcon,
-//	SELINUX_DB_TABLE, permission, res);
-//
-//	sqlite3_free(tcon);
-//	return 0 == res;
-//}
-/*
- * Checks whether the source context has been granted the specified permission
- * for the class 'db_column' and the target context associated with the column
- * in the table. Returns 1 if the access has been granted, 0 otherwise.
- */
-//int checkColumnAccess(const char *dbname, const char *table, const char *column,
-//		const char *permission) {
-//
-//	security_context_t tcon;
-//	getColumnContext(dbname, table, column, &tcon)
-//			|| getTableContext(dbname, table, &tcon)
-//			|| getDefaultContext(&tcon);
-//
-//	int res = selinux_check_access(scon, tcon, SELINUX_DB_COLUMN, permission,
-//	NULL);
-//	printf("selinux_check_access(%s, %s, %s, %s) => %d\n", scon, tcon,
-//	SELINUX_DB_COLUMN, permission, res);
-//
-//	sqlite3_free(tcon);
-//	return 0 == res;
-//}
-/*
- * Checks whether the source context has been granted the specified permission
  * for the classes 'db_table' and 'db_column' and the target context associated with the table/column.
  * Returns 1 if the access has been granted, 0 otherwise.
  */
@@ -125,27 +122,10 @@ int checkAccess(const char *dbname, const char *table, const char *column,
 
 	//check
 	assert(tclass <= NELEMS(access_vector));
-
 	security_context_t tcon;
 	int res = -1;
 
-	switch (tclass) {
-	case 0: /* database */
-		break;
-	case 1: /* table */
-		getContext(dbname, table, NULL, &tcon)
-				|| getDefaultContext(&tcon);
-
-		break;
-	case 2: /* column */
-		getContext(dbname, table, column, &tcon)
-				|| getContext(dbname, table, NULL, &tcon)
-				|| getDefaultContext(&tcon);
-		break;
-	default:
-		break;
-	}
-
+	getContext(dbname, tclass, table, column, &tcon);
 	assert(tcon != NULL);
 
 	res = selinux_check_access(scon, tcon, access_vector[tclass].c_name,
@@ -189,7 +169,7 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 		//TODO in android the default security_context is not always the same (e.g., untrusted_app->app_data_file,
 		//release_app->platform_app_data_file)
 		if (!checkAccess(dbname, arg1, NULL, SELINUX_DB_TABLE,
-			SELINUX_CREATE)) {
+		SELINUX_CREATE)) {
 			rc = SQLITE_DENY;
 		}
 		break;
@@ -233,7 +213,7 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 
 	case SQLITE_DELETE: /* Table Name    | NULL            */
 		if (!checkAccess(dbname, arg1, NULL, SELINUX_DB_TABLE,
-				SELINUX_DELETE)) {
+		SELINUX_DELETE)) {
 			rc = SQLITE_DENY;
 		}
 		// TODO check delete permission on all columns.
@@ -241,13 +221,14 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 
 	case SQLITE_DROP_INDEX: /* Index Name    | Table Name      */
 		if (!checkAccess(dbname, arg2, NULL, SELINUX_DB_TABLE,
-				SELINUX_SETATTR)) {
+		SELINUX_SETATTR)) {
 			rc = SQLITE_DENY;
 		}
 		break;
 
 	case SQLITE_DROP_TABLE: /* Table Name    | NULL            */
-		if (!checkAccess(dbname, arg1, NULL, SELINUX_DB_TABLE, SELINUX_DROP)) {
+		if (!checkAccess(dbname, arg1, NULL, SELINUX_DB_TABLE,
+		SELINUX_DROP)) {
 			rc = SQLITE_DENY;
 		}
 		break;
@@ -262,27 +243,29 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 		break;
 
 	case SQLITE_DROP_TEMP_VIEW: /* View Name     | NULL            */
-		if (!checkAccess(dbname, arg1, NULL, SELINUX_DB_TABLE, SELINUX_DROP)) {
-					rc = SQLITE_DENY;
+		if (!checkAccess(dbname, arg1, NULL, SELINUX_DB_TABLE,
+		SELINUX_DROP)) {
+			rc = SQLITE_DENY;
 		}
 		break;
 
 	case SQLITE_DROP_TRIGGER: /* Trigger Name  | Table Name      */
 		if (!checkAccess(dbname, arg2, NULL, SELINUX_DB_TABLE,
-				SELINUX_SETATTR)) {
+		SELINUX_SETATTR)) {
 			rc = SQLITE_DENY;
 		}
 		break;
 
 	case SQLITE_DROP_VIEW: /* View Name     | NULL            */
-		if (!checkAccess(dbname, arg1, NULL, SELINUX_DB_TABLE, SELINUX_DROP)) {
+		if (!checkAccess(dbname, arg1, NULL, SELINUX_DB_TABLE,
+		SELINUX_DROP)) {
 			rc = SQLITE_DENY;
 		}
 		break;
 
 	case SQLITE_INSERT: /* Table Name    | NULL            */
 		if (!checkAccess(dbname, arg1, NULL, SELINUX_DB_TABLE,
-				SELINUX_INSERT)) {
+		SELINUX_INSERT)) {
 			rc = SQLITE_DENY;
 		}
 		// TODO check insert permission on all columns.
@@ -290,16 +273,17 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 
 	case SQLITE_PRAGMA: /* Pragma Name   | 1st arg or NULL */
 		if (0 == sqlite3_stricmp(arg1, "writable_schema")) {
-			fprintf(stderr, "Pragma disabled to guarantee SeSqlite checks. [pragma command: %s]\n", arg1);
+			fprintf(stderr,
+					"Pragma disabled to guarantee SeSqlite checks. [pragma command: %s]\n",
+					arg1);
 			rc = SQLITE_DENY;
 		}
 		break;
 
 	case SQLITE_READ: /* Table Name    | Column Name     */
 
-
 		if (!checkAccess(dbname, arg1, arg2, SELINUX_DB_COLUMN,
-				SELINUX_SELECT)) {
+		SELINUX_SELECT)) {
 			rc = SQLITE_DENY;
 		}
 		break;
@@ -313,7 +297,7 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 
 	case SQLITE_UPDATE: /* Table Name    | Column Name     */
 		if (!checkAccess(dbname, arg1, arg2, SELINUX_DB_COLUMN,
-				SELINUX_UPDATE)) {
+		SELINUX_UPDATE)) {
 			rc = SQLITE_DENY;
 		}
 		break;
@@ -321,7 +305,9 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 	case SQLITE_ATTACH: /* Filename      | NULL            */
 		// TODO change when multiple databases are supported by SeSqlite.
 		if ((arg1 != NULL) && (strlen(arg1) != 0)) {
-			fprintf(stderr, "SeSqlite does not support multiple databases yet. [db filename: %s]\n", arg1);
+			fprintf(stderr,
+					"SeSqlite does not support multiple databases yet. [db filename: %s]\n",
+					arg1);
 			rc = SQLITE_DENY;
 		}
 		break;
@@ -329,13 +315,16 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 	case SQLITE_DETACH: /* Database Name | NULL            */
 		// TODO change when multiple databases are supported by SeSqlite.
 		if ((arg1 != NULL) && (strlen(arg1) != 0)) {
-			fprintf(stderr, "SeSqlite does not support multiple databases yet. [db filename: %s]\n", arg1);
+			fprintf(stderr,
+					"SeSqlite does not support multiple databases yet. [db filename: %s]\n",
+					arg1);
 			rc = SQLITE_DENY;
 		}
 		break;
 
 	case SQLITE_ALTER_TABLE: /* Database Name | Table Name      */
-		if (!checkAccess(arg1, arg2, NULL, SELINUX_DB_TABLE, SELINUX_GETATTR)) {
+		if (!checkAccess(arg1, arg2, NULL, SELINUX_DB_TABLE,
+		SELINUX_GETATTR)) {
 			rc = SQLITE_DENY;
 		}
 		break;
@@ -350,7 +339,8 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 		break;
 
 	case SQLITE_DROP_VTABLE: /* Table Name    | Module Name     */
-		if (!checkAccess(dbname, arg1, NULL, SELINUX_DB_TABLE, SELINUX_DROP)) {
+		if (!checkAccess(dbname, arg1, NULL, SELINUX_DB_TABLE,
+		SELINUX_DROP)) {
 			rc = SQLITE_DENY;
 		}
 		break;
@@ -380,8 +370,7 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
  */
 static void selinuxCheckAccessFunction(sqlite3_context *context, int argc,
 		sqlite3_value **argv) {
-	int rc = selinux_check_access(
-	sqlite3_value_text(argv[0]), /* source security context */
+	int rc = selinux_check_access(sqlite3_value_text(argv[0]), /* source security context */
 	sqlite3_value_text(argv[1]), /* target security context */
 	sqlite3_value_text(argv[2]), /* target security class string */
 	sqlite3_value_text(argv[3]), /* requested permissions string */
@@ -389,6 +378,109 @@ static void selinuxCheckAccessFunction(sqlite3_context *context, int argc,
 	);
 
 	sqlite3_result_int(context, rc == 0);
+}
+
+void insertData(sqlite3 *db) {
+	int rc;
+	//TODO TEST
+	rc =
+			sqlite3_exec(db,
+					"INSERT INTO selinux_context(security_context, name) values ('unconfined_u:object_r:sesqlite_public:s0', 'selinux_context')",
+					NULL, NULL, NULL);
+
+	rc =
+			sqlite3_exec(db,
+					"INSERT INTO selinux_context values ('unconfined_u:object_r:sesqlite_public:s0', 'selinux_context', 'security_context')",
+					NULL, NULL, NULL);
+
+	rc =
+			sqlite3_exec(db,
+					"INSERT INTO selinux_context values ('unconfined_u:object_r:sesqlite_public:s0', 'selinux_context', 'name')",
+					NULL, NULL, NULL);
+
+	rc =
+			sqlite3_exec(db,
+					"INSERT INTO selinux_context values ('unconfined_u:object_r:sesqlite_public:s0', 'selinux_context', 'column')",
+					NULL, NULL, NULL);
+
+	/* sqlite_master */
+
+	rc =
+			sqlite3_exec(db,
+					"INSERT INTO selinux_context(security_context, name) values ('unconfined_u:object_r:sesqlite_public:s0', 'sqlite_master')",
+					NULL, NULL, NULL);
+
+	rc =
+			sqlite3_exec(db,
+					"INSERT INTO selinux_context values ('unconfined_u:object_r:sesqlite_public:s0', 'sqlite_master', 'type')",
+					NULL, NULL, NULL);
+
+	rc =
+			sqlite3_exec(db,
+					"INSERT INTO selinux_context values ('unconfined_u:object_r:sesqlite_public:s0', 'sqlite_master', 'name')",
+					NULL, NULL, NULL);
+
+	rc =
+			sqlite3_exec(db,
+					"INSERT INTO selinux_context values ('unconfined_u:object_r:sesqlite_public:s0', 'sqlite_master', 'tbl_name')",
+					NULL, NULL, NULL);
+
+	rc =
+			sqlite3_exec(db,
+					"INSERT INTO selinux_context values ('unconfined_u:object_r:sesqlite_public:s0', 'sqlite_master', 'rootpage')",
+					NULL, NULL, NULL);
+
+	rc =
+			sqlite3_exec(db,
+					"INSERT INTO selinux_context values ('unconfined_u:object_r:sesqlite_public:s0', 'sqlite_master', 'sql')",
+					NULL, NULL, NULL);
+
+	/* FOR TEST*/
+	//CREATE TABLE t1(a INTEGER, b INTEGER, c TEXT);
+	//CREATE TABLE t2(a INTEGER, b INTEGER, c TEXT);
+
+	rc =
+				sqlite3_exec(db,
+						"INSERT INTO selinux_context(security_context, name) values ('unconfined_u:object_r:sesqlite_public:s0', 't1')",
+						NULL, NULL, NULL);
+	rc =
+			sqlite3_exec(db,
+					"INSERT INTO selinux_context values ('unconfined_u:object_r:sesqlite_public:s0', 't1', 'a')",
+					NULL, NULL, NULL);
+	rc =
+			sqlite3_exec(db,
+					"INSERT INTO selinux_context values ('unconfined_u:object_r:sesqlite_public:s0', 't1', 'b')",
+					NULL, NULL, NULL);
+	rc =
+			sqlite3_exec(db,
+					"INSERT INTO selinux_context values ('unconfined_u:object_r:sesqlite_public:s0', 't1', 'c')",
+					NULL, NULL, NULL);
+
+	rc =
+				sqlite3_exec(db,
+						"INSERT INTO selinux_context(security_context, name) values ('unconfined_u:object_r:sesqlite_public:s0', 't2')",
+						NULL, NULL, NULL);
+	rc =
+			sqlite3_exec(db,
+					"INSERT INTO selinux_context values ('unconfined_u:object_r:sesqlite_public:s0', 't2', 'a')",
+					NULL, NULL, NULL);
+	rc =
+			sqlite3_exec(db,
+					"INSERT INTO selinux_context values ('unconfined_u:object_r:sesqlite_public:s0', 't2', 'b')",
+					NULL, NULL, NULL);
+	rc =
+			sqlite3_exec(db,
+					"INSERT INTO selinux_context values ('unconfined_u:object_r:sesqlite_public:s0', 't2', 'c')",
+					NULL, NULL, NULL);
+
+	sqlite3_exec(db, "select * from sesqlite_master",
+	NULL, NULL, NULL);
+
+	//		rc =
+	//				sqlite3_exec(db,
+	//						"INSERT INTO selinux_context values ('', 'selinux_context', 'column')",
+	//						NULL, NULL, NULL);
+
 }
 
 /*
@@ -399,74 +491,116 @@ static void selinuxCheckAccessFunction(sqlite3_context *context, int argc,
  */
 int initializeSeSqliteObjects(sqlite3 *db) {
 	int rc = SQLITE_OK;
+	char *pzErr;
 
 #ifdef SQLITE_DEBUG
 	fprintf(stdout, "\n == SeSqlite Initialization == \n");
 #endif
 
-	// TODO attached databases could not have the triggers an the table, we should
-	//      consider adding an hook for the attach or the open database and
-	//	    move the table and trigger creation there.
+	//
+	setHashMap(&hash);
 
-	rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS sesqlite_master ( "
-			"security_context TEXT NOT NULL, "
-			"name TEXT NOT NULL, "
-			"column TEXT DEFAULT NULL, "
-			"PRIMARY KEY (name, column) "
-			");", 0, 0, 0);
-
-#ifdef SQLITE_DEBUG
-	fprintf(stdout, "Table created: sesqlite_master\n");
-#endif
-
-	// TODO experiments on why triggers are disabled for sqlite_* tables are required
-	//      the easy solution is to allow them. Indexes are also disables, and
-	//      enabling them causes the execution to interrupt, so imposing a UNIQUE
-	//      or PRIMARY KEY constraint for column 'name' in sqlite_master in order
-	//      to use it as foreign key in sesqlite_master is not feasible.
-
-	// create trigger to delete unused SELinux contexts after table drop
-	if (rc == SQLITE_OK) {
-		rc = sqlite3_exec(db,
-				"CREATE TRIGGER IF NOT EXISTS delete_contexts_after_table_drop "
-						"AFTER DELETE ON sqlite_master "
-						"FOR EACH ROW WHEN OLD.type IN ('table', 'view') "
-						"BEGIN "
-						" DELETE FROM sesqlite_master WHERE name = OLD.name; "
-						"END;", 0, 0, 0);
+	/* register module */
+	rc = sqlite3_create_module(db, "selinuxModule", &sesqlite_mod, NULL);
+	if (rc != SQLITE_OK) {
+		return rc;
 	}
 
 #ifdef SQLITE_DEBUG
-	fprintf(stdout, "Trigger created: delete_contexts_after_table_drop\n");
+	if (rc == SQLITE_OK)
+	fprintf(stdout, "Module 'selinuxModule' registered successfully.\n");
+	else
+	fprintf(stderr, "Error: unable to register 'sesqliteModule' module.\n");
 #endif
 
-	// create trigger to update SELinux contexts after table rename
+// 		TODO attached databases could not have the triggers an the table, we should
+//      consider adding an hook for the attach or the open database and
+//	    move the table and trigger creation there.
+	if (rc == SQLITE_OK) {
+		/* automatically create an instance of the virtual table */
+		rc =
+		sqlite3_exec(db,
+				"CREATE VIRTUAL TABLE sesqlite_master USING selinuxModule",
+				NULL, NULL, NULL);
+
+		//TODO WHERE??
+		rc =
+				sqlite3_exec(db,
+						"CREATE TABLE IF NOT EXISTS selinux_context(security_context TEXT, name TEXT, column TEXT, PRIMARY KEY(name, column))",
+						NULL, NULL, NULL);
+
+		insertData(db);
+
+#ifdef SQLITE_DEBUG
+		if (rc == SQLITE_OK)
+		fprintf(stdout, "Virtual table 'sesqlite_master' created successfully.\n");
+		else
+		fprintf(stderr, "Error: unable to create VirtualTable 'sesqlite_master'.\n");
+#endif
+	}
+
+// 		TODO experiments on why triggers are disabled for sqlite_* tables are required
+//      the easy solution is to allow them. Indexes are also disables, and
+//      enabling them causes the execution to interrupt, so imposing a UNIQUE
+//      or PRIMARY KEY constraint for column 'name' in sqlite_master in order
+//      to use it as foreign key in sesqlite_master is not feasible.
+// 		create trigger to delete unused SELinux contexts after table drop
+	if (rc == SQLITE_OK) {
+		rc =
+		sqlite3_exec(db, "CREATE TEMP TRIGGER delete_contexts_after_table_drop "
+				"AFTER DELETE ON sqlite_master "
+				"FOR EACH ROW WHEN OLD.type IN ('table', 'view') "
+				"BEGIN "
+				" DELETE FROM sesqlite_master WHERE name = OLD.name; "
+				"END;", 0, 0, 0);
+
+#ifdef SQLITE_DEBUG
+		if (rc == SQLITE_OK)
+		fprintf(stdout, "Trigger 'delete_contexts_after_table_drop' created successfully.\n");
+		else
+		fprintf(stderr, "Error: unable to create 'delete_contexts_after_table_drop' trigger.\n");
+#endif
+	}
+
+// create trigger to update SELinux contexts after table rename
 	if (rc == SQLITE_OK) {
 		rc =
 				sqlite3_exec(db,
-						"CREATE TRIGGER IF NOT EXISTS update_contexts_after_rename "
+						"CREATE TEMP TRIGGER update_contexts_after_rename "
 								"AFTER UPDATE OF name ON sqlite_master "
 								"FOR EACH ROW WHEN NEW.type IN ('table', 'view') "
 								"BEGIN "
 								" UPDATE sesqlite_master SET name = NEW.name WHERE name = OLD.name; "
 								"END;", 0, 0, 0);
+
+#ifdef SQLITE_DEBUG
+		if (rc == SQLITE_OK) {
+			fprintf(stdout, "Trigger 'update_contexts_after_rename' created successfully.\n");
+			fprintf(stdout, " == SeSqlite Initialized == \n\n");
+		} else
+		fprintf(stderr, "Error: unable to create 'update_contexts_after_rename' trigger.\n");
+#endif
 	}
 
 #ifdef SQLITE_DEBUG
-	fprintf(stdout, "Trigger created: update_contexts_after_rename\n");
-	fprintf(stdout, " == SeSqlite Initialized == \n\n");
+	if (rc != SQLITE_OK)
+	fprintf(stderr, "Error: unable to initialize the selinux support for SQLite.\n");
 #endif
 
 	return rc;
 }
 
 /*
- * Initialize SeSqlite and register objects, authorizer and functions.
- * This function is called by the SQLite core in case the SQLITE_CORE
- * compile flag has been enabled or at runtime when the extension is loaded.
+ * Function: sqlite3SelinuxInit
+ * Purpose: Initialize SeSqlite and register objects, authorizer and functions.
+ * 			This function is called by the SQLite core in case the SQLITE_CORE
+ * 			compile flag has been enabled or at runtime when the extension is loaded.
+ * Parameters:
+ * 				sqlite3 *db: a pointer to the SQLite database.
+ * Return value: 0->OK, other->ERROR (see **pzErr for info about error)
  */
 int sqlite3SelinuxInit(sqlite3 *db) {
-	//retrieve current security context
+//retrieve current security context
 	int rc = getcon(&scon);
 	if (rc == -1) {
 		fprintf(stderr,
@@ -474,25 +608,17 @@ int sqlite3SelinuxInit(sqlite3 *db) {
 		return -1;
 	}
 
-	// initialize sesqlite table and trigger
+// initialize sesqlite table and trigger
 	rc = initializeSeSqliteObjects(db);
 
-	// prepare sesqlite query statements
-	if (rc == SQLITE_OK) {
-		rc = sqlite3_prepare_v2(db,
-				"SELECT security_context FROM sesqlite_master "
-						"WHERE name IS ?1 AND column IS ?2 LIMIT 1", -1,
-				&sesqlite_stmt, NULL);
-	}
-
-	// create the SQL function selinux_check_access
+// create the SQL function selinux_check_access
 	if (rc == SQLITE_OK) {
 		rc = sqlite3_create_function(db, "selinux_check_access", 4,
-				SQLITE_UTF8 /* | SQLITE_DETERMINISTIC */, 0,
-				selinuxCheckAccessFunction, 0, 0);
+		SQLITE_UTF8 /* | SQLITE_DETERMINISTIC */, 0, selinuxCheckAccessFunction,
+				0, 0);
 	}
 
-	// set the authorizer
+// set the authorizer
 	if (rc == SQLITE_OK) {
 		rc = sqlite3_set_authorizer(db, selinuxAuthorizer, NULL);
 	}
@@ -505,9 +631,9 @@ int sqlite3SelinuxInit(sqlite3 *db) {
 #if !SQLITE_CORE
 int sqlite3_extension_init(sqlite3 *db, char **pzErrMsg,
 		const sqlite3_api_routines *pApi) {
-	SQLITE_EXTENSION_INIT2(pApi)
+	SQLITE_EXTENSION_INIT2(pApi);
 	return sqlite3SelinuxInit(db);
 }
 #endif
 
-#endif
+#endif /* !defined(SQLITE_CORE) || defined(SQLITE_ENABLE_SELINUX) */
