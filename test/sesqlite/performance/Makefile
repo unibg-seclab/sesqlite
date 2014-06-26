@@ -16,6 +16,18 @@ LDFLAGS        += -ldl
 
 all: $(NAME) $(NAME_SE)
 
+test: $(NAME) $(TEST_SQL) clean_test_db
+	@./$(NAME) -quiet $(TEST_DB) $(TEST_SQL)
+
+test_se: $(NAME_SE) $(TEST_SQL) clean_test_db
+	@./$(NAME_SE) -quiet $(TEST_DB) $(TEST_SQL)
+
+$(NAME): $(OBJS) $(SQLITE_OBJ)
+	gcc $(OBJS) $(SQLITE_OBJ) -o $(NAME) $(INCLUDES) $(LDFLAGS)
+
+$(NAME_SE): $(OBJS) $(SE_SQLITE_OBJ)
+	gcc $(OBJS) $(SE_SQLITE_OBJ) -o $(NAME_SE) $(INCLUDES) $(LDFLAGS) -lselinux
+
 $(SE_SQLITE_OBJ):
 	@make performance-selinux -C $(TOP)
 	cp $(TOP)/build/sqlite3.o ./$(SE_SQLITE_OBJ)
@@ -24,11 +36,8 @@ $(SQLITE_OBJ):
 	@make performance -C $(TOP)
 	cp $(TOP)/build/sqlite3.o ./$(SQLITE_OBJ)
 
-$(NAME): $(OBJS) $(SQLITE_OBJ)
-	gcc $(OBJS) $(SQLITE_OBJ) -o $(NAME) $(INCLUDES) $(LDFLAGS)
-
-$(NAME_SE): $(OBJS) $(SE_SQLITE_OBJ)
-	gcc $(OBJS) $(SE_SQLITE_OBJ) -o $(NAME_SE) $(INCLUDES) $(LDFLAGS) -lselinux
+$(TEST_SQL):
+	tclsh $(TOP)/tool/mkspeedsql.tcl > $(TEST_SQL)
 
 clean: clean_test_db
 	@- $(RM) $(NAME) $(NAME_SE)
@@ -36,9 +45,3 @@ clean: clean_test_db
 
 clean_test_db:
 	@- $(RM) $(TEST_DB)*
-
-test: $(NAME) clean_test_db
-	@./$(NAME) -quiet $(TEST_DB) $(TEST_SQL)
-
-test_se: $(NAME_SE) clean_test_db
-	@./$(NAME_SE) -quiet $(TEST_DB) $(TEST_SQL)
