@@ -1,0 +1,7 @@
+*.o
+*.db
+*.db-journal
+*.out
+
+speedtest8
+speedtest8_se
