@@ -14,7 +14,7 @@ INCLUDES       := -I$(TOP)/src
 LDFLAGS        += -ldl
 
 
-all: $(NAME) $(NAME_SE)
+all: $(NAME) $(NAME_SE) $(TEST_SQL)
 
 test: $(NAME) $(TEST_SQL) clean_test_db
 	@./$(NAME) -quiet $(TEST_DB) $(TEST_SQL)
@@ -37,6 +37,7 @@ $(SQLITE_OBJ):
 	cp $(TOP)/build/sqlite3.o ./$(SQLITE_OBJ)
 
 $(TEST_SQL):
+	@echo "[Generating $@]"
 	tclsh $(TOP)/tool/mkspeedsql.tcl > $(TEST_SQL)
 
 clean: clean_test_db
