@@ -11,7 +11,6 @@
 extern "C" {
 #endif  /* __cplusplus */
 
-
 #define NELEMS(x)  (sizeof(x) / sizeof(x[0]))
 
 /* SELinux classes */
@@ -66,135 +65,74 @@ const char *authtype[] = { "SQLITE_COPY", "SQLITE_CREATE_INDEX",
 /* */
 int sqlite3SelinuxInit(sqlite3 *db);
 
+static struct sesqlite_context *sesqlite_contexts = NULL;
 
+struct sesqlite_context {
+
+	//table
+	int ntable_context;
+	struct sesqlite_context_element *table_context;
+
+	//column
+	int ncolumn_context;
+	struct sesqlite_context_element *column_context;
+
+	//tuple
+	int ntuple_context;
+	struct sesqlite_context_element *tuple_context;
+
+};
+
+/**
+ * Used to store
+ */
+struct sesqlite_context_element {
+	//*.*
+	char *fparam;
+	char *sparam;
+	char *security_context;
+	struct sesqlite_context_element *next;
+};
 
 /* struct for the management of selinux classes and the relative permissions*/
 static struct {
-	const char 			*c_name;
-	uint16_t			c_code;
-	struct{
-		const char 		*p_name;
-		uint16_t		p_code;
+	const char *c_name;
+	uint16_t c_code;
+	struct {
+		const char *p_name;
+		uint16_t p_code;
 	} perm[32];
 
 } access_vector[] =
-{
-		{
-			"db_database", SELINUX_DB_DATABASE,
-			{
-				{
-					"create", SELINUX_CREATE
-				},
-				{
-					"drop", SELINUX_DROP
-				},
-				{
-					"getattr", SELINUX_GETATTR
-				},
-				{
-					"setattr", SELINUX_SETATTR
-				},
-				{
-					"relabelfrom", SELINUX_RELABEL_FROM
-				},
-				{
-					"relabelto", SELINUX_RELABEL_TO
-				},
-			}
-		},
-		{
-			"db_table", SELINUX_DB_TABLE,
-			{
-				{
-					"create", SELINUX_CREATE
-				},
-				{
-					"drop", SELINUX_DROP
-				},
-				{
-					"getattr", SELINUX_GETATTR
-				},
-				{
-					"setattr", SELINUX_SETATTR
-				},
-				{
-					"relabelfrom", SELINUX_RELABEL_FROM
-				},
-				{
-					"relabelto", SELINUX_RELABEL_TO
-				},
-				{
-					"select", SELINUX_SELECT
-				},
-				{
-					"update", SELINUX_UPDATE
-				},
-				{
-					"insert", SELINUX_INSERT
-				},
-				{
-					"delete", SELINUX_DELETE
-				},
-			}
-		},
-		{
-			"db_column", SELINUX_DB_COLUMN,
-			{
-				{
-					"create", SELINUX_CREATE
-				},
-				{
-					"drop", SELINUX_DROP
-				},
-				{
-					"getattr", SELINUX_GETATTR
-				},
-				{
-					"setattr", SELINUX_SETATTR
-				},
-				{
-					"relabelfrom", SELINUX_RELABEL_FROM
-				},
-				{
-					"relabelto", SELINUX_RELABEL_TO
-				},
-				{
-					"select", SELINUX_SELECT
-				},
-				{
-					"update", SELINUX_UPDATE
-				},
-				{
-					"insert", SELINUX_INSERT
-				},
-			}
-		},
-		{
-			"db_tuple", SELINUX_DB_TUPLE,
-			{
-				{
-					"relabelfrom", SELINUX_RELABEL_FROM
-				},
-				{
-					"relabelto", SELINUX_RELABEL_TO
-				},
-				{
-					"select", SELINUX_SELECT
-				},
-				{
-					"update", SELINUX_UPDATE
-				},
-				{
-					"insert", SELINUX_INSERT
-				},
-				{
-					"delete", SELINUX_DELETE
-				},
-			}
-		},
-};
-
+		{ { "db_database", SELINUX_DB_DATABASE, { { "create", SELINUX_CREATE },
+				{ "drop", SELINUX_DROP }, { "getattr", SELINUX_GETATTR }, {
+						"setattr", SELINUX_SETATTR }, { "relabelfrom",
+						SELINUX_RELABEL_FROM }, { "relabelto",
+						SELINUX_RELABEL_TO }, } }, { "db_table",
+				SELINUX_DB_TABLE, { { "create", SELINUX_CREATE }, { "drop",
+						SELINUX_DROP }, { "getattr", SELINUX_GETATTR }, {
+						"setattr", SELINUX_SETATTR }, { "relabelfrom",
+						SELINUX_RELABEL_FROM }, { "relabelto",
+						SELINUX_RELABEL_TO }, { "select", SELINUX_SELECT }, {
+						"update", SELINUX_UPDATE },
+						{ "insert", SELINUX_INSERT },
+						{ "delete", SELINUX_DELETE }, } }, { "db_column",
+				SELINUX_DB_COLUMN,
+				{ { "create", SELINUX_CREATE }, { "drop", SELINUX_DROP }, {
+						"getattr", SELINUX_GETATTR }, { "setattr",
+						SELINUX_SETATTR },
+						{ "relabelfrom", SELINUX_RELABEL_FROM }, { "relabelto",
+								SELINUX_RELABEL_TO },
+						{ "select", SELINUX_SELECT },
+						{ "update", SELINUX_UPDATE },
+						{ "insert", SELINUX_INSERT }, } }, { "db_tuple",
+				SELINUX_DB_TUPLE,
+				{ { "relabelfrom", SELINUX_RELABEL_FROM }, { "relabelto",
+						SELINUX_RELABEL_TO }, { "select", SELINUX_SELECT }, {
+						"update", SELINUX_UPDATE },
+						{ "insert", SELINUX_INSERT },
+						{ "delete", SELINUX_DELETE }, } }, };
 
 #ifdef __cplusplus
-}  /* extern "C" */
+} /* extern "C" */
 #endif  /* __cplusplus */
