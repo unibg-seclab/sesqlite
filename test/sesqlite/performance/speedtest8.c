@@ -100,8 +100,7 @@ int main(int argc, char **argv){
   char *zSql;
   int i, j;
   FILE *in;
-  struct timespec iStart, iElapse;
-  struct timespec iSetup;
+  struct timespec iStart, iOpen, iClose;
   int nStmt = 0;
   int nByte = 0;
   const char *zArgv0 = argv[0];
@@ -201,9 +200,8 @@ int main(int argc, char **argv){
 #endif
   iStart = tsTOD();
   rc = sqlite3_open(argv[1], &db);
-  iElapse = tsSubtract(tsTOD(), iStart);
-  iSetup = iElapse;
-  if (!bQuiet) printf("sqlite3_open() returns %d in %g secs\n", rc, tsFloat(iElapse));
+  iOpen = tsSubtract(tsTOD(), iStart);
+  if (!bQuiet) printf("sqlite3_open() returns %d in %g secs\n", rc, tsFloat(iOpen));
   for(i=j=0; j<nSql; j++){
     if( zSql[j]==';' ){
       int isComplete;
@@ -228,12 +226,11 @@ int main(int argc, char **argv){
   }
   iStart = tsTOD();
   sqlite3_close(db);
-  iElapse = tsSubtract(tsTOD(), iStart);
+  iClose = tsSubtract(tsTOD(), iStart);
 #if !defined(_MSC_VER)
   clkEnd = times(&tmsEnd);
 #endif
-  iSetup = tsAdd(iSetup, iElapse);
-  if (!bQuiet) printf("sqlite3_close() returns in %g secs\n", tsFloat(iElapse));
+  if (!bQuiet) printf("sqlite3_close() returns in %g secs\n", tsFloat(iClose));
 
   printf("\n");
   printf("Statements run:        %15d stmts\n", nStmt);
@@ -241,9 +238,10 @@ int main(int argc, char **argv){
   printf("Total prepare time:    %g secs\n", tsFloat(prepTime));
   printf("Total run time:        %g secs\n", tsFloat(runTime));
   printf("Total finalize time:   %g secs\n", tsFloat(finalizeTime));
-  printf("Open/Close time:       %g secs\n", tsFloat(iSetup));
+  printf("Open time:             %g secs\n", tsFloat(iOpen));
+  printf("Close time:            %g secs\n", tsFloat(iClose));
   printf("Total time:            %g secs\n",
-      tsFloat(tsAdd(prepTime, tsAdd(runTime, tsAdd(finalizeTime, iSetup)))));
+      tsFloat(tsAdd(prepTime, tsAdd(runTime, tsAdd(finalizeTime, tsAdd(iOpen, iClose))))));
 
 // #if !defined(_MSC_VER)
 //   printf("\n");
