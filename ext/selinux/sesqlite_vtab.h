@@ -29,18 +29,18 @@ static const char *azSql[N_STATEMENT] = {
 		"name = ?1 AND column = ?2", };
 
 typedef enum sesqliteQueryType {
-  QUERY_ALL,   /* table scan */
-  QUERY_TABLE,     /* lookup by rowid */
-  QUERY_COLUMN   /* QUERY_FULLTEXT + [i] is a full-text search for column i*/
+	QUERY_ALL, /* table scan */
+	QUERY_TABLE, /* lookup by rowid */
+	QUERY_COLUMN /* QUERY_FULLTEXT + [i] is a full-text search for column i*/
 } sesqliteQueryType;
 
 typedef struct sesqlite_vtab_s {
-	sqlite3_vtab vtab; 					/* this must go first */
-	sesqliteQueryType iCursorType;           	/* Copy of sqlite3_index_info.idxNum */
-	sqlite3 *db; 						/* module specific fields then follow */
-	sqlite3_stmt *pSelectAll; 			/* sql statement */
-	sqlite3_stmt *pSelectTable; 		/* sql statement */
-	sqlite3_stmt *pSelectColumn; 		/* sql statement */
+	sqlite3_vtab vtab; /* this must go first */
+	sesqliteQueryType iCursorType; /* Copy of sqlite3_index_info.idxNum */
+	sqlite3 *db; /* module specific fields then follow */
+	sqlite3_stmt *pSelectAll; /* sql statement */
+	sqlite3_stmt *pSelectTable; /* sql statement */
+	sqlite3_stmt *pSelectColumn; /* sql statement */
 } sesqlite_vtab;
 
 typedef struct sesqlite_cursor_s {
@@ -75,6 +75,9 @@ static int sesqlite_rowid(sqlite3_vtab_cursor *cur, sqlite3_int64 *rowid);
 
 static int sesqlite_rename(sqlite3_vtab *vtab, const char *newname);
 
+static int seslite_update(sqlite3_vtab *pVtab, int argc, sqlite3_value ** argv,
+		sqlite3_int64 *pRowId);
+
 static sqlite3_module sesqlite_mod = {
 /* iVersion      */0,
 /* xCreate       */sesqlite_connect,
@@ -89,7 +92,7 @@ static sqlite3_module sesqlite_mod = {
 /* xEof          */sesqlite_eof,
 /* xColumn       */sesqlite_column,
 /* xRowid        */sesqlite_rowid,
-/* xUpdate       */0,
+/* xUpdate       */seslite_update,
 /* xBegin        */0,
 /* xSync         */0,
 /* xCommit       */0,

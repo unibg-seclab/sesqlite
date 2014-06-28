@@ -822,34 +822,34 @@ int initializeSeSqliteObjects(sqlite3 *db) {
 //      or PRIMARY KEY constraint for column 'name' in sqlite_master in order
 //      to use it as foreign key in sesqlite_master is not feasible.
 // 		create trigger to delete unused SELinux contexts after table drop
-//	if (rc == SQLITE_OK) {
-//		rc =
-//		sqlite3_exec(db, "CREATE TEMP TRIGGER delete_contexts_after_table_drop "
-//				"AFTER DELETE ON sqlite_master "
-//				"FOR EACH ROW WHEN OLD.type IN ('table', 'view') "
-//				"BEGIN "
-//				" DELETE FROM sesqlite_master WHERE name = OLD.name; "
-//				"END;", 0, 0, 0);
-//
-//#ifdef SQLITE_DEBUG
-//		if (rc == SQLITE_OK)
-//		fprintf(stdout, "Trigger 'delete_contexts_after_table_drop' created successfully.\n");
-//		else
-//		fprintf(stderr, "Error: unable to create 'delete_contexts_after_table_drop' trigger.\n");
-//#endif
-//	}
-//
-//// create trigger to update SELinux contexts after table rename
-//	if (rc == SQLITE_OK) {
-//		rc =
-//				sqlite3_exec(db,
-//						"CREATE TEMP TRIGGER update_contexts_after_rename "
-//								"AFTER UPDATE OF name ON sqlite_master "
-//								"FOR EACH ROW WHEN NEW.type IN ('table', 'view') "
-//								"BEGIN "
-//								" UPDATE sesqlite_master SET name = NEW.name WHERE name = OLD.name; "
-//								"END;", 0, 0, 0);
-//
+	if (rc == SQLITE_OK) {
+		rc =
+		sqlite3_exec(db, "CREATE TEMP TRIGGER delete_contexts_after_table_drop "
+				"AFTER DELETE ON sqlite_master "
+				"FOR EACH ROW WHEN OLD.type IN ('table', 'view') "
+				"BEGIN "
+				" DELETE FROM sesqlite_master WHERE name = OLD.name; "
+				"END;", 0, 0, 0);
+
+#ifdef SQLITE_DEBUG
+		if (rc == SQLITE_OK)
+		fprintf(stdout, "Trigger 'delete_contexts_after_table_drop' created successfully.\n");
+		else
+		fprintf(stderr, "Error: unable to create 'delete_contexts_after_table_drop' trigger.\n");
+#endif
+	}
+
+// create trigger to update SELinux contexts after table rename
+	if (rc == SQLITE_OK) {
+		rc =
+				sqlite3_exec(db,
+						"CREATE TEMP TRIGGER update_contexts_after_rename "
+								"AFTER UPDATE OF name ON sqlite_master "
+								"FOR EACH ROW WHEN NEW.type IN ('table', 'view') "
+								"BEGIN "
+								" UPDATE selinux_context SET name = NEW.name WHERE name = OLD.name; "
+								"END;", 0, 0, 0);
+
 #ifdef SQLITE_DEBUG
 		if (rc == SQLITE_OK) {
 			//fprintf(stdout, "Trigger 'update_contexts_after_rename' created successfully.\n");
@@ -857,7 +857,7 @@ int initializeSeSqliteObjects(sqlite3 *db) {
 		} else
 		fprintf(stderr, "Error: unable to create 'update_contexts_after_rename' trigger.\n");
 #endif
-	//}
+	}
 
 #ifdef SQLITE_DEBUG
 	if (rc != SQLITE_OK)
