@@ -2,23 +2,28 @@
 # Initial security label for SESQLite
 #
 
+#db.table.column
+#db.table
+
 # <databases>
-db_database	*	unconfined_u:object_r:sesqlite_public:s0
+db_database	*	unconfined_u:object_r:sesqlite_db_public:s0
 
 # <tables>
-db_table	*.*	system_u:object_r:other_t
 db_table	*.sqlite_master	unconfined_u:object_r:sesqlite_public:s0
 db_table	*.selinux_context	unconfined_u:object_r:sesqlite_public:s0
 db_table	*.sesqlite_master	unconfined_u:object_r:sesqlite_public:s0
+db_table	*.sqlite_temp_master	unconfined_u:object_r:sesqlite_temp_public:s0
+db_table	*.*	system_u:object_r:other_t
 
 
 # <column>
-db_column	sqlite_master.*	unconfined_u:object_r:sesqlite_public:s0
-db_column	selinux_context.*	unconfined_u:object_r:sesqlite_public:s0
-db_column	*.*	unconfined_u:object_r:sesqlite_public:s0
+db_column	*.sqlite_master.*	unconfined_u:object_r:sesqlite_public:s0
+db_column	*.sqlite_master.sql	unconfined_u:object_r:sesqlite_sql_public:s0
+db_column	*.selinux_context.*	unconfined_u:object_r:sesqlite_public:s0
+db_column	*.*.*	unconfined_u:object_r:sesqlite_public:s0
 
 # <tuples>
-db_tuple	selinux_context.*	unconfined_u:object_r:sesqlite_public:s0
+db_tuple	*.selinux_context	unconfined_u:object_r:sesqlite_public:s0
 db_tuple	*.*	unconfined_u:object_r:sesqlite_public:s0
 
 # <views>

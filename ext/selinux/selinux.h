@@ -13,6 +13,14 @@ extern "C" {
 
 #define NELEMS(x)  (sizeof(x) / sizeof(x[0]))
 
+#define SELINUX_CONTEXT_TABLE		"CREATE TABLE IF NOT EXISTS \
+												selinux_context( \
+												security_context TEXT, \
+												db TEXT, \
+												name TEXT, \
+												column TEXT, \
+												PRIMARY KEY(name, column))"
+
 /* SELinux classes */
 #define SELINUX_DB_DATABASE      	0
 #define SELINUX_DB_TABLE      		1
@@ -69,6 +77,10 @@ static struct sesqlite_context *sesqlite_contexts = NULL;
 
 struct sesqlite_context {
 
+	//db
+	int ndb_context;
+	struct sesqlite_context_element *db_context;
+
 	//table
 	int ntable_context;
 	struct sesqlite_context_element *table_context;
@@ -88,8 +100,10 @@ struct sesqlite_context {
  */
 struct sesqlite_context_element {
 	//*.*
+	char *origin;
 	char *fparam;
 	char *sparam;
+	char *tparam;
 	char *security_context;
 	struct sesqlite_context_element *next;
 };
@@ -103,35 +117,30 @@ static struct {
 		uint16_t p_code;
 	} perm[32];
 
-} access_vector[] =
-		{ { "db_database", SELINUX_DB_DATABASE, { { "create", SELINUX_CREATE },
-				{ "drop", SELINUX_DROP }, { "getattr", SELINUX_GETATTR }, {
-						"setattr", SELINUX_SETATTR }, { "relabelfrom",
-						SELINUX_RELABEL_FROM }, { "relabelto",
-						SELINUX_RELABEL_TO }, } }, { "db_table",
-				SELINUX_DB_TABLE, { { "create", SELINUX_CREATE }, { "drop",
-						SELINUX_DROP }, { "getattr", SELINUX_GETATTR }, {
-						"setattr", SELINUX_SETATTR }, { "relabelfrom",
-						SELINUX_RELABEL_FROM }, { "relabelto",
-						SELINUX_RELABEL_TO }, { "select", SELINUX_SELECT }, {
-						"update", SELINUX_UPDATE },
-						{ "insert", SELINUX_INSERT },
-						{ "delete", SELINUX_DELETE }, } }, { "db_column",
-				SELINUX_DB_COLUMN,
-				{ { "create", SELINUX_CREATE }, { "drop", SELINUX_DROP }, {
-						"getattr", SELINUX_GETATTR }, { "setattr",
-						SELINUX_SETATTR },
-						{ "relabelfrom", SELINUX_RELABEL_FROM }, { "relabelto",
-								SELINUX_RELABEL_TO },
-						{ "select", SELINUX_SELECT },
-						{ "update", SELINUX_UPDATE },
-						{ "insert", SELINUX_INSERT }, } }, { "db_tuple",
-				SELINUX_DB_TUPLE,
-				{ { "relabelfrom", SELINUX_RELABEL_FROM }, { "relabelto",
-						SELINUX_RELABEL_TO }, { "select", SELINUX_SELECT }, {
-						"update", SELINUX_UPDATE },
-						{ "insert", SELINUX_INSERT },
-						{ "delete", SELINUX_DELETE }, } }, };
+} access_vector[] = { { "db_database", SELINUX_DB_DATABASE, { { "create",
+		SELINUX_CREATE }, { "drop", SELINUX_DROP },
+		{ "getattr", SELINUX_GETATTR }, { "setattr", SELINUX_SETATTR }, {
+				"relabelfrom",
+				SELINUX_RELABEL_FROM }, { "relabelto",
+		SELINUX_RELABEL_TO }, } }, { "db_table",
+SELINUX_DB_TABLE, { { "create", SELINUX_CREATE }, { "drop",
+SELINUX_DROP }, { "getattr", SELINUX_GETATTR }, { "setattr", SELINUX_SETATTR },
+		{ "relabelfrom",
+		SELINUX_RELABEL_FROM }, { "relabelto",
+		SELINUX_RELABEL_TO }, { "select", SELINUX_SELECT }, { "update",
+				SELINUX_UPDATE }, { "insert", SELINUX_INSERT }, { "delete",
+				SELINUX_DELETE }, } }, { "db_column",
+SELINUX_DB_COLUMN, { { "create", SELINUX_CREATE }, { "drop", SELINUX_DROP }, {
+		"getattr", SELINUX_GETATTR }, { "setattr",
+SELINUX_SETATTR }, { "relabelfrom", SELINUX_RELABEL_FROM }, { "relabelto",
+SELINUX_RELABEL_TO }, { "select", SELINUX_SELECT },
+		{ "update", SELINUX_UPDATE }, { "insert", SELINUX_INSERT }, } }, {
+		"db_tuple",
+		SELINUX_DB_TUPLE, { { "relabelfrom", SELINUX_RELABEL_FROM }, {
+				"relabelto",
+				SELINUX_RELABEL_TO }, { "select", SELINUX_SELECT }, { "update",
+				SELINUX_UPDATE }, { "insert", SELINUX_INSERT }, { "delete",
+				SELINUX_DELETE }, } }, };
 
 #ifdef __cplusplus
 } /* extern "C" */

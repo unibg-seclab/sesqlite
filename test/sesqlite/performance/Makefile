@@ -5,6 +5,7 @@ NAME           := speedtest8
 NAME_SE        := $(NAME)_se
 TEST_DB        := test.db
 TEST_SQL       := test.sql
+SESQLITE_CONTEXT        := sesqlite_contexts
 SQLITE_OBJ     := sqlite3.o
 SE_SQLITE_OBJ  := sesqlite3.o
 
@@ -31,6 +32,7 @@ $(NAME_SE): $(OBJS) $(SE_SQLITE_OBJ)
 $(SE_SQLITE_OBJ):
 	@make performance-selinux -C $(TOP)
 	cp $(TOP)/build/sqlite3.o ./$(SE_SQLITE_OBJ)
+	cp $(TOP)/test/sesqlite/policy/$(SESQLITE_CONTEXT) ./$(SESQLITE_CONTEXT)
 
 $(SQLITE_OBJ):
 	@make performance -C $(TOP)

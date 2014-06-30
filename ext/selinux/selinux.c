@@ -393,7 +393,7 @@ static void selinuxCheckAccessFunction(sqlite3_context *context, int argc,
 		NULL /* auxiliary audit data */
 		);
 		seSQLiteHashInsert(&avc, key, sizeof(key), &rc);
-	}else
+	} else
 		rc = 0;
 	sqlite3_free(key);
 #else
@@ -414,19 +414,43 @@ static void selinuxCheckAccessFunction(sqlite3_context *context, int argc,
 	sqlite3_result_int(context, rc == 0);
 }
 
+/* function to insert a new_node in a list. Note that this
+ function expects a pointer to head_ref as this can modify the
+ head of the input linked list (similar to push())*/
+void sortedInsert(struct sesqlite_context_element** head_ref,
+		struct sesqlite_context_element* new_node) {
+	struct sesqlite_context_element* current;
+
+	/* Special case for the head end */
+	if (*head_ref == NULL
+			|| strcasecmp((*head_ref)->origin, new_node->origin) <= 0) {
+		new_node->next = *head_ref;
+		*head_ref = new_node;
+	} else {
+		/* Locate the node before the point of insertion */
+		current = *head_ref;
+		while (current->next != NULL
+				&& strcasecmp(current->next->origin, new_node->origin) > 0) {
+			current = current->next;
+		}
+		new_node->next = current->next;
+		current->next = new_node;
+	}
+}
+
 /**
  *
  */
 int initializeContext(sqlite3 *db) {
 	int rc = SQLITE_OK;
 	int fd;
-	int n_line, ntable_line, ncolumn_line, ntuple_line;
+	int n_line, ndb_line, ntable_line, ncolumn_line, ntuple_line;
 	char line[255];
 	char *p, *token, *stoken;
 	FILE* fp = NULL;
 
 	/* open the sqlite_contexts configuration file*/
-	fp = fopen("../test/sesqlite/policy/sesqlite_contexts", "r");
+	fp = fopen("./sesqlite_contexts", "r");
 
 	if (fd == -1) {
 		fprintf(stderr, "Error. Unable to open '%s' configuration file.", "");
@@ -435,35 +459,41 @@ int initializeContext(sqlite3 *db) {
 
 	sesqlite_contexts = (struct sesqlite_context*) malloc(
 			sizeof(struct sesqlite_context));
+	sesqlite_contexts->db_context = NULL;
 	sesqlite_contexts->table_context = NULL;
 	sesqlite_contexts->column_context = NULL;
 	sesqlite_contexts->tuple_context = NULL;
 
 	n_line = 0;
+	ndb_line = 0;
 	ntable_line = 0;
 	ncolumn_line = 0;
 	ntuple_line = 0;
-	while (fgets(line, sizeof line - 1, fp)) {
-		p = line;
-		while (isspace(*p))
-			p++;
-		if (*p == '#' || *p == 0)
-			continue;
+//	while (fgets(line, sizeof line - 1, fp)) {
+//		p = line;
+//		while (isspace(*p))
+//			p++;
+//		if (*p == '#' || *p == 0)
+//			continue;
+//
+//		token = strtok(p, " \t");
+//		if (!strcasecmp(token, "db_database"))
+//			ndb_line++;
+//		else if (!strcasecmp(token, "db_table"))
+//			ntable_line++;
+//		else if (!strcasecmp(token, "db_column"))
+//			ncolumn_line++;
+//		else if (!strcasecmp(token, "db_tuple"))
+//			ntuple_line++;
+//		else {
+//			fprintf(stderr,
+//					"Error, unable to recognize '%s' in sesqlite_context file.\n",
+//					token);
+//		}
+//		n_line++;
+//	}
+//	rewind(fp);
 
-		token = strtok(p, " \t");
-		if (!strcasecmp(token, "db_table"))
-			ntable_line++;
-		else if (!strcasecmp(token, "db_column"))
-			ncolumn_line++;
-		else if (!strcasecmp(token, "db_tuple"))
-			ntuple_line++;
-		else {
-			fprintf(stderr, "Not recognized!!!");
-		}
-		n_line++;
-	}
-
-	rewind(fp);
 	while (fgets(line, sizeof line - 1, fp)) {
 		if (line[strlen(line) - 1] == '\n')
 			line[strlen(line) - 1] = 0;
@@ -474,143 +504,135 @@ int initializeContext(sqlite3 *db) {
 			continue;
 
 		token = strtok(p, " \t");
-		if (!strcasecmp(token, "db_table")) {
-			if (sesqlite_contexts->table_context == NULL) {
-				sesqlite_contexts->table_context =
-						(struct sesqlite_context_element*) malloc(
-								sizeof(struct sesqlite_context_element));
-				token = strtok(NULL, " \t");
-				char *con = strtok(NULL, " \t");
-				sesqlite_contexts->table_context->security_context = strdup(
-						con);
+		if (!strcasecmp(token, "db_database")) {
+			struct sesqlite_context_element *new;
+			new = (struct sesqlite_context_element*) malloc(
+					sizeof(struct sesqlite_context_element));
+			new->next = NULL;
 
-				stoken = strtok(token, ".");
-				sesqlite_contexts->table_context->fparam = strdup(stoken);
-				stoken = strtok(NULL, ".");
-				sesqlite_contexts->table_context->sparam = strdup(stoken);
+			token = strtok(NULL, " \t");
+			new->origin = strdup(token);
+			char *con = strtok(NULL, " \t");
+			new->security_context = strdup(con);
+			new->fparam = strdup(token);
+			new->sparam = strdup(token);
+			new->tparam = strdup(token);
 
-				sesqlite_contexts->table_context->next = NULL;
+			sortedInsert(&sesqlite_contexts->db_context, new);
+			ndb_line++;
 
-			} else {
-				struct sesqlite_context_element *new;
-				new = (struct sesqlite_context_element*) malloc(
-						sizeof(struct sesqlite_context_element));
-				new->next = NULL;
+		} else if (!strcasecmp(token, "db_table")) {
 
-				token = strtok(NULL, " \t");
-				char *con = strtok(NULL, " \t");
-				new->security_context = strdup(con);
-				stoken = strtok(token, ".");
-				new->fparam = strdup(stoken);
-				stoken = strtok(NULL, ".");
-				new->sparam = strdup(stoken);
+			struct sesqlite_context_element *new;
+			new = (struct sesqlite_context_element*) malloc(
+					sizeof(struct sesqlite_context_element));
+			new->next = NULL;
 
-				new->next = sesqlite_contexts->table_context;
-				sesqlite_contexts->table_context = new;
-			}
+			token = strtok(NULL, " \t");
+			new->origin = strdup(token);
+			char *con = strtok(NULL, " \t");
+			new->security_context = strdup(con);
+			stoken = strtok(token, ".");
+			new->fparam = strdup(stoken);
+			stoken = strtok(NULL, ".");
+			new->sparam = strdup(stoken);
+			new->tparam = NULL;
+
+			sortedInsert(&sesqlite_contexts->table_context, new);
+			ntable_line++;
 
 		} else if (!strcasecmp(token, "db_column")) {
-			if (sesqlite_contexts->column_context == NULL) {
-				sesqlite_contexts->column_context =
-						(struct sesqlite_context_element*) malloc(
-								sizeof(struct sesqlite_context_element));
-				token = strtok(NULL, " \t");
-				char *con = strtok(NULL, " \t");
-				sesqlite_contexts->column_context->security_context = strdup(
-						con);
 
-				stoken = strtok(token, ".");
-				sesqlite_contexts->column_context->fparam = strdup(stoken);
-				stoken = strtok(NULL, ".");
-				sesqlite_contexts->column_context->sparam = strdup(stoken);
+			struct sesqlite_context_element *new;
+			new = (struct sesqlite_context_element*) malloc(
+					sizeof(struct sesqlite_context_element));
+			new->next = NULL;
 
-				sesqlite_contexts->column_context->next = NULL;
+			token = strtok(NULL, " \t");
+			new->origin = strdup(token);
+			char *con = strtok(NULL, " \t");
+			new->security_context = strdup(con);
+			stoken = strtok(token, ".");
+			new->fparam = strdup(stoken);
+			stoken = strtok(NULL, ".");
+			new->sparam = strdup(stoken);
+			stoken = strtok(NULL, ".");
+			new->tparam = strdup(stoken);
 
-			} else {
-				struct sesqlite_context_element *new;
-				new = (struct sesqlite_context_element*) malloc(
-						sizeof(struct sesqlite_context_element));
-				new->next = NULL;
-
-				token = strtok(NULL, " \t");
-				char *con = strtok(NULL, " \t");
-				new->security_context = strdup(con);
-				stoken = strtok(token, ".");
-				new->fparam = strdup(stoken);
-				stoken = strtok(NULL, ".");
-				new->sparam = strdup(stoken);
-
-				new->next = sesqlite_contexts->column_context;
-				sesqlite_contexts->column_context = new;
-			}
+			sortedInsert(&sesqlite_contexts->column_context, new);
+			ncolumn_line++;
 
 		} else if (!strcasecmp(token, "db_tuple")) {
-			if (sesqlite_contexts->tuple_context == NULL) {
-				sesqlite_contexts->tuple_context =
-						(struct sesqlite_context_element*) malloc(
-								sizeof(struct sesqlite_context_element));
-				token = strtok(NULL, " \t");
-				char *con = strtok(NULL, " \t");
-				sesqlite_contexts->tuple_context->security_context = strdup(
-						con);
 
-				stoken = strtok(token, ".");
-				sesqlite_contexts->tuple_context->fparam = strdup(stoken);
-				stoken = strtok(NULL, ".");
-				sesqlite_contexts->tuple_context->sparam = strdup(stoken);
+			struct sesqlite_context_element *new;
+			new = (struct sesqlite_context_element*) malloc(
+					sizeof(struct sesqlite_context_element));
+			new->next = NULL;
 
-				sesqlite_contexts->tuple_context->next = NULL;
+			token = strtok(NULL, " \t");
+			new->origin = strdup(token);
+			char *con = strtok(NULL, " \t");
+			new->security_context = strdup(con);
+			stoken = strtok(token, ".");
+			new->fparam = strdup(stoken);
+			stoken = strtok(NULL, ".");
+			new->sparam = strdup(stoken);
+			new->tparam = NULL;
 
-			} else {
-				struct sesqlite_context_element *new;
-				new = (struct sesqlite_context_element*) malloc(
-						sizeof(struct sesqlite_context_element));
-				new->next = NULL;
-
-				token = strtok(NULL, " \t");
-				char *con = strtok(NULL, " \t");
-				new->security_context = strdup(con);
-				stoken = strtok(token, ".");
-				new->fparam = strdup(stoken);
-				stoken = strtok(NULL, ".");
-				new->sparam = strdup(stoken);
-
-				new->next = sesqlite_contexts->tuple_context;
-				sesqlite_contexts->tuple_context = new;
-			}
+			sortedInsert(&sesqlite_contexts->tuple_context, new);
+			ntuple_line++;
 
 		} else {
-			//fprintf(stderr, "Error!!!\n");
+			fprintf(stderr,
+					"Error, unable to recognize '%s' in sesqlite_context file.\n",
+					token);
 		}
 	}
 
-	//TODO sort the contexts, more specific >> less specific
-
+//	fprintf(stdout, "\n******DATABASE\n");
 //	struct sesqlite_context_element *pp;
-//	pp = sesqlite_contexts->table_context;
+//	pp = sesqlite_contexts->db_context;
 //	while (pp != NULL) {
+//		fprintf(stdout, "Origin: %s\n", pp->origin);
 //		fprintf(stdout, "Fparam: %s\n", pp->fparam);
 //		fprintf(stdout, "Sparam: %s\n", pp->sparam);
+//		fprintf(stdout, "Tparam: %s\n", pp->tparam);
 //		fprintf(stdout, "SecCon: %s\n", pp->security_context);
 //		pp = pp->next;
 //	}
 //
-//	fprintf(stdout, "\n");
+//	fprintf(stdout, "\n******TABLE\n");
+//	pp = NULL;
+//	pp = sesqlite_contexts->table_context;
+//	while (pp != NULL) {
+//		fprintf(stdout, "Origin: %s\n", pp->origin);
+//		fprintf(stdout, "Fparam: %s\n", pp->fparam);
+//		fprintf(stdout, "Sparam: %s\n", pp->sparam);
+//		fprintf(stdout, "Tparam: %s\n", pp->tparam);
+//		fprintf(stdout, "SecCon: %s\n", pp->security_context);
+//		pp = pp->next;
+//	}
+//
+//	fprintf(stdout, "\n******COLUMN\n");
 //	pp = NULL;
 //	pp = sesqlite_contexts->column_context;
 //	while (pp != NULL) {
+//		fprintf(stdout, "Origin: %s\n", pp->origin);
 //		fprintf(stdout, "Fparam: %s\n", pp->fparam);
 //		fprintf(stdout, "Sparam: %s\n", pp->sparam);
+//		fprintf(stdout, "Tparam: %s\n", pp->tparam);
 //		fprintf(stdout, "SecCon: %s\n", pp->security_context);
 //		pp = pp->next;
 //	}
 //
-//	fprintf(stdout, "\n");
+//	fprintf(stdout, "\n******TUPLE\n");
 //	pp = NULL;
 //	pp = sesqlite_contexts->tuple_context;
 //	while (pp != NULL) {
+//		fprintf(stdout, "Origin: %s\n", pp->origin);
 //		fprintf(stdout, "Fparam: %s\n", pp->fparam);
 //		fprintf(stdout, "Sparam: %s\n", pp->sparam);
+//		fprintf(stdout, "Tparam: %s\n", pp->tparam);
 //		fprintf(stdout, "SecCon: %s\n", pp->security_context);
 //		pp = pp->next;
 //	}
@@ -634,16 +656,19 @@ int initializeContext(sqlite3 *db) {
 
 				if (result != NULL) {
 					sqlite3_bind_text(sesqlite_stmt, 1, result, strlen(result),
+					SQLITE_TRANSIENT);
+					sqlite3_bind_text(sesqlite_stmt, 2, pDb->zName,
+							strlen(pDb->zName), SQLITE_TRANSIENT);
+					sqlite3_bind_text(sesqlite_stmt, 3, pTab->zName,
+							strlen(pTab->zName),
 							SQLITE_TRANSIENT);
-					sqlite3_bind_text(sesqlite_stmt, 2, pTab->zName,
-							strlen(pTab->zName), SQLITE_TRANSIENT);
-					sqlite3_bind_text(sesqlite_stmt, 3, "", strlen(""),
-							SQLITE_TRANSIENT);
+					sqlite3_bind_text(sesqlite_stmt, 4, "", strlen(""),
+					SQLITE_TRANSIENT);
 
 					rc = sqlite3_step(sesqlite_stmt);
 					rc = sqlite3_reset(sesqlite_stmt);
 
-					rc = insertKey(pTab->zName, NULL, result);
+					rc = insertKey(pDb->zName, pTab->zName, NULL, result);
 					result = NULL;
 				}
 
@@ -658,15 +683,18 @@ int initializeContext(sqlite3 *db) {
 						if (result != NULL) {
 							sqlite3_bind_text(sesqlite_stmt, 1, result,
 									strlen(result), SQLITE_TRANSIENT);
-							sqlite3_bind_text(sesqlite_stmt, 2, pTab->zName,
+							sqlite3_bind_text(sesqlite_stmt, 2, pDb->zName,
+									strlen(pDb->zName), SQLITE_TRANSIENT);
+							sqlite3_bind_text(sesqlite_stmt, 3, pTab->zName,
 									strlen(pTab->zName), SQLITE_TRANSIENT);
-							sqlite3_bind_text(sesqlite_stmt, 3, pCol->zName,
+							sqlite3_bind_text(sesqlite_stmt, 4, pCol->zName,
 									strlen(pCol->zName), SQLITE_TRANSIENT);
 
 							rc = sqlite3_step(sesqlite_stmt);
 							rc = sqlite3_reset(sesqlite_stmt);
 
-							rc = insertKey(pTab->zName, pCol->zName, result);
+							rc = insertKey(pDb->zName, pTab->zName, pCol->zName,
+									result);
 							result = NULL;
 						}
 					}
@@ -691,10 +719,12 @@ int computeTableContext(sqlite3 *db, char *dbName, char *tblName,
 		if (strcasecmp(dbName, p->fparam) == 0 || strcmp(p->fparam, "*") == 0) {
 			if (strcasecmp(tblName, p->sparam) == 0
 					|| strcmp(p->sparam, "*") == 0) {
-//				fprintf(stdout, "Database: %s, Table: %s, Context found: %s\n",
-//						dbName, tblName, p->security_context);
 				*res = p->security_context;
 				found = 1;
+#ifdef SQLITE_DEBUG
+				fprintf(stdout, "Database: %s, Table: %s, Context found: %s\n",
+						dbName, tblName, p->security_context);
+#endif
 			}
 		}
 		p = p->next;
@@ -715,11 +745,17 @@ int computeColumnContext(sqlite3 *db, char *dbName, char *tblName,
 		if (strcasecmp(dbName, p->fparam) == 0 || strcmp(p->fparam, "*") == 0) {
 			if (strcasecmp(tblName, p->sparam) == 0
 					|| strcmp(p->sparam, "*") == 0) {
-//				fprintf(stdout,
-//						"Database: %s, Table: %s, Column: %s, Context found: %s\n",
-//						dbName, tblName, colName, p->security_context);
-				*res = p->security_context;
-				found = 1;
+				if (strcasecmp(colName, p->tparam) == 0
+						|| strcmp(p->tparam, "*") == 0) {
+					*res = p->security_context;
+					found = 1;
+#ifdef SQLITE_DEBUG
+					fprintf(stdout,
+							"Database: %s, Table: %s, Column: %s, Context found: %s\n",
+							dbName, tblName, colName, p->security_context);
+#endif
+
+				}
 			}
 		}
 		p = p->next;
@@ -727,17 +763,24 @@ int computeColumnContext(sqlite3 *db, char *dbName, char *tblName,
 	return rc;
 }
 
-int insertKey(char *tName, char *cName, char *con) {
+/**
+ *
+ */
+int insertKey(char *dbName, char *tName, char *cName, char *con) {
 	int rc = SQLITE_OK;
 	char *key = NULL;
 	int length = 0;
 
 	if (cName == NULL) {
-		key = strdup(tName);
-	} else {
-		length = strlen(tName) + strlen(cName) + 1;
+		length = strlen(dbName) + strlen(tName);
 		key = sqlite3_malloc(length);
-		strcpy(key, tName);
+		strcpy(key, dbName);
+		strcat(key, tName);
+	} else {
+		length = strlen(dbName) + strlen(tName) + strlen(cName);
+		key = sqlite3_malloc(length);
+		strcpy(key, dbName);
+		strcat(key, tName);
 		strcat(key, cName);
 	}
 
@@ -797,12 +840,12 @@ int initializeSeSqliteObjects(sqlite3 *db) {
 
 		//TODO WHERE??
 		rc =
-				sqlite3_exec(db,
-						"CREATE TABLE IF NOT EXISTS selinux_context(security_context TEXT, name TEXT, column TEXT, PRIMARY KEY(name, column))",
-						NULL, NULL, NULL);
+		sqlite3_exec(db,
+		SELINUX_CONTEXT_TABLE,
+		NULL, NULL, NULL);
 
 		rc = sqlite3_prepare_v2(db,
-				"INSERT INTO selinux_context values(?1, ?2, ?3);", -1,
+				"INSERT INTO selinux_context values(?1, ?2, ?3, ?4);", -1,
 				&sesqlite_stmt, 0);
 
 		if (rc == SQLITE_OK)
@@ -891,8 +934,8 @@ int sqlite3SelinuxInit(sqlite3 *db) {
 // create the SQL function selinux_check_access
 	if (rc == SQLITE_OK) {
 		rc = sqlite3_create_function(db, "selinux_check_access", 4,
-				SQLITE_UTF8 /* | SQLITE_DETERMINISTIC */, 0,
-				selinuxCheckAccessFunction, 0, 0);
+		SQLITE_UTF8 /* | SQLITE_DETERMINISTIC */, 0, selinuxCheckAccessFunction,
+				0, 0);
 	}
 
 // set the authorizer
