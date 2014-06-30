@@ -20,7 +20,7 @@ test: $(NAME) $(TEST_SQL) clean_test_db
 	@./$(NAME) -quiet $(TEST_DB) $(TEST_SQL)
 
 test_se: $(NAME_SE) $(TEST_SQL) clean_test_db
-	@./$(NAME_SE) -quiet $(TEST_DB) $(TEST_SQL)
+	@./$(NAME_SE) $(TEST_DB) $(TEST_SQL)
 
 $(NAME): $(OBJS) $(SQLITE_OBJ)
 	gcc $(OBJS) $(SQLITE_OBJ) -o $(NAME) $(INCLUDES) $(LDFLAGS)
