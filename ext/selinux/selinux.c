@@ -42,8 +42,7 @@ static seSQLiteHash avc; /* HashMap*/
  */
 int getContext(const char *dbname, int tclass, const char *table,
 		const char *column, char **con) {
-// TODO another way would be to use a virtual table and query its structure.
-	auth_enabled = 0;
+
 	int rc = 0;
 	size_t length = 0;
 	char *res = NULL, *key = NULL;
@@ -52,12 +51,16 @@ int getContext(const char *dbname, int tclass, const char *table,
 	case 0: /* database */
 		break;
 	case 1: /* table */
-		key = strdup(table);
-		break;
-	case 2: /* column */
-		length = strlen(table) + strlen(column) + 1;
+		length = strlen(dbname) + strlen(table);
 		key = sqlite3_malloc(length);
-		strcpy(key, table);
+		strcpy(key, dbname);
+		strcat(key, table);
+		break;
+	case 2:
+		length = strlen(dbname) + strlen(table) + strlen(column);
+		key = sqlite3_malloc(length);
+		strcpy(key, dbname);
+		strcat(key, table);
 		strcat(key, column);
 		break;
 	default:
@@ -71,13 +74,10 @@ int getContext(const char *dbname, int tclass, const char *table,
 		getDefaultContext(con);
 
 #ifdef SQLITE_DEBUG
-	fprintf(stdout, "%s: table=%s, column=%s -> %sfound (%s)\n", (res != NULL ? "Hash hint" : "default_context"), table,
+	fprintf(stdout, "%s: db=%s, table=%s, column=%s -> %sfound (%s)\n", (res != NULL ? "Hash hint" : "default_context"), dbname, table,
 			(column ? column : "NULL"), (res != NULL ? "" : "not "), res);
 #endif
 
-	// TODO use dbname when multiple databases are supported by SeSqlite.
-
-	auth_enabled = 1;
 	sqlite3_free(key);
 	return rc;
 }
@@ -137,6 +137,42 @@ int checkAccess(const char *dbname, const char *table, const char *column,
 	return 0 == rc;
 }
 
+/**
+ * Scan all the columns and call checkAccess
+ */
+int checkAllColumns(sqlite3* pdb, const char *dbName, const char* tblName,
+		int type, int action) {
+
+	int rc = SQLITE_OK;
+	int i = -1; /* Database number */
+	int j;
+	Hash *pTbls;
+	HashElem *x;
+	Db *pDb;
+
+	for (i = (pdb->nDb - 1), pDb = &pdb->aDb[i]; i >= 0; i--, pDb--) {
+		if (strcmp(pdb->aDb[i].zName, dbName) && (!OMIT_TEMPDB || i != 1)) {
+			pTbls = &pdb->aDb[i].pSchema->tblHash;
+			for (x = sqliteHashFirst(pTbls); x; x = sqliteHashNext(x)) {
+				Table *pTab = sqliteHashData(x);
+				if (pTab) {
+					Column *pCol;
+					for (j = 0, pCol = pTab->aCol; j < pTab->nCol;
+							j++, pCol++) {
+						if (!checkAccess(dbName, tblName, pTab->aCol->zName,
+								type, action)) {
+							rc = SQLITE_DENY;
+						}
+
+					}
+				}
+			}
+		}
+	}
+
+	return rc;
+}
+
 /*
  * Authorizer to be set with sqlite3_set_authorizer that checks the SELinux
  * permission at schema level (tables and columns).
@@ -144,6 +180,8 @@ int checkAccess(const char *dbname, const char *table, const char *column,
 int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 		const char *arg2, const char *dbname, const char *source) {
 	int rc = SQLITE_OK;
+
+	sqlite3 *pdb = (sqlite3*) pUserData;
 
 	if (!auth_enabled)
 		return rc;
@@ -213,10 +251,9 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 			rc = SQLITE_DENY;
 		}
 
-		//MANCA sqlite3 *db
-		//Table *pTable = sqlite3FindTable(db, arg1, dbname);
+		rc = checkAllColumns(pdb, dbname, arg1, SELINUX_DB_COLUMN,
+		SELINUX_DROP);
 
-		// TODO check delete permission on all columns.
 		break;
 
 	case SQLITE_DROP_INDEX: /* Index Name    | Table Name      */
@@ -231,12 +268,24 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 		SELINUX_DROP)) {
 			rc = SQLITE_DENY;
 		}
+
+		rc = checkAllColumns(pdb, dbname, arg1, SELINUX_DB_COLUMN,
+		SELINUX_DROP);
+
 		break;
 
 	case SQLITE_DROP_TEMP_INDEX: /* Index Name    | Table Name      */
 		break;
 
 	case SQLITE_DROP_TEMP_TABLE: /* Table Name    | NULL            */
+		if (!checkAccess(dbname, arg1, NULL, SELINUX_DB_TABLE,
+		SELINUX_DROP)) {
+			rc = SQLITE_DENY;
+		}
+
+		rc = checkAllColumns(pdb, dbname, arg1, SELINUX_DB_COLUMN,
+		SELINUX_DROP);
+
 		break;
 
 	case SQLITE_DROP_TEMP_TRIGGER: /* Trigger Name  | Table Name      */
@@ -261,6 +310,10 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 		SELINUX_DROP)) {
 			rc = SQLITE_DENY;
 		}
+
+		rc = checkAllColumns(pdb, dbname, arg1, SELINUX_DB_COLUMN,
+				SELINUX_DROP);
+
 		break;
 
 	case SQLITE_INSERT: /* Table Name    | NULL            */
@@ -268,7 +321,10 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 		SELINUX_INSERT)) {
 			rc = SQLITE_DENY;
 		}
-		// TODO check insert permission on all columns.
+
+		rc = checkAllColumns(pdb, dbname, arg1, SELINUX_DB_COLUMN,
+		SELINUX_INSERT);
+
 		break;
 
 	case SQLITE_PRAGMA: /* Pragma Name   | 1st arg or NULL */
@@ -301,10 +357,13 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 		SELINUX_UPDATE)) {
 			rc = SQLITE_DENY;
 		}
+
 		break;
 
 	case SQLITE_ATTACH: /* Filename      | NULL            */
 		// TODO change when multiple databases are supported by SeSqlite.
+		//modify access vector policy
+		//UNION selinux_context
 		if ((arg1 != NULL) && (strlen(arg1) != 0)) {
 			fprintf(stderr,
 					"SeSqlite does not support multiple databases yet. [db filename: %s]\n",
@@ -344,6 +403,10 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 		SELINUX_DROP)) {
 			rc = SQLITE_DENY;
 		}
+
+		rc = checkAllColumns(pdb, dbname, arg1, SELINUX_DB_COLUMN,
+		SELINUX_DROP);
+
 		break;
 
 	case SQLITE_FUNCTION: /* NULL          | Function Name   */
@@ -443,18 +506,16 @@ void sortedInsert(struct sesqlite_context_element** head_ref,
  */
 int initializeContext(sqlite3 *db) {
 	int rc = SQLITE_OK;
-	int fd;
 	int n_line, ndb_line, ntable_line, ncolumn_line, ntuple_line;
 	char line[255];
 	char *p, *token, *stoken;
 	FILE* fp = NULL;
 
-	/* open the sqlite_contexts configuration file*/
 	fp = fopen("./sesqlite_contexts", "r");
-
-	if (fd == -1) {
-		fprintf(stderr, "Error. Unable to open '%s' configuration file.", "");
-		return SQLITE_ERROR;
+	if (fp == NULL) {
+		fprintf(stderr, "Error. Unable to open '%s' configuration file.\n",
+				"sesqlite_contexts");
+		return SQLITE_OK;
 	}
 
 	sesqlite_contexts = (struct sesqlite_context*) malloc(
@@ -940,7 +1001,9 @@ int sqlite3SelinuxInit(sqlite3 *db) {
 
 // set the authorizer
 	if (rc == SQLITE_OK) {
-		rc = sqlite3_set_authorizer(db, selinuxAuthorizer, NULL);
+
+		rc = sqlite3_set_authorizer(db, selinuxAuthorizer, db);
+
 	}
 
 	return rc;

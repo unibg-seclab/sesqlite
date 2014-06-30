@@ -5,9 +5,11 @@ CONFOPTS		= --enable-option-checking=fatal --enable-load-extension
 NO_THREADSAFE	= --enable-threadsafe=no
 ENABLE_SELINUX	= --enable-selinux
 ENABLE_DEBUG	= --enable-debug
+SESQLITE_CONTEXT        := sesqlite_contexts
 
 build:
 	mkdir -p build
+	cp test/sesqlite/policy/$(SESQLITE_CONTEXT) ./$(SESQLITE_CONTEXT)
 	cd build; $(CONF) $(CONFOPTS); make
 
 all:
