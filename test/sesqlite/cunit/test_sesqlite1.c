@@ -238,11 +238,18 @@ int main(int argc, char **argv) {
 		return CU_get_error();
 	}
 
-	/* Run all tests using the CUnit Console interface */
-	CU_console_run_tests();
+	if (argc > 1 && (strcmp(argv[1], "-auto") == 0)) {
+		/* Run all test using the CUnit automated interface (output to xml file) */
+		CU_set_output_filename( "cunit_testall" );
+		//CU_list_tests_to_file();
+		CU_automated_run_tests();
+		printf("[%u tests failed]\n\n", CU_get_number_of_failures());
+	} else {
+		/* Run all tests using the CUnit Console interface */
+		CU_console_run_tests();
+	}
+
 	CU_cleanup_registry();
 	return CU_get_error();
-
-	return 0;
 
 }

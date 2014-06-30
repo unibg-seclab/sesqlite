@@ -1,0 +1,5 @@
+*.o
+*.xml
+
+test_sesqlite
+sesqlite_contexts
