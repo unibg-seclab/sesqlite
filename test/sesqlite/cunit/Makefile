@@ -18,13 +18,13 @@ sqlite3.o:
 	@ make all -C $(TOP)
 	cp $(TOP)/build/sqlite3.o .
 
-sesqlite_contexts:
-	cp ../policy/$@
+$(CONTEXTS):
+	cp ../policy/$@ .
 
 $(NAME): $(OBJS)
 	gcc $(OBJS) -o $(NAME) $(LDFLAGS)
 
-$(CUNIT_XML): $(sesqlite_contexts)
+$(CUNIT_XML): $(CONTEXTS)
 	@- ./$(NAME) -auto
 
 $(JUNIT_XML) test: $(NAME) $(CUNIT_XML)
