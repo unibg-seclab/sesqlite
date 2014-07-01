@@ -103,7 +103,7 @@ int checkAccess(const char *dbname, const char *table, const char *column,
 	//check
 	assert(tclass <= NELEMS(access_vector));
 	security_context_t tcon;
-	int rc;
+	int rc = -1;
 	int* res = NULL;
 	char *key;
 
@@ -117,11 +117,11 @@ int checkAccess(const char *dbname, const char *table, const char *column,
 	strcat(key, tcon);
 	strcat(key, access_vector[tclass].c_name);
 	strcat(key, access_vector[tclass].perm[perm].p_name);
-	res = seSQLiteHashFind(&avc, key, sizeof(key));
+	//res = seSQLiteHashFind(&avc, key, sizeof(key));
 	if (res == NULL) {
 		rc = selinux_check_access(scon, tcon, access_vector[tclass].c_name,
 				access_vector[tclass].perm[perm].p_name, NULL);
-		seSQLiteHashInsert(&avc, key, sizeof(key), &rc);
+		//seSQLiteHashInsert(&avc, key, sizeof(key), &rc);
 	} else {
 		rc = 0;
 	}
@@ -150,22 +150,12 @@ int checkAllColumns(sqlite3* pdb, const char *dbName, const char* tblName,
 	HashElem *x;
 	Db *pDb;
 
-	for (i = (pdb->nDb - 1), pDb = &pdb->aDb[i]; i >= 0; i--, pDb--) {
-		if (strcmp(pdb->aDb[i].zName, dbName) && (!OMIT_TEMPDB || i != 1)) {
-			pTbls = &pdb->aDb[i].pSchema->tblHash;
-			for (x = sqliteHashFirst(pTbls); x; x = sqliteHashNext(x)) {
-				Table *pTab = sqliteHashData(x);
-				if (pTab) {
-					Column *pCol;
-					for (j = 0, pCol = pTab->aCol; j < pTab->nCol;
-							j++, pCol++) {
-						if (!checkAccess(dbName, tblName, pTab->aCol->zName,
-								type, action)) {
-							rc = SQLITE_DENY;
-						}
-
-					}
-				}
+	Table *pTab = sqlite3FindTable(pdb, tblName, dbName);
+	if (pTab) {
+		Column *pCol;
+		for (j = 0, pCol = pTab->aCol; j < pTab->nCol; j++, pCol++) {
+			if (!checkAccess(dbName, tblName, pCol->zName, type, action)) {
+				rc = SQLITE_DENY;
 			}
 		}
 	}
@@ -312,7 +302,7 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 		}
 
 		rc = checkAllColumns(pdb, dbname, arg1, SELINUX_DB_COLUMN,
-				SELINUX_DROP);
+		SELINUX_DROP);
 
 		break;
 
@@ -342,11 +332,10 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 		SELINUX_SELECT)) {
 			rc = SQLITE_DENY;
 		}
-		;
+
 		break;
 
 	case SQLITE_SELECT: /* NULL          | NULL            */
-		//check the table
 		break;
 
 	case SQLITE_TRANSACTION: /* Operation     | NULL            */

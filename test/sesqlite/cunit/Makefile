@@ -11,16 +11,20 @@ CUNIT_XML		:= cunit_testall-Results.xml		# do not change
 JUNIT_XML		:= junit_testall-Results.xml
 CUNIT_TO_JUNIT	:= cunit-to-junit.xsl
 CONTEXTS		:= sesqlite_contexts
+DB_ORIGIN		:= test.db.0
+DB_TEST		:= test.db
 
 all: test
 
 sqlite3.o:
 	@ make all -C $(TOP)
 	cp $(TOP)/build/sqlite3.o .
+	cp ./$(DB_ORIGIN) ./$(DB_TEST)
+	cp $(TOP)/test/sesqlite/policy/$(CONTEXTS) ./$(CONTEXTS)
 
 $(CONTEXTS):
 	cp ../policy/$@ .
-
+	
 $(NAME): $(OBJS)
 	gcc $(OBJS) -o $(NAME) $(LDFLAGS)
 
@@ -31,7 +35,7 @@ $(JUNIT_XML) test: $(NAME) $(CUNIT_XML)
 	@ xsltproc --novalid -o $(JUNIT_XML) $(CUNIT_TO_JUNIT) $(CUNIT_XML)
 
 clean:
-	@- $(RM) $(NAME) $(OBJS) $(CUNIT_XML) $(JUNIT_XML)
+	@- $(RM) $(NAME) $(OBJS) $(CUNIT_XML) $(JUNIT_XML) $(DB_TEST)
 
 distclean: clean
 	@ make clean -C $(TOP)
