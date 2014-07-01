@@ -49,7 +49,7 @@ $(TEST_SQL):
 
 clean: clean_test_db
 	@- $(RM) $(NAME) $(NAME_SE)
-	@- $(RM) $(OBJS) $(SE_SQLITE_OBJ) $(SQLITE_OBJ)
+	@- $(RM) $(OBJS) $(SE_SQLITE_OBJ) $(SQLITE_OBJ) $(CONTEXTS)
 	@- $(RM) -rf results
 
 clean_test_db:

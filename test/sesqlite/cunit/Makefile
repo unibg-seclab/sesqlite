@@ -35,7 +35,7 @@ $(JUNIT_XML) test: $(NAME) $(CUNIT_XML)
 	@ xsltproc --novalid -o $(JUNIT_XML) $(CUNIT_TO_JUNIT) $(CUNIT_XML)
 
 clean:
-	@- $(RM) $(NAME) $(OBJS) $(CUNIT_XML) $(JUNIT_XML) $(DB_TEST)
+	@- $(RM) $(NAME) $(OBJS) $(CUNIT_XML) $(JUNIT_XML) $(DB_TEST) $(CONTEXTS)
 
 distclean: clean
 	@ make clean -C $(TOP)

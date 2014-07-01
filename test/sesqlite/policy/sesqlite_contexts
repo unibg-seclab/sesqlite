@@ -18,7 +18,6 @@ db_table	*.*	system_u:object_r:other_t
 
 # <column>
 db_column	*.sqlite_master.*	unconfined_u:object_r:sesqlite_public:s0
-db_column	*.sqlite_master.sql	unconfined_u:object_r:sesqlite_sql_public:s0
 db_column	*.selinux_context.*	unconfined_u:object_r:sesqlite_public:s0
 db_column	*.*.*	unconfined_u:object_r:sesqlite_public:s0
 
