@@ -3,6 +3,7 @@ module sqlite 1.0.0;
 require {
 	attribute domain;
 	type unconfined_t;
+	type initrc_t;
 	class db_column { select update insert drop };
 	class db_table { create select update insert delete setattr getattr drop };
 }
@@ -17,3 +18,11 @@ allow unconfined_t sesqlite_public:db_table { create select update insert delete
 allow unconfined_t app_data_db_c:db_column { insert };
 allow unconfined_t app_data_db_t:db_table { create select insert delete };
 allow unconfined_t app_data_db_t:db_column { select update insert drop };
+
+allow initrc_t sesqlite_public:db_column { select update insert drop };
+allow initrc_t sesqlite_public:db_table { create select update insert delete setattr getattr drop };
+
+allow initrc_t app_data_db_c:db_column { insert };
+allow initrc_t app_data_db_t:db_table { create select insert delete };
+allow initrc_t app_data_db_t:db_column { select update insert drop };
+
