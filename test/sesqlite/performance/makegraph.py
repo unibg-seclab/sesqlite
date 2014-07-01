@@ -2,10 +2,13 @@
 
 from collections import defaultdict
 from os.path import basename
-import matplotlib.pyplot as plt
 import numpy as np
 import glob
 import re
+
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 files = glob.glob('results/*.out')
 width = .8 / len(files)

@@ -1,4 +1,4 @@
-.PHONY: all clean performance performance-selinux test
+.PHONY: all clean cleanall performance performance-selinux test
 
 CONF			 = ../configure
 CONFOPTS		 = --enable-option-checking=fatal --enable-load-extension
@@ -19,15 +19,15 @@ test:
 	make fresh -C test/sesqlite/cunit
 	make graph -C test/sesqlite/performance
 
-performance: cleanbuild
+performance: clean
 	make build CONFOPTS="$(CONFOPTS) $(NO_THREADSAFE)"
 
-performance-selinux: cleanbuild
+performance-selinux: clean
 	make build CONFOPTS="$(CONFOPTS) $(NO_THREADSAFE) $(ENABLE_SELINUX)"
 
-cleanbuild:
+clean:
 	@- $(RM) -rf build
 
-clean: cleanbuild
+cleanall: clean
 	@ make clean -C test/sesqlite/cunit
 	@ make clean -C test/sesqlite/performance

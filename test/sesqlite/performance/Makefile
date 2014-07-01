@@ -15,6 +15,8 @@ OBJS			:= $(SRCS:.c=.o)
 INCLUDES		:= -I$(TOP)/src
 LDFLAGS			+= -ldl
 
+BASE_OUT		 = results/base.out
+SE_SQLITE_OUT	 = results/sesqlite.out
 
 all: $(NAME) $(NAME_SE) $(TEST_SQL)
 
@@ -53,19 +55,19 @@ clean: clean_test_db
 clean_test_db:
 	@- $(RM) $(TEST_DB)*
 
-graph: | all results/base.out results/sesqlite.out
-	@ python makegraph.py
+graph: $(BASE_OUT) $(SE_SQLITE_OUT)
+	@- python makegraph.py
 
 results:
 	@ mkdir results
 
-results/base.out: results
+$(BASE_OUT): results $(TEST_SQL) $(NAME)
 	@ for i in `seq 1 $(n)` ; \
 	    do echo "testing base ($$i) ..." ; \
 	    make test $>> $@ ; \
 	done
 
-results/sesqlite.out: results
+$(SE_SQLITE_OUT): results $(TEST_SQL) $(NAME_SE)
 	@ for i in `seq 1 $(n)` ;\
 	    do echo "testing sesqlite ($$i) ..." ; \
 	    make test_se $>> $@ ; \
