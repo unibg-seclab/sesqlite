@@ -64,11 +64,11 @@ results:
 $(BASE_OUT): results $(TEST_SQL) $(NAME)
 	@ for i in `seq 1 $(n)` ; \
 	    do echo "testing base ($$i) ..." ; \
-	    make test $>> $@ ; \
+	    make test >> $@ ; \
 	done
 
 $(SE_SQLITE_OUT): results $(TEST_SQL) $(NAME_SE)
 	@ for i in `seq 1 $(n)` ;\
 	    do echo "testing sesqlite ($$i) ..." ; \
-	    make test_se $>> $@ ; \
+	    make test_se >> $@ ; \
 	done
