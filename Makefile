@@ -1,15 +1,15 @@
 .PHONY: all clean performance performance-selinux test
 
-CONF			= ../configure
-CONFOPTS		= --enable-option-checking=fatal --enable-load-extension
-NO_THREADSAFE	= --enable-threadsafe=no
-ENABLE_SELINUX	= --enable-selinux
-ENABLE_DEBUG	= --enable-debug
-SESQLITE_CONTEXT        := sesqlite_contexts
+CONF			 = ../configure
+CONFOPTS		 = --enable-option-checking=fatal --enable-load-extension
+NO_THREADSAFE	 = --enable-threadsafe=no
+ENABLE_SELINUX	 = --enable-selinux
+ENABLE_DEBUG	 = --enable-debug
+CONTEXTS		:= sesqlite_contexts
 
 build:
 	mkdir -p build
-	cp test/sesqlite/policy/$(SESQLITE_CONTEXT) ./$(SESQLITE_CONTEXT)
+	cp test/sesqlite/policy/$(CONTEXTS) build
 	cd build; $(CONF) $(CONFOPTS); make
 
 all:
@@ -17,14 +17,17 @@ all:
 
 test:
 	make fresh -C test/sesqlite/cunit
+	make graph -C test/sesqlite/performance
 
-performance: clean
+performance: cleanbuild
 	make build CONFOPTS="$(CONFOPTS) $(NO_THREADSAFE)"
 
-performance-selinux: clean
+performance-selinux: cleanbuild
 	make build CONFOPTS="$(CONFOPTS) $(NO_THREADSAFE) $(ENABLE_SELINUX)"
 
-clean:
+cleanbuild:
 	@- $(RM) -rf build
+
+clean: cleanbuild
 	@ make clean -C test/sesqlite/cunit
 	@ make clean -C test/sesqlite/performance
