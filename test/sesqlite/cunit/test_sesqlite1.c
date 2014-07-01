@@ -196,24 +196,24 @@ void test_select_table(void) {
 
 void test_update_table(void) {
 
-//	CU_ASSERT(
-//			sqlite3_exec(db, "UPDATE t1 SET a='z';", 0, 0, 0) == SQLITE_OK);
-//
-//	CU_ASSERT(
-//			sqlite3_exec(db, "UPDATE t2 SET d='z';", 0, 0, 0) == SQLITE_AUTH);
-//	CU_ASSERT(
-//			sqlite3_exec(db, "UPDATE t2 SET e='z';", 0, 0, 0) == SQLITE_AUTH);
-//
-//	CU_ASSERT(
-//			sqlite3_exec(db, "UPDATE t3 SET f='z';", 0, 0, 0) == SQLITE_OK);
-//	CU_ASSERT(
-//			sqlite3_exec(db, "UPDATE t3 SET g='z';", 0, 0, 0) == SQLITE_AUTH);
+	CU_ASSERT(
+			sqlite3_exec(db, "UPDATE t1 SET a='z';", 0, 0, 0) == SQLITE_OK);
+
+	CU_ASSERT(
+			sqlite3_exec(db, "UPDATE t2 SET d='z';", 0, 0, 0) == SQLITE_AUTH);
+	CU_ASSERT(
+			sqlite3_exec(db, "UPDATE t2 SET e='z';", 0, 0, 0) == SQLITE_AUTH);
+
+	CU_ASSERT(
+			sqlite3_exec(db, "UPDATE t3 SET f='z';", 0, 0, 0) == SQLITE_OK);
+	CU_ASSERT(
+			sqlite3_exec(db, "UPDATE t3 SET g='z';", 0, 0, 0) == SQLITE_AUTH);
 }
 
 void test_delete_table(void) {
 
-//	CU_ASSERT(
-//			sqlite3_exec(db, "DELETE FROM t1 WHERE a='z'", 0, 0, 0) == SQLITE_OK);
+	CU_ASSERT(
+			sqlite3_exec(db, "DELETE FROM t1 WHERE a='z'", 0, 0, 0) == SQLITE_OK);
 }
 
 int main(int argc, char **argv) {
