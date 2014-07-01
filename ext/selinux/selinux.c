@@ -35,61 +35,41 @@ static seSQLiteHash avc; /* HashMap*/
 #endif
 
 /*
- * Get the column context from sesqlite for the specified table.
- * Returns 1 if a context is defined for the table, 0 otherwise. The string
- * representing the context is allocated using sqlite3_mprintf in *con only
- * if the result is 1. The caller has to free the allocated space after usage.
+ * Get the column context from sesqlite for the specified table. The string
+ * representing the context is allocated using sqlite3_mprintf in *con.
+ * The caller has to free the allocated space after usage.
  */
-int getContext(const char *dbname, int tclass, const char *table,
+void getContext(const char *dbname, int tclass, const char *table,
 		const char *column, char **con) {
 
-	int rc = 0;
-	size_t length = 0;
-	char *res = NULL, *key = NULL;
+	char *key = NULL;
 
 	switch (tclass) {
 	case 0: /* database */
 		break;
 	case 1: /* table */
-		length = strlen(dbname) + strlen(table);
-		key = sqlite3_malloc(length);
-		strcpy(key, dbname);
-		strcat(key, table);
+		key = sqlite3_mprintf("%s:%s", dbname, table);
 		break;
 	case 2:
-		length = strlen(dbname) + strlen(table) + strlen(column);
-		key = sqlite3_malloc(length);
-		strcpy(key, dbname);
-		strcat(key, table);
-		strcat(key, column);
-		break;
-	default:
+		key = sqlite3_mprintf("%s:%s:%s", dbname, table, column);
 		break;
 	}
 
-	res = seSQLiteHashFind(&hash, key, strlen(key));
-	if (res != NULL) {
-		*con = strdup(res);
-	} else
-		getDefaultContext(con);
+	assert(key != NULL);
+
+	char *res = seSQLiteHashFind(&hash, key, strlen(key));
+	if (res != NULL)
+		*con = sqlite3_mprintf(res);
+	else
+		*con = sqlite3_mprintf(DEFAULT_TCON);
 
 #ifdef SQLITE_DEBUG
 	fprintf(stdout, "%s: db=%s, table=%s, column=%s -> %sfound (%s)\n", (res != NULL ? "Hash hint" : "default_context"), dbname, table,
 			(column ? column : "NULL"), (res != NULL ? "" : "not "), res);
 #endif
 
+	// Here we can free key since we're not inserting it in the hashtable.
 	sqlite3_free(key);
-	return rc;
-}
-
-/*
- * Get the default context from sesqlite. Always return 1. The string
- * representing the context is allocated using sqlite3_mprintf in *con.
- * The caller has to free the allocated space after usage.
- */
-int getDefaultContext(char **con) {
-	*con = sqlite3_mprintf(DEFAULT_TCON);
-	return 1;
 }
 
 /*
@@ -103,38 +83,31 @@ int checkAccess(const char *dbname, const char *table, const char *column,
 	//check
 	assert(tclass <= NELEMS(access_vector));
 	security_context_t tcon;
-	int rc = -1;
-	int* res = NULL;
-	char *key;
 
 	getContext(dbname, tclass, table, column, &tcon);
 	assert(tcon != NULL);
 
-	key = sqlite3_malloc(
-			strlen(scon) + strlen(tcon) + strlen(access_vector[tclass].c_name)
-					+ strlen(access_vector[tclass].perm[perm].p_name) + 1);
-	strcpy(key, scon);
-	strcat(key, tcon);
-	strcat(key, access_vector[tclass].c_name);
-	strcat(key, access_vector[tclass].perm[perm].p_name);
-	//res = seSQLiteHashFind(&avc, key, sizeof(key));
+	char *key = sqlite3_mprintf("%s:%s:%s:%s", scon, tcon, access_vector[tclass].c_name,
+			access_vector[tclass].perm[perm].p_name);
+
+	int *res = seSQLiteHashFind(&avc, key, strlen(key));
 	if (res == NULL) {
-		rc = selinux_check_access(scon, tcon, access_vector[tclass].c_name,
+		res = sqlite3_malloc(sizeof(int));
+		*res = selinux_check_access(scon, tcon, access_vector[tclass].c_name,
 				access_vector[tclass].perm[perm].p_name, NULL);
-		//seSQLiteHashInsert(&avc, key, sizeof(key), &rc);
-	} else {
-		rc = 0;
+		seSQLiteHashInsert(&avc, key, strlen(key), res);
 	}
-	sqlite3_free(key);
+
+	// DO NOT FREE key AND res
 
 #ifdef SQLITE_DEBUG
 	fprintf(stdout, "%s selinux_check_access(%s, %s, %s, %s) => %d\n", res != NULL ? "Hash hint: " : "", scon, tcon,
 			access_vector[tclass].c_name,
-			access_vector[tclass].perm[perm].p_name, rc);
+			access_vector[tclass].perm[perm].p_name, *res);
 #endif
 
 	sqlite3_free(tcon);
-	return 0 == rc;
+	return 0 == *res;
 }
 
 /**
@@ -149,6 +122,8 @@ int checkAllColumns(sqlite3* pdb, const char *dbName, const char* tblName,
 	Hash *pTbls;
 	HashElem *x;
 	Db *pDb;
+
+	// TODO type = db_column
 
 	Table *pTab = sqlite3FindTable(pdb, tblName, dbName);
 	if (pTab) {
@@ -173,8 +148,8 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 
 	sqlite3 *pdb = (sqlite3*) pUserData;
 
-	if (!auth_enabled)
-		return rc;
+//	if (!auth_enabled)
+//		return rc;
 
 #ifdef SQLITE_DEBUG
 	fprintf(stdout, "authorizer: type=%s arg1=%s arg2=%s\n", authtype[type],
@@ -424,32 +399,31 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 static void selinuxCheckAccessFunction(sqlite3_context *context, int argc,
 		sqlite3_value **argv) {
 
-	void *res;
-	int rc = 1;
-	char *key;
+	int *res;
 
 #ifdef USE_AVC
-	key = sqlite3_malloc(
-			strlen(scon) + strlen(argv[1]->z) + strlen(argv[2]->z)
-					+ strlen(argv[3]->z));
-	strcpy(key, scon);
-	strcat(key, argv[1]->z);
-	strcat(key, argv[2]->z);
-	strcat(key, argv[3]->z);
-	res = seSQLiteHashFind(&avc, key, sizeof(key));
+	char *key = sqlite3_mprintf("%s:%s:%s:%s",
+			argv[0]->z, /* source security context */
+			argv[1]->z, /* target security context */
+			argv[2]->z, /* target security class string */
+			argv[3]->z  /* requested permissions string */
+	);
+
+	res = seSQLiteHashFind(&avc, key, strlen(key));
 	if (res == NULL) {
-		rc = selinux_check_access(argv[0]->z, /* source security context */
-		argv[1]->z, /* target security context */
-		argv[2]->z, /* target security class string */
-		argv[3]->z, /* requested permissions string */
-		NULL /* auxiliary audit data */
+		res = sqlite3_malloc(sizeof(int));
+		*res = selinux_check_access(argv[0]->z, /* source security context */
+				argv[1]->z, /* target security context */
+				argv[2]->z, /* target security class string */
+				argv[3]->z, /* requested permissions string */
+				NULL /* auxiliary audit data */
 		);
-		seSQLiteHashInsert(&avc, key, sizeof(key), &rc);
-	} else
-		rc = 0;
-	sqlite3_free(key);
+		seSQLiteHashInsert(&avc, key, strlen(key), res);
+
+		// DO NOT FREE key or res
+	}
 #else
-	rc = selinux_check_access(argv[0]->z, /* source security context */
+	*res = selinux_check_access(argv[0]->z, /* source security context */
 			argv[1]->z, /* target security context */
 			argv[2]->z, /* target security class string */
 			argv[3]->z, /* requested permissions string */
@@ -460,10 +434,10 @@ static void selinuxCheckAccessFunction(sqlite3_context *context, int argc,
 #ifdef SQLITE_DEBUG
 	fprintf(stdout, "selinux_check_access(%s, %s, %s, %s) => %d\n", argv[0]->z, argv[1]->z,
 			argv[2]->z,
-			argv[3]->z, rc);
+			argv[3]->z, *res);
 #endif
 
-	sqlite3_result_int(context, rc == 0);
+	sqlite3_result_int(context, 0 == *res);
 }
 
 /* function to insert a new_node in a list. Note that this
@@ -507,8 +481,7 @@ int initializeContext(sqlite3 *db) {
 		return SQLITE_OK;
 	}
 
-	sesqlite_contexts = (struct sesqlite_context*) malloc(
-			sizeof(struct sesqlite_context));
+	sesqlite_contexts = sqlite3_malloc(sizeof(struct sesqlite_context));
 	sesqlite_contexts->db_context = NULL;
 	sesqlite_contexts->table_context = NULL;
 	sesqlite_contexts->column_context = NULL;
@@ -556,7 +529,7 @@ int initializeContext(sqlite3 *db) {
 		token = strtok(p, " \t");
 		if (!strcasecmp(token, "db_database")) {
 			struct sesqlite_context_element *new;
-			new = (struct sesqlite_context_element*) malloc(
+			new = sqlite3_malloc(
 					sizeof(struct sesqlite_context_element));
 			new->next = NULL;
 
@@ -574,7 +547,7 @@ int initializeContext(sqlite3 *db) {
 		} else if (!strcasecmp(token, "db_table")) {
 
 			struct sesqlite_context_element *new;
-			new = (struct sesqlite_context_element*) malloc(
+			new = sqlite3_malloc(
 					sizeof(struct sesqlite_context_element));
 			new->next = NULL;
 
@@ -594,7 +567,7 @@ int initializeContext(sqlite3 *db) {
 		} else if (!strcasecmp(token, "db_column")) {
 
 			struct sesqlite_context_element *new;
-			new = (struct sesqlite_context_element*) malloc(
+			new = sqlite3_malloc(
 					sizeof(struct sesqlite_context_element));
 			new->next = NULL;
 
@@ -615,7 +588,7 @@ int initializeContext(sqlite3 *db) {
 		} else if (!strcasecmp(token, "db_tuple")) {
 
 			struct sesqlite_context_element *new;
-			new = (struct sesqlite_context_element*) malloc(
+			new = sqlite3_malloc(
 					sizeof(struct sesqlite_context_element));
 			new->next = NULL;
 
@@ -638,6 +611,8 @@ int initializeContext(sqlite3 *db) {
 					token);
 		}
 	}
+
+	fclose(fp);
 
 //	fprintf(stdout, "\n******DATABASE\n");
 //	struct sesqlite_context_element *pp;
@@ -719,7 +694,7 @@ int initializeContext(sqlite3 *db) {
 					rc = sqlite3_reset(sesqlite_stmt);
 
 					rc = insertKey(pDb->zName, pTab->zName, NULL, result);
-					result = NULL;
+					sqlite3_free(result);
 				}
 
 				if (pTab) {
@@ -745,13 +720,67 @@ int initializeContext(sqlite3 *db) {
 
 							rc = insertKey(pDb->zName, pTab->zName, pCol->zName,
 									result);
-							result = NULL;
+							sqlite3_free(result);
 						}
 					}
 				}
 			}
 		}
 	}
+
+		struct sesqlite_context_element *pp, *pn;
+		pp = sesqlite_contexts->db_context;
+		while (pp != NULL) {
+			free(pp->fparam);
+			free(pp->sparam);
+			free(pp->tparam);
+			free(pp->security_context);
+			free(pp->origin);
+			pn = pp->next;
+			free(pp);
+			pp = pn;
+		}
+
+		pp = NULL;
+		pp = sesqlite_contexts->table_context;
+		while (pp != NULL) {
+			free(pp->fparam);
+			free(pp->sparam);
+			free(pp->tparam);
+			free(pp->security_context);
+			free(pp->origin);
+			pn = pp->next;
+			free(pp);
+			pp = pn;
+		}
+
+		pp = NULL;
+		pp = sesqlite_contexts->column_context;
+		while (pp != NULL) {
+			free(pp->fparam);
+			free(pp->sparam);
+			free(pp->tparam);
+			free(pp->security_context);
+			free(pp->origin);
+			pn = pp->next;
+			free(pp);
+			pp = pn;
+		}
+
+		pp = NULL;
+		pp = sesqlite_contexts->tuple_context;
+		while (pp != NULL) {
+			free(pp->fparam);
+			free(pp->sparam);
+			free(pp->tparam);
+			free(pp->security_context);
+			free(pp->origin);
+			pn = pp->next;
+			free(pp);
+			pp = pn;
+		}
+
+	sqlite3_free(sesqlite_contexts);
 	return rc;
 
 }
@@ -769,7 +798,7 @@ int computeTableContext(sqlite3 *db, char *dbName, char *tblName,
 		if (strcasecmp(dbName, p->fparam) == 0 || strcmp(p->fparam, "*") == 0) {
 			if (strcasecmp(tblName, p->sparam) == 0
 					|| strcmp(p->sparam, "*") == 0) {
-				*res = p->security_context;
+				*res = sqlite3_mprintf(p->security_context);
 				found = 1;
 #ifdef SQLITE_DEBUG
 				fprintf(stdout, "Database: %s, Table: %s, Context found: %s\n",
@@ -797,7 +826,7 @@ int computeColumnContext(sqlite3 *db, char *dbName, char *tblName,
 					|| strcmp(p->sparam, "*") == 0) {
 				if (strcasecmp(colName, p->tparam) == 0
 						|| strcmp(p->tparam, "*") == 0) {
-					*res = p->security_context;
+					*res = sqlite3_mprintf(p->security_context);
 					found = 1;
 #ifdef SQLITE_DEBUG
 					fprintf(stdout,
@@ -819,30 +848,21 @@ int computeColumnContext(sqlite3 *db, char *dbName, char *tblName,
 int insertKey(char *dbName, char *tName, char *cName, char *con) {
 	int rc = SQLITE_OK;
 	char *key = NULL;
-	int length = 0;
 
 	if (cName == NULL) {
-		length = strlen(dbName) + strlen(tName);
-		key = sqlite3_malloc(length);
-		strcpy(key, dbName);
-		strcat(key, tName);
+		key = sqlite3_mprintf("%s:%s", dbName, tName);
 	} else {
-		length = strlen(dbName) + strlen(tName) + strlen(cName);
-		key = sqlite3_malloc(length);
-		strcpy(key, dbName);
-		strcat(key, tName);
-		strcat(key, cName);
+		key = sqlite3_mprintf("%s:%s:%s", dbName, tName, cName);
 	}
 
-	char *tcon = strdup(con);
+	char *tcon = sqlite3_mprintf(con);
 	char *res = NULL;
 
-	res = (char *) seSQLiteHashFind(&hash, key, strlen(key));
-	if (res == 0) {
-		seSQLiteHashInsert(&hash, key, strlen(key), tcon);
-	}
+	res = seSQLiteHashFind(&hash, key, strlen(key));
+	assert(res == NULL);
+	seSQLiteHashInsert(&hash, key, strlen(key), tcon);
 
-	sqlite3_free(key);
+	// DO NOT FREE key AND tcon
 	return rc;
 }
 
@@ -862,8 +882,11 @@ int initializeSeSqliteObjects(sqlite3 *db) {
 
 //**************
 	setHashMap(&hash);
-	seSQLiteHashInit(&hash, SESQLITE_HASH_STRING, 1); /* init */
-	seSQLiteHashInit(&avc, SESQLITE_HASH_STRING, 1); /* init avc */
+
+	// the last 0 is to avoid copying the key inside the hash structure
+	// REMEMBER TO USE MALLOC ON ALL KEYS AND NOT DEALLOCATE THEM!
+	seSQLiteHashInit(&hash, SESQLITE_HASH_STRING, 0); /* init */
+	seSQLiteHashInit(&avc, SESQLITE_HASH_STRING, 0); /* init avc */
 
 	/* register module */
 	rc = sqlite3_create_module(db, "selinuxModule", &sesqlite_mod, NULL);
@@ -990,9 +1013,7 @@ int sqlite3SelinuxInit(sqlite3 *db) {
 
 // set the authorizer
 	if (rc == SQLITE_OK) {
-
 		rc = sqlite3_set_authorizer(db, selinuxAuthorizer, db);
-
 	}
 
 	return rc;
