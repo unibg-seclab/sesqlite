@@ -1,5 +1,6 @@
 #include <selinux/selinux.h>
 #include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 #include <time.h>
 #include "ft_hash.h"
@@ -10,14 +11,14 @@
 #define TIMER_DIFF		(TIMER_GET) - _tstart
 
 int main(int argc, char **argv) {
-	int times = 1;
+	int times = 10;
 	if (argc > 1)
 		times = atoi(argv[1]);
 
 	Hash hmap;
 	HashInit(&hmap, HASH_STRING, 0);
 
-	int i, rc;
+	int i;
 	int *res = NULL;
 
 	char *scon = "unconfined_u:unconfined_r:unconfined_t:s0-s0:c0.c1023";
@@ -30,12 +31,13 @@ int main(int argc, char **argv) {
 
 	for (i = 0; i < times; ++i) {
 		TIMER_START
-		res = HashFind(&hmap, key, sizeof(key));
+		res = HashFind(&hmap, key, strlen(key));
 		if (res == NULL) {
-			rc = selinux_check_access(scon, tcon, clas, perm, NULL);
-			HashInsert(&hmap, key, sizeof(key), &rc);
+			res = malloc(sizeof(int));
+			*res = selinux_check_access(scon, tcon, clas, perm, NULL);
+			HashInsert(&hmap, strdup(key), strlen(key), res);
 		}
-		printf("%f\n", TIMER_DIFF);
+		printf("%2d) res: %d  time: %f\n", i, *res, TIMER_DIFF);
 	}
 
 	return 0;
