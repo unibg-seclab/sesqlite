@@ -393,53 +393,6 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 	return rc;
 }
 
-/*
- * Function invoked when using the SQL function selinux_check_access
- */
-static void selinuxCheckAccessFunction(sqlite3_context *context, int argc,
-		sqlite3_value **argv) {
-
-	int *res;
-
-#ifdef USE_AVC
-	char *key = sqlite3_mprintf("%s:%s:%s:%s",
-			argv[0]->z, /* source security context */
-			argv[1]->z, /* target security context */
-			argv[2]->z, /* target security class string */
-			argv[3]->z  /* requested permissions string */
-	);
-
-	res = seSQLiteHashFind(&avc, key, strlen(key));
-	if (res == NULL) {
-		res = sqlite3_malloc(sizeof(int));
-		*res = selinux_check_access(argv[0]->z, /* source security context */
-				argv[1]->z, /* target security context */
-				argv[2]->z, /* target security class string */
-				argv[3]->z, /* requested permissions string */
-				NULL /* auxiliary audit data */
-		);
-		seSQLiteHashInsert(&avc, key, strlen(key), res);
-
-		// DO NOT FREE key or res
-	}
-#else
-	*res = selinux_check_access(argv[0]->z, /* source security context */
-			argv[1]->z, /* target security context */
-			argv[2]->z, /* target security class string */
-			argv[3]->z, /* requested permissions string */
-			NULL /* auxiliary audit data */
-	);
-#endif
-
-#ifdef SQLITE_DEBUG
-	fprintf(stdout, "selinux_check_access(%s, %s, %s, %s) => %d\n", argv[0]->z, argv[1]->z,
-			argv[2]->z,
-			argv[3]->z, *res);
-#endif
-
-	sqlite3_result_int(context, 0 == *res);
-}
-
 /* function to insert a new_node in a list. Note that this
  function expects a pointer to head_ref as this can modify the
  head of the input linked list (similar to push())*/
@@ -867,6 +820,53 @@ int insertKey(char *dbName, char *tName, char *cName, char *con) {
 }
 
 /*
+ * Function invoked when using the SQL function selinux_check_access
+ */
+static void selinuxCheckAccessFunction(sqlite3_context *context, int argc,
+		sqlite3_value **argv) {
+
+	int *res;
+
+#ifdef USE_AVC
+	char *key = sqlite3_mprintf("%s:%s:%s:%s",
+			scon, /* source security context */
+			argv[0]->z, /* target security context */
+			argv[1]->z, /* target security class string */
+			argv[2]->z  /* requested permissions string */
+	);
+
+	res = seSQLiteHashFind(&avc, key, strlen(key));
+	if (res == NULL) {
+		res = sqlite3_malloc(sizeof(int));
+		*res = selinux_check_access(scon, /* source security context */
+				argv[0]->z, /* target security context */
+				argv[1]->z, /* target security class string */
+				argv[2]->z, /* requested permissions string */
+				NULL /* auxiliary audit data */
+		);
+		seSQLiteHashInsert(&avc, key, strlen(key), res);
+
+		// DO NOT FREE key or res
+	}
+#else
+	*res = selinux_check_access(scon, /* source security context */
+			argv[0]->z, /* target security context */
+			argv[1]->z, /* target security class string */
+			argv[2]->z, /* requested permissions string */
+			NULL /* auxiliary audit data */
+	);
+#endif
+
+#ifdef SQLITE_DEBUG
+	fprintf(stdout, "selinux_check_access(%s, %s, %s, %s) => %d\n", scon, argv[0]->z,
+			argv[1]->z,
+			argv[2]->z, *res);
+#endif
+
+	sqlite3_result_int(context, 0 == *res);
+}
+
+/*
  * Inizialize the database objects used by SeSqlite:
  * 1. SeSqlite master table that keeps the permission for the schema level
  * 2. Trigger to delete unused SELinux contexts after a drop table statement
@@ -1006,7 +1006,7 @@ int sqlite3SelinuxInit(sqlite3 *db) {
 
 // create the SQL function selinux_check_access
 	if (rc == SQLITE_OK) {
-		rc = sqlite3_create_function(db, "selinux_check_access", 4,
+		rc = sqlite3_create_function(db, "selinux_check_access", 3,
 		SQLITE_UTF8 /* | SQLITE_DETERMINISTIC */, 0, selinuxCheckAccessFunction,
 				0, 0);
 	}

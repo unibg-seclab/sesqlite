@@ -171,7 +171,7 @@ puts {COMMIT;}
 # 1 big text update that touches every row in the table.
 #
 puts {
-  UPDATE t1 SET c=a;
+  UPDATE t1 SET c=a WHERE security_context = 'unconfined_u:object_r:sesqlite_public:s0';
 }
 
 # Many individual text updates.  Each row in the table is
@@ -186,52 +186,52 @@ puts {COMMIT;}
 
 # Delete all content in a table.
 #
-puts {DELETE FROM t1;}
+puts {DELETE FROM t1 WHERE security_context = 'unconfined_u:object_r:sesqlite_public:s0';}
 
 # Copy one table into another
 #
-puts {INSERT INTO t1 SELECT * FROM t2;}
+puts {INSERT INTO t1 SELECT * FROM t2 WHERE security_context = 'unconfined_u:object_r:sesqlite_public:s0';}
 
 # Delete all content in a table, one row at a time.
 #
-puts {DELETE FROM t1 WHERE 1;}
+puts {DELETE FROM t1 WHERE security_context = 'unconfined_u:object_r:sesqlite_public:s0';}
 
 # Refill the table yet again
 #
-puts {INSERT INTO t1 SELECT * FROM t2;}
+puts {INSERT INTO t1 SELECT * FROM t2 WHERE security_context = 'unconfined_u:object_r:sesqlite_public:s0';}
 
 # Drop the table and recreate it without its indices.
 #
 puts {BEGIN;}
 puts {
    DROP TABLE t1;
-   CREATE TABLE t1(a INTEGER, b INTEGER, c TEXT);
+   CREATE TABLE t1(a INTEGER, b INTEGER, c TEXT, security_context TEXT);
 }
 puts {COMMIT;}
 
 # Refill the table yet again.  This copy should be faster because
 # there are no indices to deal with.
 #
-puts {INSERT INTO t1 SELECT * FROM t2;}
+puts {INSERT INTO t1 SELECT * FROM t2 WHERE security_context = 'unconfined_u:object_r:sesqlite_public:s0';}
 
 # Select 20000 rows from the table at random.
 #
 puts {
-  SELECT rowid FROM t1 ORDER BY random() LIMIT 20000;
+  SELECT rowid FROM t1 WHERE security_context = 'unconfined_u:object_r:sesqlite_public:s0' ORDER BY random() LIMIT 20000;
 }
 
 # Delete 20000 random rows from the table.
 #
 puts {
   DELETE FROM t1 WHERE rowid IN
-    (SELECT rowid FROM t1 ORDER BY random() LIMIT 20000);
+    (SELECT rowid FROM t1 WHERE security_context = 'unconfined_u:object_r:sesqlite_public:s0' ORDER BY random() LIMIT 20000);
 }
-puts {SELECT count(*) FROM t1;}
+puts {SELECT count(*) FROM t1 WHERE security_context = 'unconfined_u:object_r:sesqlite_public:s0';}
     
 # Delete 20000 more rows at random from the table.
 #
 puts {
   DELETE FROM t1 WHERE rowid IN
-    (SELECT rowid FROM t1 ORDER BY random() LIMIT 20000);
+    (SELECT rowid FROM t1 WHERE security_context = 'unconfined_u:object_r:sesqlite_public:s0' ORDER BY random() LIMIT 20000);
 }
-puts {SELECT count(*) FROM t1;}
+puts {SELECT count(*) FROM t1 WHERE security_context = 'unconfined_u:object_r:sesqlite_public:s0';}
