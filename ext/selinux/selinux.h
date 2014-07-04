@@ -14,12 +14,12 @@ extern "C" {
 #define NELEMS(x)  (sizeof(x) / sizeof(x[0]))
 
 #define SELINUX_CONTEXT_TABLE		"CREATE TABLE IF NOT EXISTS \
-												selinux_context( \
-												security_context TEXT, \
-												db TEXT, \
-												name TEXT, \
-												column TEXT, \
-												PRIMARY KEY(name, column))"
+selinux_context( \
+security_context TEXT, \
+db TEXT, \
+name TEXT, \
+column TEXT, \
+PRIMARY KEY(name, column))"
 
 /* SELinux classes */
 #define SELINUX_DB_DATABASE      	0

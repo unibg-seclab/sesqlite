@@ -16,6 +16,7 @@ SQLITE_EXTENSION_INIT1
 #include "selinux.h"
 #include "sesqlite_vtab.h"
 #include "sesqlite_hash.h"
+#include <time.h>
 
 #define USE_AVC
 
@@ -87,7 +88,8 @@ int checkAccess(const char *dbname, const char *table, const char *column,
 	getContext(dbname, tclass, table, column, &tcon);
 	assert(tcon != NULL);
 
-	char *key = sqlite3_mprintf("%s:%s:%s:%s", scon, tcon, access_vector[tclass].c_name,
+	char *key = sqlite3_mprintf("%s:%s:%s:%s", scon, tcon,
+			access_vector[tclass].c_name,
 			access_vector[tclass].perm[perm].p_name);
 
 	int *res = seSQLiteHashFind(&avc, key, strlen(key));
@@ -482,8 +484,7 @@ int initializeContext(sqlite3 *db) {
 		token = strtok(p, " \t");
 		if (!strcasecmp(token, "db_database")) {
 			struct sesqlite_context_element *new;
-			new = sqlite3_malloc(
-					sizeof(struct sesqlite_context_element));
+			new = sqlite3_malloc(sizeof(struct sesqlite_context_element));
 			new->next = NULL;
 
 			token = strtok(NULL, " \t");
@@ -500,8 +501,7 @@ int initializeContext(sqlite3 *db) {
 		} else if (!strcasecmp(token, "db_table")) {
 
 			struct sesqlite_context_element *new;
-			new = sqlite3_malloc(
-					sizeof(struct sesqlite_context_element));
+			new = sqlite3_malloc(sizeof(struct sesqlite_context_element));
 			new->next = NULL;
 
 			token = strtok(NULL, " \t");
@@ -520,8 +520,7 @@ int initializeContext(sqlite3 *db) {
 		} else if (!strcasecmp(token, "db_column")) {
 
 			struct sesqlite_context_element *new;
-			new = sqlite3_malloc(
-					sizeof(struct sesqlite_context_element));
+			new = sqlite3_malloc(sizeof(struct sesqlite_context_element));
 			new->next = NULL;
 
 			token = strtok(NULL, " \t");
@@ -541,8 +540,7 @@ int initializeContext(sqlite3 *db) {
 		} else if (!strcasecmp(token, "db_tuple")) {
 
 			struct sesqlite_context_element *new;
-			new = sqlite3_malloc(
-					sizeof(struct sesqlite_context_element));
+			new = sqlite3_malloc(sizeof(struct sesqlite_context_element));
 			new->next = NULL;
 
 			token = strtok(NULL, " \t");
@@ -621,7 +619,7 @@ int initializeContext(sqlite3 *db) {
 	int i = -1; /* Database number */
 	int j;
 	Hash *pTbls;
-	HashElem *x;
+	HashElem * x;
 	Db *pDb;
 	char *result = NULL;
 	for (i = (db->nDb - 1), pDb = &db->aDb[i]; i >= 0; i--, pDb--) {
@@ -681,57 +679,58 @@ int initializeContext(sqlite3 *db) {
 		}
 	}
 
-		struct sesqlite_context_element *pp, *pn;
-		pp = sesqlite_contexts->db_context;
-		while (pp != NULL) {
-			free(pp->fparam);
-			free(pp->sparam);
-			free(pp->tparam);
-			free(pp->security_context);
-			free(pp->origin);
-			pn = pp->next;
-			free(pp);
-			pp = pn;
-		}
+	//free all
+	struct sesqlite_context_element *pp, *pn;
+	pp = sesqlite_contexts->db_context;
+	while (pp != NULL) {
+		free(pp->fparam);
+		free(pp->sparam);
+		free(pp->tparam);
+		free(pp->security_context);
+		free(pp->origin);
+		pn = pp->next;
+		free(pp);
+		pp = pn;
+	}
 
-		pp = NULL;
-		pp = sesqlite_contexts->table_context;
-		while (pp != NULL) {
-			free(pp->fparam);
-			free(pp->sparam);
-			free(pp->tparam);
-			free(pp->security_context);
-			free(pp->origin);
-			pn = pp->next;
-			free(pp);
-			pp = pn;
-		}
+	pp = NULL;
+	pp = sesqlite_contexts->table_context;
+	while (pp != NULL) {
+		free(pp->fparam);
+		free(pp->sparam);
+		free(pp->tparam);
+		free(pp->security_context);
+		free(pp->origin);
+		pn = pp->next;
+		free(pp);
+		pp = pn;
+	}
 
-		pp = NULL;
-		pp = sesqlite_contexts->column_context;
-		while (pp != NULL) {
-			free(pp->fparam);
-			free(pp->sparam);
-			free(pp->tparam);
-			free(pp->security_context);
-			free(pp->origin);
-			pn = pp->next;
-			free(pp);
-			pp = pn;
-		}
+	pp = NULL;
+	pp = sesqlite_contexts->column_context;
+	while (pp != NULL) {
+		free(pp->fparam);
+		free(pp->sparam);
+		free(pp->tparam);
+		free(pp->security_context);
+		free(pp->origin);
+		pn = pp->next;
+		free(pp);
+		pp = pn;
+	}
 
-		pp = NULL;
-		pp = sesqlite_contexts->tuple_context;
-		while (pp != NULL) {
-			free(pp->fparam);
-			free(pp->sparam);
-			free(pp->tparam);
-			free(pp->security_context);
-			free(pp->origin);
-			pn = pp->next;
-			free(pp);
-			pp = pn;
-		}
+	pp = NULL;
+	pp = sesqlite_contexts->tuple_context;
+	while (pp != NULL) {
+		free(pp->fparam);
+		free(pp->sparam);
+		free(pp->tparam);
+		free(pp->security_context);
+		free(pp->origin);
+		pn = pp->next;
+		free(pp);
+		pp = pn;
+	}
 
 	sqlite3_free(sesqlite_contexts);
 	return rc;
@@ -828,21 +827,20 @@ static void selinuxCheckAccessFunction(sqlite3_context *context, int argc,
 	int *res;
 
 #ifdef USE_AVC
-	char *key = sqlite3_mprintf("%s:%s:%s:%s",
-			scon, /* source security context */
-			argv[0]->z, /* target security context */
-			argv[1]->z, /* target security class string */
-			argv[2]->z  /* requested permissions string */
+	char *key = sqlite3_mprintf("%s:%s:%s:%s", scon, /* source security context */
+	argv[0]->z, /* target security context */
+	argv[1]->z, /* target security class string */
+	argv[2]->z /* requested permissions string */
 	);
 
 	res = seSQLiteHashFind(&avc, key, strlen(key));
 	if (res == NULL) {
 		res = sqlite3_malloc(sizeof(int));
 		*res = selinux_check_access(scon, /* source security context */
-				argv[0]->z, /* target security context */
-				argv[1]->z, /* target security class string */
-				argv[2]->z, /* requested permissions string */
-				NULL /* auxiliary audit data */
+		argv[0]->z, /* target security context */
+		argv[1]->z, /* target security class string */
+		argv[2]->z, /* requested permissions string */
+		NULL /* auxiliary audit data */
 		);
 		seSQLiteHashInsert(&avc, key, strlen(key), res);
 
@@ -889,10 +887,11 @@ int initializeSeSqliteObjects(sqlite3 *db) {
 	seSQLiteHashInit(&avc, SESQLITE_HASH_STRING, 0); /* init avc */
 
 	/* register module */
-	rc = sqlite3_create_module(db, "selinuxModule", &sesqlite_mod, NULL);
-	if (rc != SQLITE_OK) {
-		return rc;
-	}
+//	rc = sqlite3_create_module(db, "selinuxModule", &sesqlite_mod, NULL);
+//	if (rc != SQLITE_OK) {
+//		return rc;
+//	}
+	rc = SQLITE_OK;
 
 #ifdef SQLITE_DEBUG
 	if (rc == SQLITE_OK)
@@ -906,10 +905,10 @@ int initializeSeSqliteObjects(sqlite3 *db) {
 //	    move the table and trigger creation there.
 	if (rc == SQLITE_OK) {
 		/* automatically create an instance of the virtual table */
-		rc =
-		sqlite3_exec(db,
-				"CREATE VIRTUAL TABLE sesqlite_master USING selinuxModule",
-				NULL, NULL, NULL);
+//		rc =
+//		sqlite3_exec(db,
+//				"CREATE VIRTUAL TABLE sesqlite_master USING selinuxModule",
+//				NULL, NULL, NULL);
 
 		//TODO WHERE??
 		rc =
@@ -944,7 +943,7 @@ int initializeSeSqliteObjects(sqlite3 *db) {
 				"AFTER DELETE ON sqlite_master "
 				"FOR EACH ROW WHEN OLD.type IN ('table', 'view') "
 				"BEGIN "
-				" DELETE FROM sesqlite_master WHERE name = OLD.name; "
+				" DELETE FROM selinux_context WHERE name = OLD.name; "
 				"END;", 0, 0, 0);
 
 #ifdef SQLITE_DEBUG
