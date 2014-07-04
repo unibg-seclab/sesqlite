@@ -938,13 +938,13 @@ int initializeSeSqliteObjects(sqlite3 *db) {
 //      to use it as foreign key in sesqlite_master is not feasible.
 // 		create trigger to delete unused SELinux contexts after table drop
 	if (rc == SQLITE_OK) {
-		rc =
-		sqlite3_exec(db, "CREATE TEMP TRIGGER delete_contexts_after_table_drop "
-				"AFTER DELETE ON sqlite_master "
-				"FOR EACH ROW WHEN OLD.type IN ('table', 'view') "
-				"BEGIN "
-				" DELETE FROM selinux_context WHERE name = OLD.name; "
-				"END;", 0, 0, 0);
+//		rc =
+//		sqlite3_exec(db, "CREATE TEMP TRIGGER delete_contexts_after_table_drop "
+//				"AFTER DELETE ON sqlite_master "
+//				"FOR EACH ROW WHEN OLD.type IN ('table', 'view') "
+//				"BEGIN "
+//				" DELETE FROM selinux_context WHERE name = OLD.name; "
+//				"END;", 0, 0, 0);
 
 #ifdef SQLITE_DEBUG
 		if (rc == SQLITE_OK)
@@ -956,14 +956,14 @@ int initializeSeSqliteObjects(sqlite3 *db) {
 
 // create trigger to update SELinux contexts after table rename
 	if (rc == SQLITE_OK) {
-		rc =
-				sqlite3_exec(db,
-						"CREATE TEMP TRIGGER update_contexts_after_rename "
-								"AFTER UPDATE OF name ON sqlite_master "
-								"FOR EACH ROW WHEN NEW.type IN ('table', 'view') "
-								"BEGIN "
-								" UPDATE selinux_context SET name = NEW.name WHERE name = OLD.name; "
-								"END;", 0, 0, 0);
+//		rc =
+//				sqlite3_exec(db,
+//						"CREATE TEMP TRIGGER update_contexts_after_rename "
+//								"AFTER UPDATE OF name ON sqlite_master "
+//								"FOR EACH ROW WHEN NEW.type IN ('table', 'view') "
+//								"BEGIN "
+//								" UPDATE selinux_context SET name = NEW.name WHERE name = OLD.name; "
+//								"END;", 0, 0, 0);
 
 #ifdef SQLITE_DEBUG
 		if (rc == SQLITE_OK) {
