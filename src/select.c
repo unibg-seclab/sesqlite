@@ -3356,7 +3356,7 @@ static int selectExpander(Walker *pWalker, Select *p){
             ** result-set list.
             */
             if( IsHiddenColumn(&pTab->aCol[j]) ){
-              assert(IsVirtual(pTab));
+              //assert(IsVirtual(pTab));
               continue;
             }
 

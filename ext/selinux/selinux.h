@@ -21,6 +21,9 @@ name TEXT, \
 column TEXT, \
 PRIMARY KEY(name, column))"
 
+#define SECURITY_CONTEXT_COLUMN_NAME "security_context"
+#define SECURITY_CONTEXT_COLUMN_DEFINITION ", security_context hidden TEXT DEFAULT (getcon())"
+
 /* SELinux classes */
 #define SELINUX_DB_DATABASE      	0
 #define SELINUX_DB_TABLE      		1
