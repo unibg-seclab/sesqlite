@@ -1009,7 +1009,7 @@ int sqlite3SelinuxInit(sqlite3 *db) {
 				0, 0);
 	}
 
- set the authorizer
+// set the authorizer
 	if (rc == SQLITE_OK) {
 		rc = sqlite3_set_authorizer(db, selinuxAuthorizer, db);
 	}
