@@ -200,8 +200,9 @@ int main(int argc, char **argv){
 #endif
   iStart = tsTOD();
   rc = sqlite3_open(argv[1], &db);
+  sqlite3_exec(db, "SELECT 1;", 0, 0, 0);  // force loading the objects
   iOpen = tsSubtract(tsTOD(), iStart);
-  if (!bQuiet) printf("sqlite3_open() returns %d in %g secs\n", rc, tsFloat(iOpen));
+  if (!bQuiet) printf("sqlite3_open() with \"SELECT 1;\" returns %d in %g secs\n", rc, tsFloat(iOpen));
   for(i=j=0; j<nSql; j++){
     if( zSql[j]==';' ){
       int isComplete;
@@ -231,8 +232,9 @@ int main(int argc, char **argv){
 
   iStart = tsTOD();
   rc = sqlite3_open(argv[1], &db);
+  sqlite3_exec(db, "SELECT 1;", 0, 0, 0);  // force loading the objects
   iReopen = tsSubtract(tsTOD(), iStart);
-  if (!bQuiet) printf("sqlite3_open() on reopen returns %d in %g secs\n", rc, tsFloat(iReopen));
+  if (!bQuiet) printf("sqlite3_open() with \"SELECT 1;\" for reopen returns %d in %g secs\n", rc, tsFloat(iReopen));
 
 #if !defined(_MSC_VER)
   clkEnd = times(&tmsEnd);
