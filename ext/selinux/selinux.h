@@ -19,7 +19,7 @@ security_context TEXT, \
 db TEXT, \
 name TEXT, \
 column TEXT, \
-PRIMARY KEY(name, column))"
+PRIMARY KEY(name, column));"
 
 #define SECURITY_CONTEXT_COLUMN_NAME "security_context"
 #define SECURITY_CONTEXT_COLUMN_DEFINITION ", security_context hidden TEXT DEFAULT (getcon())"
@@ -121,18 +121,17 @@ static struct {
 	} perm[32];
 
 } access_vector[] = { { "db_database", SELINUX_DB_DATABASE, { { "create",
-		SELINUX_CREATE }, { "drop", SELINUX_DROP },
-		{ "getattr", SELINUX_GETATTR }, { "setattr", SELINUX_SETATTR }, {
-				"relabelfrom",
-				SELINUX_RELABEL_FROM }, { "relabelto",
-		SELINUX_RELABEL_TO }, } }, { "db_table",
+SELINUX_CREATE }, { "drop", SELINUX_DROP }, { "getattr", SELINUX_GETATTR }, {
+		"setattr", SELINUX_SETATTR }, { "relabelfrom",
+SELINUX_RELABEL_FROM }, { "relabelto",
+SELINUX_RELABEL_TO }, } }, { "db_table",
 SELINUX_DB_TABLE, { { "create", SELINUX_CREATE }, { "drop",
 SELINUX_DROP }, { "getattr", SELINUX_GETATTR }, { "setattr", SELINUX_SETATTR },
 		{ "relabelfrom",
 		SELINUX_RELABEL_FROM }, { "relabelto",
 		SELINUX_RELABEL_TO }, { "select", SELINUX_SELECT }, { "update",
-				SELINUX_UPDATE }, { "insert", SELINUX_INSERT }, { "delete",
-				SELINUX_DELETE }, } }, { "db_column",
+		SELINUX_UPDATE }, { "insert", SELINUX_INSERT }, { "delete",
+		SELINUX_DELETE }, } }, { "db_column",
 SELINUX_DB_COLUMN, { { "create", SELINUX_CREATE }, { "drop", SELINUX_DROP }, {
 		"getattr", SELINUX_GETATTR }, { "setattr",
 SELINUX_SETATTR }, { "relabelfrom", SELINUX_RELABEL_FROM }, { "relabelto",
@@ -142,8 +141,8 @@ SELINUX_RELABEL_TO }, { "select", SELINUX_SELECT },
 		SELINUX_DB_TUPLE, { { "relabelfrom", SELINUX_RELABEL_FROM }, {
 				"relabelto",
 				SELINUX_RELABEL_TO }, { "select", SELINUX_SELECT }, { "update",
-				SELINUX_UPDATE }, { "insert", SELINUX_INSERT }, { "delete",
-				SELINUX_DELETE }, } }, };
+		SELINUX_UPDATE }, { "insert", SELINUX_INSERT }, { "delete",
+		SELINUX_DELETE }, } }, };
 
 #ifdef __cplusplus
 } /* extern "C" */

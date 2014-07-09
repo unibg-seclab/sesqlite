@@ -10,7 +10,7 @@ LDFLAGS			+= -lselinux -lpthread -ldl -lcunit
 CUNIT_XML		:= cunit_testall-Results.xml		# do not change
 JUNIT_XML		:= junit_testall-Results.xml
 CUNIT_TO_JUNIT	:= cunit-to-junit.xsl
-CONTEXTS		:= sesqlite_contexts
+CONTEXTS		:= sesqlite_contexts_test
 DB_ORIGIN		:= test.db.0
 DB_TEST		:= test.db
 
@@ -20,10 +20,10 @@ sqlite3.o:
 	@ make all -C $(TOP)
 	cp $(TOP)/build/sqlite3.o .
 	cp ./$(DB_ORIGIN) ./$(DB_TEST)
-	cp $(TOP)/test/sesqlite/policy/$(CONTEXTS) ./$(CONTEXTS)
+	cp $(TOP)/test/sesqlite/policy/$(CONTEXTS) ./sesqlite_contexts
 
 $(CONTEXTS):
-	cp ../policy/$@ .
+	cp ../policy/$@ ./sesqlite_contexts
 	
 $(NAME): $(OBJS)
 	gcc $(OBJS) -o $(NAME) $(LDFLAGS)

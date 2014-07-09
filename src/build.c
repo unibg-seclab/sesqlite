@@ -1610,7 +1610,7 @@ Select *pSelect /* Select from a "CREATE ... AS SELECT" */
 
 #if defined(SQLITE_ENABLE_SELINUX)
 		//do not add extra column to sqlite_*** due to compatibility.
-		if(0!=sqlite3StrNICmp(p->zName, "sqlite_", 7)) {
+		if(0!=sqlite3StrNICmp(p->zName, "sqlite_", 7) && 0!=sqlite3StrNICmp(p->zName, "selinux_", 8)) {
 			Column *pCol;
 #if SQLITE_MAX_COLUMN
 			if (p->nCol + 1 > db->aLimit[SQLITE_LIMIT_COLUMN]) {
@@ -1644,16 +1644,21 @@ Select *pSelect /* Select from a "CREATE ... AS SELECT" */
 		} else {
 			n = (int) (pEnd->z - pParse->sNameToken.z) + 1;
 #if defined(SQLITE_ENABLE_SELINUX)
-			int length = n + strlen(SECURITY_CONTEXT_COLUMN_DEFINITION) + 1;
-			char *zTmpStmt = NULL;
-			zTmpStmt = (char *) sqlite3_malloc(length * sizeof(char));
-			memset(zTmpStmt, '\0', length * sizeof(char));
-			strncpy(zTmpStmt, pParse->sNameToken.z, n - 1);
-			strcat(zTmpStmt, SECURITY_CONTEXT_COLUMN_DEFINITION);
-			strcat(zTmpStmt, pEnd->z);
+			if(0!=sqlite3StrNICmp(p->zName, "sqlite_", 7) && 0!=sqlite3StrNICmp(p->zName, "selinux_", 8)) {
+				int length = n + strlen(SECURITY_CONTEXT_COLUMN_DEFINITION) + 1;
+				char *zTmpStmt = NULL;
+				zTmpStmt = (char *) sqlite3_malloc(length * sizeof(char));
+				memset(zTmpStmt, '\0', length * sizeof(char));
+				strncpy(zTmpStmt, pParse->sNameToken.z, n - 1);
+				strcat(zTmpStmt, SECURITY_CONTEXT_COLUMN_DEFINITION);
+				strcat(zTmpStmt, pEnd->z);
 
-			zStmt = sqlite3MPrintf(db, "CREATE %s %.*s", zType2, length, zTmpStmt);
-			sqlite3_free(zTmpStmt);
+				zStmt = sqlite3MPrintf(db, "CREATE %s %.*s", zType2, length, zTmpStmt);
+				sqlite3_free(zTmpStmt);
+			}else{
+				zStmt = sqlite3MPrintf(db, "CREATE %s %.*s", zType2, n,
+									pParse->sNameToken.z);
+			}
 #else
 			zStmt = sqlite3MPrintf(db, "CREATE %s %.*s", zType2, n,
 					pParse->sNameToken.z);

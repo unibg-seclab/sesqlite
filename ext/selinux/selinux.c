@@ -864,6 +864,19 @@ static void selinuxCheckAccessFunction(sqlite3_context *context, int argc,
 	sqlite3_result_int(context, 0 == *res);
 }
 
+static void selinuxGetContextFunction(sqlite3_context *context, int argc,
+		sqlite3_value **argv) {
+
+	security_context_t con;
+	int rc = getcon(&con);
+	if (rc == -1) {
+		fprintf(stderr,
+				"Error: unable to retrieve the current security context.\n");
+		sqlite3_result_text(context, "unlabeled", -1, 0);
+	} else
+		sqlite3_result_text(context, con, -1, 0);
+}
+
 /*
  * Inizialize the database objects used by SeSqlite:
  * 1. SeSqlite master table that keeps the permission for the schema level
@@ -904,20 +917,19 @@ int initializeSeSqliteObjects(sqlite3 *db) {
 //	    move the table and trigger creation there.
 	if (rc == SQLITE_OK) {
 		/* automatically create an instance of the virtual table */
-		rc =
-		sqlite3_exec(db,
-				"CREATE VIRTUAL TABLE sesqlite_master USING selinuxModule",
-				NULL, NULL, NULL);
-
+//		rc =
+//		sqlite3_exec(db,
+//				"CREATE VIRTUAL TABLE sesqlite_master USING selinuxModule",
+//				NULL, NULL, NULL);
 		//TODO WHERE??
 		rc =
 		sqlite3_exec(db,
-		SELINUX_CONTEXT_TABLE,
-		NULL, NULL, NULL);
+		SELINUX_CONTEXT_TABLE, 0, 0, 0);
 
-		rc = sqlite3_prepare_v2(db,
-				"INSERT INTO selinux_context values(?1, ?2, ?3, ?4);", -1,
-				&sesqlite_stmt, 0);
+		if (rc == SQLITE_OK)
+			rc = sqlite3_prepare_v2(db,
+					"INSERT INTO selinux_context values(?1, ?2, ?3, ?4);", -1,
+					&sesqlite_stmt, 0);
 
 		if (rc == SQLITE_OK)
 			rc = initializeContext(db);
@@ -1006,6 +1018,13 @@ int sqlite3SelinuxInit(sqlite3 *db) {
 	if (rc == SQLITE_OK) {
 		rc = sqlite3_create_function(db, "selinux_check_access", 3,
 		SQLITE_UTF8 /* | SQLITE_DETERMINISTIC */, 0, selinuxCheckAccessFunction,
+				0, 0);
+	}
+
+// create the SQL function getcon
+	if (rc == SQLITE_OK) {
+		rc = sqlite3_create_function(db, "getcon", 0,
+		SQLITE_UTF8 /* | SQLITE_DETERMINISTIC */, 0, selinuxGetContextFunction,
 				0, 0);
 	}
 
