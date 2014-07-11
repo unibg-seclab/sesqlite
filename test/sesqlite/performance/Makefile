@@ -1,4 +1,4 @@
-.PHONY: all clean graph test test_se
+.PHONY: all clean clean_temp clean_test_db graph test test_se
 
 n					= 2
 TOP					= ../../..
@@ -26,7 +26,7 @@ SE_SQLITE_TUPLE_OUT	 = results/sesqlite_tuple.out
 
 all: $(NAME) $(NAME_SE) $(TEST_SQL) $(TEST_TUPLE_SQL) $(TEST_TUPLE_SE_SQL)
 
-test: clean_test_db $(CONTEXTS) $(TEST_SQL) $(NAME)
+test: clean_test_db $(TEST_SQL) $(NAME)
 	@ ./$(NAME) -quiet $(TEST_DB) $(TEST_SQL)
 
 test_se: clean_test_db $(CONTEXTS) $(TEST_SQL) $(NAME_SE)
@@ -72,22 +72,24 @@ $(TEST_TUPLE_SE_SQL):
 clean_test_db:
 	@- $(RM) $(TEST_DB)*
 
-clean: clean_test_db
+clean_temp: clean_test_db
 	@- $(RM) $(NAME) $(NAME_SE) $(CONTEXTS)
 	@- $(RM) $(OBJS) $(SE_SQLITE_OBJ) $(SQLITE_OBJ)
+
+clean: clean_temp
 	@- $(RM) -rf results
 
 graph: $(BASE_OUT) $(SE_SQLITE_OUT) $(BASE_TUPLE_OUT) $(SE_SQLITE_TUPLE_OUT)
 	@- python makegraph.py
 
 results:
-	@ mkdir results
+	@ mkdir -p results
 
 define testout
 	@ $(foreach i, $(shell seq 1 $(n)), echo "$(1) $(i) ..." ; make $(1) >> $@ ; )
 endef
 
-$(BASE_OUT): results $(CONTEXTS) $(TEST_SQL) $(NAME)
+$(BASE_OUT): results $(TEST_SQL) $(NAME)
 	@ $(call testout,test)
 
 $(SE_SQLITE_OUT): results  $(CONTEXTS) $(TEST_SQL) $(NAME_SE)
