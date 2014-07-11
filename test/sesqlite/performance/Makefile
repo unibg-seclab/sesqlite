@@ -28,13 +28,9 @@ $(SQLITE_OBJ):
 	@ make -C $(TOP)
 	cp $(TOP)/build/sqlite3.o ./$(SQLITE_OBJ)
 
-define generate_sql
-	@ echo "[Generating $@]"
-	tclsh $(TOP)/tool/$(1) > $@
-endef
-
 $(TEST_SQL):
-	@ $(call generate_sql, mkspeedsql.tcl)
+	@ echo "[Generating $@]"
+	tclsh $(TOP)/tool/mkspeedsql.tcl > $@
 
 clean_test_db:
 	@- $(RM) $(TEST_DB)*
@@ -50,9 +46,5 @@ graph: $(BASE_OUT)
 results:
 	@ mkdir results
 
-define testout
-	@ $(foreach i, $(shell seq 1 $(n)), echo "$(1) $(i) ..." ; make $(1) >> $@ ; )
-endef
-
 $(BASE_OUT): results $(TEST_SQL) $(NAME)
-	@ $(call testout, test)
+	@ $(foreach i, $(shell seq 1 $(n)), echo "test $(i) ..." ; make test >> $@ ; )
