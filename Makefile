@@ -9,11 +9,11 @@ CONTEXTS		:= sesqlite_contexts
 
 build:
 	mkdir -p build
-	cp test/sesqlite/policy/$(CONTEXTS) build
 	cd build; $(CONF) $(CONFOPTS); make
 
 all:
 	make build CONFOPTS="$(CONFOPTS) $(ENABLE_SELINUX) $(ENABLE_DEBUG)"
+	cp test/sesqlite/policy/$(CONTEXTS) build
 
 test:
 	make fresh -C test/sesqlite/cunit
