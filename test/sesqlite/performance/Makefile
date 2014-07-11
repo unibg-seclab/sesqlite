@@ -103,7 +103,7 @@ $(BASE_OUT): results $(TEST_SQL) $(NAME)
 $(SE_OUT): results $(CONTEXTS) $(TEST_SQL) $(NAME_SE)
 	@ $(call testout,test_se)
 
-$(SE_TUPLE_STATIC_OUT): results $(CONTEXTS) $(TEST_TUPLE_SQL) $(NAME)
+$(SE_TUPLE_STATIC_OUT): results $(CONTEXTS) $(TEST_TUPLE_SQL) $(NAME_SE)
 	@ $(call testout,test_tuple)
 
 $(SE_TUPLE_OUT): results $(CONTEXTS) $(TEST_TUPLE_SE_SQL) $(NAME_SE)
