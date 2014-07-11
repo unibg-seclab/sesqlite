@@ -100,7 +100,7 @@ int main(int argc, char **argv){
   char *zSql;
   int i, j;
   FILE *in;
-  struct timespec iStart, iOpen, iClose;
+  struct timespec iStart, iOpen, iClose, iReopen;
   int nStmt = 0;
   int nByte = 0;
   const char *zArgv0 = argv[0];
@@ -200,8 +200,9 @@ int main(int argc, char **argv){
 #endif
   iStart = tsTOD();
   rc = sqlite3_open(argv[1], &db);
+  sqlite3_exec(db, "SELECT 1;", 0, 0, 0);  // force loading the objects
   iOpen = tsSubtract(tsTOD(), iStart);
-  if (!bQuiet) printf("sqlite3_open() returns %d in %g secs\n", rc, tsFloat(iOpen));
+  if (!bQuiet) printf("sqlite3_open() with \"SELECT 1;\" returns %d in %g secs\n", rc, tsFloat(iOpen));
   for(i=j=0; j<nSql; j++){
     if( zSql[j]==';' ){
       int isComplete;
@@ -227,10 +228,17 @@ int main(int argc, char **argv){
   iStart = tsTOD();
   sqlite3_close(db);
   iClose = tsSubtract(tsTOD(), iStart);
+  if (!bQuiet) printf("sqlite3_close() returns in %g secs\n", tsFloat(iClose));
+
+  iStart = tsTOD();
+  rc = sqlite3_open(argv[1], &db);
+  sqlite3_exec(db, "SELECT 1;", 0, 0, 0);  // force loading the objects
+  iReopen = tsSubtract(tsTOD(), iStart);
+  if (!bQuiet) printf("sqlite3_open() with \"SELECT 1;\" for reopen returns %d in %g secs\n", rc, tsFloat(iReopen));
+
 #if !defined(_MSC_VER)
   clkEnd = times(&tmsEnd);
 #endif
-  if (!bQuiet) printf("sqlite3_close() returns in %g secs\n", tsFloat(iClose));
 
   printf("\n");
   printf("Statements run:        %15d stmts\n", nStmt);
@@ -240,8 +248,9 @@ int main(int argc, char **argv){
   printf("Total finalize time:   %g secs\n", tsFloat(finalizeTime));
   printf("Open time:             %g secs\n", tsFloat(iOpen));
   printf("Close time:            %g secs\n", tsFloat(iClose));
+  printf("Reopen time:           %g secs\n", tsFloat(iReopen));
   printf("Total time:            %g secs\n",
-      tsFloat(tsAdd(prepTime, tsAdd(runTime, tsAdd(finalizeTime, tsAdd(iOpen, iClose))))));
+      tsFloat(tsAdd(prepTime, tsAdd(runTime, tsAdd(finalizeTime, tsAdd(iClose, tsAdd(iReopen, iOpen)))))));
 
 // #if !defined(_MSC_VER)
 //   printf("\n");

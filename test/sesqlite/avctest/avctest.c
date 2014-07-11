@@ -9,7 +9,7 @@
 #define TIMER_DIFF		(TIMER_GET) - _tstart
 
 int main(int argc, char **argv) {
-	int times = 1;
+	int times = 10;
 	if (argc > 1)
 		times = atoi(argv[1]);
 
@@ -20,11 +20,13 @@ int main(int argc, char **argv) {
 
 	TIMER_INIT
 
-	int i;
+	int i, rc;
+	double diff;
 	for (i = 0; i < times; ++i) {
 		TIMER_START
-		selinux_check_access(scon, tcon, clas, perm, NULL);
-		printf("%f\n", TIMER_DIFF);
+		rc = selinux_check_access(scon, tcon, clas, perm, NULL);
+		diff = TIMER_DIFF;
+		printf("%2d) res: %d  time: %f\n", i, rc, TIMER_DIFF);
 	}
 
 	return 0;

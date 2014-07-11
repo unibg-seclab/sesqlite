@@ -38,7 +38,7 @@ Procedures:
 #include  <time.h>			/* Time definitions. */
 #include  "ts_util.h"           /* "timespec" manipulation functions. */
 // #include  "tv_util.h"			/* "timeval" manipulation functions. */
-
+
 /*!*****************************************************************************
 
 Procedure:
@@ -71,9 +71,11 @@ Purpose:
 
 
 struct  timespec  tsAdd (
-        struct  timespec  time1,
-        struct  timespec  time2)
-{    /* Local variables. */
+    struct  timespec  time1,
+    struct  timespec  time2
+){    
+
+/* Local variables. */
     struct  timespec  result ;
 
 /* Add the two times together. */
@@ -87,7 +89,7 @@ struct  timespec  tsAdd (
     return (result) ;
 
 }
-
+
 /*!*****************************************************************************
 
 Procedure:
@@ -116,11 +118,13 @@ Purpose:
 
 
 double  tsFloat (
-        struct  timespec  time)
-{
+    struct  timespec  time
+){
+
     return ((double) time.tv_sec + (time.tv_nsec / 1000000000.0)) ;
+
 }
-
+
 /*!*****************************************************************************
 
 Procedure:
@@ -151,9 +155,11 @@ Purpose:
 
 
 struct  timespec  tsSubtract (
-        struct  timespec  time1,
-        struct  timespec  time2)
-{    /* Local variables. */
+    struct  timespec  time1,
+    struct  timespec  time2
+){    
+
+/* Local variables. */
     struct  timespec  result ;
 
 /* Subtract the second time from the first. */
@@ -175,7 +181,7 @@ struct  timespec  tsSubtract (
     return (result) ;
 
 }
-
+
 /*!*****************************************************************************
 
 Procedure:
@@ -206,10 +212,12 @@ Purpose:
 
 
 struct  timespec  tsTOD ()
+{
 
-{    /* Local variables. */
+/* Local variables. */
     struct  timespec  timeOfDay ;
 
-clock_gettime (CLOCK_REALTIME, &timeOfDay) ;
-return (timeOfDay) ;
+    clock_gettime (CLOCK_MONOTONIC, &timeOfDay) ;
+    return (timeOfDay) ;
+
 }

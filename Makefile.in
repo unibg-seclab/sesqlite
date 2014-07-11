@@ -199,7 +199,7 @@ LIBOBJS0 = alter.lo analyze.lo attach.lo auth.lo \
          update.lo util.lo vacuum.lo \
          vdbe.lo vdbeapi.lo vdbeaux.lo vdbeblob.lo vdbemem.lo vdbesort.lo \
          vdbetrace.lo wal.lo walker.lo where.lo utf.lo vtab.lo \
-         selinux.lo
+         sesqlite_hash.lo sesqlite_vtab.lo selinux.lo 
 
 # Object files for the amalgamation.
 #
@@ -346,8 +346,12 @@ SRC += \
   $(TOP)/ext/rtree/rtree.h \
   $(TOP)/ext/rtree/rtree.c
 SRC += \
+  $(TOP)/ext/selinux/sesqlite_hash.h \
+  $(TOP)/ext/selinux/sesqlite_vtab.h \
   $(TOP)/ext/selinux/selinux.h \
-  $(TOP)/ext/selinux/selinux.c
+  $(TOP)/ext/selinux/sesqlite_hash.c \
+  $(TOP)/ext/selinux/sesqlite_vtab.c \
+  $(TOP)/ext/selinux/selinux.c 
 
 # Generated source code files
 #
@@ -496,7 +500,9 @@ EXTHDR += \
 EXTHDR += \
   $(TOP)/ext/rtree/sqlite3rtree.h
 EXTHDR += \
-  $(TOP)/ext/selinux/selinux.h
+  $(TOP)/ext/selinux/sesqlite_hash.h \
+  $(TOP)/ext/selinux/sesqlite_vtab.h \
+  $(TOP)/ext/selinux/selinux.h 
 
 # This is the default Makefile target.  The objects listed here
 # are what get build when you type just "make" with no arguments.
@@ -886,10 +892,15 @@ fts3_write.lo:	$(TOP)/ext/fts3/fts3_write.c $(HDR) $(EXTHDR)
 
 rtree.lo:	$(TOP)/ext/rtree/rtree.c $(HDR) $(EXTHDR)
 	$(LTCOMPILE) -DSQLITE_CORE -c $(TOP)/ext/rtree/rtree.c
+
+sesqlite_hash.lo:	$(TOP)/ext/selinux/sesqlite_hash.c $(HDR) $(EXTHDR)
+	$(LTCOMPILE) -DSQLITE_CORE -c $(TOP)/ext/selinux/sesqlite_hash.c
+
+sesqlite_vtab.lo:	$(TOP)/ext/selinux/sesqlite_vtab.c $(HDR) $(EXTHDR)
+	$(LTCOMPILE) -DSQLITE_CORE -c $(TOP)/ext/selinux/sesqlite_vtab.c
 	
 selinux.lo:	$(TOP)/ext/selinux/selinux.c $(HDR) $(EXTHDR)
 	$(LTCOMPILE) -DSQLITE_CORE -c $(TOP)/ext/selinux/selinux.c
-
 
 # Rules to build the 'testfixture' application.
 #
