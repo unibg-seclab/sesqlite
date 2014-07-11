@@ -61,13 +61,13 @@ define generate_sql
 endef
 
 $(TEST_SQL):
-	@ $(call generate_sql, mkspeedsql.tcl)
+	@ $(call generate_sql,mkspeedsql.tcl)
 
 $(TEST_TUPLE_SQL):
-	@ $(call generate_sql, mkspeedsql_tuple.tcl)
+	@ $(call generate_sql,mkspeedsql_tuple.tcl)
 
 $(TEST_TUPLE_SE_SQL):
-	@ $(call generate_sql, mkspeedsql_tuple_se.tcl)
+	@ $(call generate_sql,mkspeedsql_tuple_se.tcl)
 
 clean_test_db:
 	@- $(RM) $(TEST_DB)*
@@ -88,13 +88,13 @@ define testout
 endef
 
 $(BASE_OUT): results $(CONTEXTS) $(TEST_SQL) $(NAME)
-	@ $(call testout, test)
+	@ $(call testout,test)
 
 $(SE_SQLITE_OUT): results  $(CONTEXTS) $(TEST_SQL) $(NAME_SE)
-	@ $(call testout, test_se)
+	@ $(call testout,test_se)
 
 $(BASE_TUPLE_OUT): results  $(CONTEXTS) $(TEST_TUPLE_SQL) $(NAME)
-	@ $(call testout, test_tuple)
+	@ $(call testout,test_tuple)
 
 $(SE_SQLITE_TUPLE_OUT): results $(CONTEXTS) $(TEST_TUPLE_SE_SQL) $(NAME_SE)
-	@ $(call testout, test_tuple_se)
+	@ $(call testout,test_tuple_se)
