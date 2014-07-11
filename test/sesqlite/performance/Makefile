@@ -1,4 +1,4 @@
-.PHONY: all clean clean_temp clean_test_db graph test test_se
+.PHONY: all clean clean_test_db graph graph_base graph_se test test_se
 
 n					= 2
 TOP					= ../../..
@@ -19,9 +19,9 @@ INCLUDES			:= -I$(TOP)/src
 LDFLAGS				+= -ldl
 
 BASE_OUT			 = results/base.out
-SE_SQLITE_OUT		 = results/sesqlite.out
-BASE_TUPLE_OUT		 = results/base_tuple.out
-SE_SQLITE_TUPLE_OUT	 = results/sesqlite_tuple.out
+SE_OUT				 = results/se.out
+SE_TUPLE_OUT		 = results/se_tuple.out
+SE_TUPLE_STATIC_OUT	 = results/se_tuple_static.out
 
 
 all: $(NAME) $(NAME_SE) $(TEST_SQL) $(TEST_TUPLE_SQL) $(TEST_TUPLE_SE_SQL)
@@ -72,15 +72,23 @@ $(TEST_TUPLE_SE_SQL):
 clean_test_db:
 	@- $(RM) $(TEST_DB)*
 
-clean_temp: clean_test_db
+clean: clean_test_db
 	@- $(RM) $(NAME) $(NAME_SE) $(CONTEXTS)
 	@- $(RM) $(OBJS) $(SE_SQLITE_OBJ) $(SQLITE_OBJ)
-
-clean: clean_temp
 	@- $(RM) -rf results
 
-graph: $(BASE_OUT) $(SE_SQLITE_OUT) $(BASE_TUPLE_OUT) $(SE_SQLITE_TUPLE_OUT)
-	@- python makegraph.py
+define makegraph
+	@ python makegraph.py
+endef
+
+graph_base: $(BASE_OUT)
+	$(call makegraph)
+
+graph_se: $(SE_OUT) $(SE_TUPLE_STATIC_OUT) $(SE_TUPLE_OUT)
+	$(call makegraph)
+
+graph: $(BASE_OUT) $(SE_OUT) $(SE_TUPLE_STATIC_OUT) $(SE_TUPLE_OUT)
+	$(call makegraph)
 
 results:
 	@ mkdir -p results
@@ -92,11 +100,11 @@ endef
 $(BASE_OUT): results $(TEST_SQL) $(NAME)
 	@ $(call testout,test)
 
-$(SE_SQLITE_OUT): results  $(CONTEXTS) $(TEST_SQL) $(NAME_SE)
+$(SE_OUT): results $(CONTEXTS) $(TEST_SQL) $(NAME_SE)
 	@ $(call testout,test_se)
 
-$(BASE_TUPLE_OUT): results  $(CONTEXTS) $(TEST_TUPLE_SQL) $(NAME)
+$(SE_TUPLE_STATIC_OUT): results $(CONTEXTS) $(TEST_TUPLE_SQL) $(NAME)
 	@ $(call testout,test_tuple)
 
-$(SE_SQLITE_TUPLE_OUT): results $(CONTEXTS) $(TEST_TUPLE_SE_SQL) $(NAME_SE)
+$(SE_TUPLE_OUT): results $(CONTEXTS) $(TEST_TUPLE_SE_SQL) $(NAME_SE)
 	@ $(call testout,test_tuple_se)
