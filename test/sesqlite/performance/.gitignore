@@ -1,0 +1,10 @@
+*.o
+*.db
+*.db-journal
+*.out
+*.sql
+
+speedtest8
+speedtest8_se
+sesqlite_contexts
+results/
