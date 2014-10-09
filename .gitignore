@@ -27,3 +27,5 @@ local.properties
 # PDT-specific
 .buildpath
 
+# configure created by autoconfigure
+/configure
