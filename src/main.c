@@ -2306,7 +2306,7 @@ static int openDatabase(
   if( !db->mallocFailed ){
     rc = sqlite3SelinuxInit(db);
   }
-#endif
+#endif /* SQLITE_ENABLE_SELINUX */
 
   sqlite3Error(db, rc, 0);
 
