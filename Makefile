@@ -7,14 +7,17 @@ ENABLE_SELINUX	 = --enable-selinux
 ENABLE_DEBUG	 = --enable-debug
 CONTEXTS		:= sesqlite_contexts
 
-build:
-	mkdir -p build
-	cd build; $(CONF) $(CONFOPTS); make
-
 all:
 	make build CONFOPTS="$(CONFOPTS) $(ENABLE_SELINUX) $(ENABLE_DEBUG)"
 	cp test/sesqlite/policy/$(CONTEXTS) build
 
+build:  configure
+	mkdir -p build
+	cd build; $(CONF) $(CONFOPTS); make
+	
+configure:
+	autoconf -i
+	
 test:
 	make fresh -C test/sesqlite/cunit
 	make graph -C test/sesqlite/performance
@@ -27,6 +30,7 @@ performance-selinux: clean
 
 clean:
 	@- $(RM) -rf build
+	@- $(RM) configure
 
 cleanall: clean
 	@ make clean -C test/sesqlite/cunit

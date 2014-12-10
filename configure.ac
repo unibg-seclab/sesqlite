@@ -690,22 +690,70 @@ AC_SUBST(USE_GCOV)
 
 #########
 # See whether we should allow selinux extensions
-AC_ARG_ENABLE(selinux, AC_HELP_STRING([--enable-selinux],
-      [Enable using selinux]),
-      [use_selinux=$enableval],[use_selinux=no])
-if test "${use_selinux}" = "yes" ; then
-  USE_SELINUX=1
-#check libselinux
-  AC_SEARCH_LIBS([selinux_check_access], [selinux], [], [
-  AC_MSG_ERROR([unable to find the selinux_check_access function],[$?])])
- #check headers
-  AC_CHECK_HEADERS([selinux.h avc.h], [selinux_found_headers=yes; break;])
-	AS_IF([test "x$selinux_found_headers" != "xyes"],
-	[AC_MSG_ERROR([Unable to find the selinux headers],[$?])])
-else
-  USE_SELINUX=0
+#
+TARGET_SELINUX_LIBS=""
+TARGET_SELINUX_INC=""
+TARGET_HAVE_SELINUX=0
+AC_ARG_ENABLE(selinux, 
+      AC_HELP_STRING([--enable-selinux], [Enable using selinux]),
+      [use_selinux=$enableval],
+      [use_selinux=no])
+      
+if test x"$use_selinux" != xno; then
+  TARGET_HAVE_SELINUX=1
+  
+  #check library
+  AC_ARG_WITH([selinux-lib],
+	[AC_HELP_STRING([--with-selinux-lib],[specify selinux library])],
+	[with_selinux_lib=$withval],
+	[with_selinux_lib="auto"])
+	
+  if test "x$with_selinux_lib" = xauto; then
+	save_LIBS="$LIBS"
+	LIBS=""
+	AC_SEARCH_LIBS([selinux_check_access], [selinux], [term_LIBS="$LIBS"], [term_LIBS=""])
+	AC_CHECK_LIB([selinux], [selinux_check_access], [TARGET_SELINUX_LIBS="-lselinux"], [found="no"])
+	TARGET_SELINUX_LIBS="$TARGET_SELINUX_LIBS $term_LIBS"
+	LIBS="$save_LIBS"
+  else
+	TARGET_SELINUX_LIBS="$with_selinux_lib"
+  fi
+  
+  #check headers
+  AC_ARG_WITH([selinux-inc],
+	[AC_HELP_STRING([--with-selinux-inc],[specify selinux include paths])],
+	[with_selinux_inc=$withval],
+	[with_selinux_inc="auto"])
+  
+  if test "x$with_selinux_inc" = xauto; then
+	AC_CHECK_HEADER(selinux.h, [found="yes"], [found="no"
+		for dir in /usr /usr/local; do
+			for subdir in include include/selinux; do
+				AC_CHECK_FILE($dir/$subdir/selinux.h, found=yes)
+				if test "$found" = "yes"; then
+					TARGET_SELINUX_INC="-I$dir/$subdir"
+					break
+				fi
+			done
+			test "$found" = "yes" && break
+		done
+	])
+  else
+	TARGET_SELINUX_INC="$with_selinux_inc"
+  fi
+  
+  if test x"$found" = xno; then
+	TARGET_SELINUX_LIBS=""
+	TARGET_SELINUX_INC=""
+	TARGET_HAVE_SELINUX=0
+  else
+	TARGET_HAVE_SELINUX=1
+  fi
 fi
-AC_SUBST(USE_SELINUX)
+
+AC_SUBST(TARGET_SELINUX_LIBS)
+AC_SUBST(TARGET_SELINUX_INC)
+AC_SUBST(TARGET_HAVE_SELINUX)
 
 #########
 # Output the config header

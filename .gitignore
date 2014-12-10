@@ -29,3 +29,6 @@ local.properties
 
 # configure created by autoconfigure
 /configure
+
+#cache
+autom4te.cache/
