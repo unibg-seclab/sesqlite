@@ -236,6 +236,8 @@ struct sqlite3_api_routines {
   int (*blob_reopen)(sqlite3_blob*,sqlite3_int64);
   int (*vtab_config)(sqlite3*,int op,...);
   int (*vtab_on_conflict)(sqlite3*);
+  /* Added by XXX */
+  int (*pragma_add)(sqlite3*,const char*,void(*)(void*,sqlite3*,const char*),void*);
 };
 
 /*
@@ -439,6 +441,7 @@ struct sqlite3_api_routines {
 #define sqlite3_blob_reopen            sqlite3_api->blob_reopen
 #define sqlite3_vtab_config            sqlite3_api->vtab_config
 #define sqlite3_vtab_on_conflict       sqlite3_api->vtab_on_conflict
+#define sqlite3_pragma_add             sqlite3_api->pragma_add
 #endif /* SQLITE_CORE */
 
 #define SQLITE_EXTENSION_INIT1     const sqlite3_api_routines *sqlite3_api = 0;

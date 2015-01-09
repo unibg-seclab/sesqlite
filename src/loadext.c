@@ -378,6 +378,15 @@ static const sqlite3_api_routines sqlite3Apis = {
   sqlite3_blob_reopen,
   sqlite3_vtab_config,
   sqlite3_vtab_on_conflict,
+
+  /**
+  ** Added for XXX
+  */
+#if !defined(SQLITE_OMIT_EXTENDED_PRAGMA) && !defined(SQLITE_OMIT_PRAGMA)
+  sqlite3_pragma_add,
+#else
+  0,
+#endif
 };
 
 /*

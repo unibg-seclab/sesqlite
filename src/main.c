@@ -832,6 +832,18 @@ int sqlite3_close(sqlite3 *db){
   }
   sqlite3CloseExtensions(db);
 
+#ifndef SQLITE_OMIT_EXTENDED_PRAGMA
+  ExtPragma *iter = db->pPragmaList;
+  ExtPragma *prev;
+
+  while( iter!=0 ){
+    sqlite3DbFree(db, iter->pCommand);
+    prev = iter;
+    iter = iter->pNext;
+    sqlite3DbFree(db, prev);
+  }
+#endif
+
   db->magic = SQLITE_MAGIC_ERROR;
 
   /* The temp-database schema is allocated differently from the other schema

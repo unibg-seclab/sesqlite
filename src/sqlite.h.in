@@ -6922,6 +6922,25 @@ int sqlite3_vtab_on_conflict(sqlite3 *);
 /* #define SQLITE_ABORT 4  // Also an error code */
 #define SQLITE_REPLACE  5
 
+/*
+** CAPI3REF: Custom pragmas
+**
+** This command is used to add custom pragmas to sqlite in order to perform
+** custom actions. ^The first argument is the database you need to register
+** the new pragma on. The second argument is the pragma name (the one that
+** will be used to invoke the pragma).
+**
+** The fourth argument is a pointer to user data that is later passed to the
+** callback when invoked. ^The first argument of the callback is the user data.
+** The second one is a pointer to the database structure. The third argument is
+** the string following the pragma command.
+*/
+int sqlite3_pragma_add(
+  sqlite3 *db,
+  const char *command,
+  void (*xCallback)(void*,sqlite3*,const char*),
+  void *pData
+);
 
 
 /*
