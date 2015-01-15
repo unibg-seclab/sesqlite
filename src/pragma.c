@@ -796,7 +796,22 @@ void sqlite3Pragma(
       lwr = mid + 1;
     }
   }
-  if( lwr>upr ) goto pragma_out;
+  if( lwr>upr ) {
+
+#ifndef SQLITE_OMIT_EXTENDED_PRAGMA
+    /* Check extended pragmas */
+    ExtPragma *iter = db->pPragmaList;
+    while( iter != 0 ){
+      if( sqlite3StrICmp(zLeft, iter->pCommand)==0 ){
+        iter->xCallback(iter->pCallbackArg, db, zRight);
+        break;
+      }
+      iter = iter->pNext;
+    }
+#endif
+
+    goto pragma_out;
+  }
 
   /* Make sure the database schema is loaded if the pragma requires that */
   if( (aPragmaNames[mid].mPragFlag & PragFlag_NeedSchema)!=0 ){
@@ -2306,5 +2321,38 @@ pragma_out:
   sqlite3DbFree(db, zLeft);
   sqlite3DbFree(db, zRight);
 }
+
+#ifndef SQLITE_OMIT_EXTENDED_PRAGMA
+int sqlite3_pragma_add(
+  sqlite3 *db,
+  const char *pCommand,
+  void (*xCallback)(void*,sqlite3*,const char*),
+  void *pData
+){
+  sqlite3_mutex_enter(db->mutex);
+
+  ExtPragma *new = sqlite3_malloc(sizeof(ExtPragma));
+  new->pCommand = sqlite3_mprintf("%s", pCommand);
+  new->xCallback = xCallback;
+  new->pCallbackArg = pData;
+  new->pNext = 0;
+
+  if( db->pPragmaList==0 ){
+    db->pPragmaList = new;
+  }else{
+    ExtPragma *iter = db->pPragmaList;
+    while( iter->pNext!=0 )
+      iter = iter->pNext;
+    iter->pNext = new;
+  }
+
+#ifdef SQLITE_DEBUG
+  fprintf(stdout, "Pragma registered: '%s'\n", pCommand);
+#endif
+
+  sqlite3_mutex_leave(db->mutex);
+  return SQLITE_OK;
+}
+#endif
 
 #endif /* SQLITE_OMIT_PRAGMA */

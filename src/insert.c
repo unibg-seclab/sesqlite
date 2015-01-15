@@ -724,6 +724,15 @@ void sqlite3Insert(
       nHidden += (IsHiddenColumn(&pTab->aCol[i]) ? 1 : 0);
     }
   }
+
+#ifdef SQLITE_ENABLE_SELINUX
+  else {
+    for(i=0; i<pTab->nCol; i++){
+      nHidden += (IsHiddenColumn(&pTab->aCol[i]) ? 1 : 0);
+    }
+  }
+#endif /* SQLITE_ENABLE_SELINUX */
+
   if( pColumn==0 && nColumn && nColumn!=(pTab->nCol-nHidden) ){
     sqlite3ErrorMsg(pParse, 
        "table %S has %d columns but %d values were supplied",
@@ -917,7 +926,11 @@ void sqlite3Insert(
       }
       if( pColumn==0 ){
         if( IsHiddenColumn(&pTab->aCol[i]) ){
+
+#if	!defined(SQLITE_ENABLE_SELINUX)
           assert( IsVirtual(pTab) );
+#endif
+
           j = -1;
           nHidden++;
         }else{

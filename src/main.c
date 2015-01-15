@@ -25,6 +25,10 @@
 #ifdef SQLITE_ENABLE_ICU
 # include "sqliteicu.h"
 #endif
+#ifdef SQLITE_ENABLE_SELINUX
+# include "selinux.h"
+#endif
+
 
 #ifndef SQLITE_AMALGAMATION
 /* IMPLEMENTATION-OF: R-46656-45156 The sqlite3_version[] string constant
@@ -982,6 +986,18 @@ void sqlite3LeaveMutexAndCloseZombie(sqlite3 *db){
   sqlite3Error(db, SQLITE_OK, 0); /* Deallocates any cached error strings. */
   sqlite3ValueFree(db->pErr);
   sqlite3CloseExtensions(db);
+
+#ifndef SQLITE_OMIT_EXTENDED_PRAGMA
+  ExtPragma *iter = db->pPragmaList;
+  ExtPragma *prev;
+
+  while( iter!=0 ){
+    sqlite3DbFree(db, iter->pCommand);
+    prev = iter;
+    iter = iter->pNext;
+    sqlite3DbFree(db, prev);
+  }
+#endif
 
   db->magic = SQLITE_MAGIC_ERROR;
 
@@ -2622,6 +2638,12 @@ static int openDatabase(
     rc = sqlite3RtreeInit(db);
   }
 #endif
+
+#ifdef SQLITE_ENABLE_SELINUX
+  if( !db->mallocFailed ){
+    rc = sqlite3SelinuxInit(db);
+  }
+#endif /* SQLITE_ENABLE_SELINUX */
 
   /* -DSQLITE_DEFAULT_LOCKING_MODE=1 makes EXCLUSIVE the default locking
   ** mode.  -DSQLITE_DEFAULT_LOCKING_MODE=0 make NORMAL the default locking

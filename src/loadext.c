@@ -390,7 +390,16 @@ static const sqlite3_api_routines sqlite3Apis = {
   sqlite3_uri_int64,
   sqlite3_uri_parameter,
   sqlite3_vsnprintf,
-  sqlite3_wal_checkpoint_v2
+  sqlite3_wal_checkpoint_v2,
+
+  /**
+  ** Added for XXX
+  */
+#if !defined(SQLITE_OMIT_EXTENDED_PRAGMA) && !defined(SQLITE_OMIT_PRAGMA)
+  sqlite3_pragma_add,
+#else
+  0,
+#endif
 };
 
 /*

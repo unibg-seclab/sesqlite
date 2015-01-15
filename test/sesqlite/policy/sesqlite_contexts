@@ -1,0 +1,42 @@
+#
+# Initial security label for SESQLite
+#
+
+#db.table.column
+#db.table
+
+# <databases>
+db_database	*	unconfined_u:object_r:sesqlite_db_public:s0
+
+# <tables>
+db_table	*.sqlite_master	unconfined_u:object_r:sesqlite_master:s0
+db_table	*.selinux_context	unconfined_u:object_r:sesqlite_public:s0
+db_table	*.sesqlite_master	unconfined_u:object_r:sesqlite_public:s0
+db_table	*.sqlite_temp_master	unconfined_u:object_r:sesqlite_temp_public:s0
+db_table	*.t1	unconfined_u:object_r:app_data_db_t:s0
+db_table	*.t2	unconfined_u:object_r:app_data_db_t:s0
+db_table	*.t3	unconfined_u:object_r:app_data_db_t:s0
+db_table	*.*	unconfined_u:object_r:sesqlite_public:s0
+
+
+# <column>
+db_column	*.sqlite_master.*	unconfined_u:object_r:sesqlite_public:s0
+db_column	*.selinux_context.*	unconfined_u:object_r:sesqlite_public:s0
+db_column	*.t3.g	unconfined_u:object_r:app_data_db_c:s0
+db_column	*.t2.d	unconfined_u:object_r:app_data_db_c:s0
+db_column	*.t2.e	unconfined_u:object_r:app_data_db_c:s0
+db_column	*.*.*	unconfined_u:object_r:sesqlite_public:s0
+
+# <tuples>
+db_tuple	*.selinux_context	unconfined_u:object_r:sesqlite_public:s0
+db_tuple	*.*	unconfined_u:object_r:sesqlite_public:s0
+
+# <views>
+#db_view	*			system_u:object_r:sepgsql_view_t
+
+#sqlite_master contiene 
+
+
+#########################
+#tabelle, view, trigger
+#potrei guardare in base alla colonna type

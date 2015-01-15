@@ -803,6 +803,7 @@ typedef struct VtabCtx VtabCtx;
 typedef struct Walker Walker;
 typedef struct WhereInfo WhereInfo;
 typedef struct With With;
+typedef struct ExtPragma ExtPragma;
 
 /*
 ** Defer sourcing vdbe.h and btree.h until after the "u8" and 
@@ -1047,6 +1048,10 @@ struct sqlite3 {
   void *pUnlockArg;                     /* Argument to xUnlockNotify */
   void (*xUnlockNotify)(void **, int);  /* Unlock notify callback */
   sqlite3 *pNextBlocked;        /* Next in list of all blocked connections */
+#endif
+
+#ifndef SQLITE_OMIT_EXTENDED_PRAGMA
+  ExtPragma *pPragmaList;       /* head of the extended pragmas linked list */
 #endif
 };
 
@@ -2742,6 +2747,19 @@ struct Walker {
     struct SrcCount *pSrcCount;                /* Counting column references */
   } u;
 };
+
+/*
+** Instances of this structure are used as nodes of a linked list that
+** keeps track of the extended pragmas registered by extensions
+*/
+#ifndef SQLITE_OMIT_EXTENDED_PRAGMA
+struct ExtPragma {
+  char *pCommand;            /* Command used to invoke the pragma callback */
+  void (*xCallback)(void*,sqlite3*,const char*); /* Callback function */
+  void *pCallbackArg;        /* user data passed to the callback */
+  ExtPragma *pNext;          /* Next node in the linked list */
+};
+#endif
 
 /* Forward declarations */
 int sqlite3WalkExpr(Walker*, Expr*);

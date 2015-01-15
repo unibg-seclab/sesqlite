@@ -726,6 +726,9 @@ SRC = $(SRC) \
 SRC = $(SRC) \
   $(TOP)\ext\rtree\rtree.h \
   $(TOP)\ext\rtree\rtree.c
+SRC = $(SRC) \
+  $(TOP)\ext\selinux\selinux.h \
+  $(TOP)\ext\selinux\selinux.c
 
 
 # Generated source code files
@@ -890,6 +893,8 @@ EXTHDR = $(EXTHDR) \
   $(TOP)\ext\icu\sqliteicu.h
 EXTHDR = $(EXTHDR) \
   $(TOP)\ext\rtree\sqlite3rtree.h
+EXTHDR = $(EXTHDR) \
+  $(TOP)\ext\selinux\selinux.h
 
 # This is the default Makefile target.  The objects listed here
 # are what get build when you type just "make" with no arguments.
@@ -1293,6 +1298,9 @@ fts3_write.lo:	$(TOP)\ext\fts3\fts3_write.c $(HDR) $(EXTHDR)
 
 rtree.lo:	$(TOP)\ext\rtree\rtree.c $(HDR) $(EXTHDR)
 	$(LTCOMPILE) -DSQLITE_CORE -c $(TOP)\ext\rtree\rtree.c
+
+selinux.lo:	$(TOP)\ext\selinux\selinux.c $(HDR) $(EXTHDR)
+	$(LTCOMPILE) -DSQLITE_CORE -c $(TOP)\ext\selinux\selinux.c
 
 
 # Rules to build the 'testfixture' application.

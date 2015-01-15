@@ -4065,7 +4065,9 @@ static int selectExpander(Walker *pWalker, Select *p){
             ** result-set list.
             */
             if( IsHiddenColumn(&pTab->aCol[j]) ){
+#ifndef SQLITE_ENABLE_SELINUX
               assert(IsVirtual(pTab));
+#endif /* SQLITE_ENABLE_SELINUX */
               continue;
             }
             tableSeen = 1;
