@@ -65,8 +65,8 @@ void getContext(const char *dbname, int tclass, const char *table,
 		*con = sqlite3_mprintf(DEFAULT_TCON);
 
 #ifdef SQLITE_DEBUG
-	fprintf(stdout, "%s: db=%s, table=%s, column=%s -> %sfound (%s)\n", (res != NULL ? "Hash hint" : "default_context"), dbname, table,
-			(column ? column : "NULL"), (res != NULL ? "" : "not "), res);
+	//fprintf(stdout, "%s: db=%s, table=%s, column=%s -> %sfound (%s)\n", (res != NULL ? "Hash hint" : "default_context"), dbname, table,
+	//		(column ? column : "NULL"), (res != NULL ? "" : "not "), res);
 #endif
 
 	// Here we can free key since we're not inserting it in the hashtable.
@@ -103,9 +103,9 @@ int checkAccess(const char *dbname, const char *table, const char *column,
 	// DO NOT FREE key AND res
 
 #ifdef SQLITE_DEBUG
-	fprintf(stdout, "%s selinux_check_access(%s, %s, %s, %s) => %d\n", res != NULL ? "Hash hint: " : "", scon, tcon,
-			access_vector[tclass].c_name,
-			access_vector[tclass].perm[perm].p_name, *res);
+	//fprintf(stdout, "%s selinux_check_access(%s, %s, %s, %s) => %d\n", res != NULL ? "Hash hint: " : "", scon, tcon,
+	//		access_vector[tclass].c_name,
+	//		access_vector[tclass].perm[perm].p_name, *res);
 #endif
 
 	sqlite3_free(tcon);
@@ -429,7 +429,7 @@ int initializeContext(sqlite3 *db) {
 	char *p, *token, *stoken;
 	FILE* fp = NULL;
 
-	fp = fopen("./sesqlite_contexts", "r");
+	fp = fopen("/home/mutti/git/sesqlite/build/sesqlite_contexts", "rb");
 	if (fp == NULL) {
 		fprintf(stderr, "Error. Unable to open '%s' configuration file.\n",
 				"sesqlite_contexts");
@@ -856,9 +856,9 @@ static void selinuxCheckAccessFunction(sqlite3_context *context, int argc,
 #endif
 
 #ifdef SQLITE_DEBUG
-	fprintf(stdout, "selinux_check_access(%s, %s, %s, %s) => %d\n", scon, argv[0]->z,
-			argv[1]->z,
-			argv[2]->z, *res);
+	//fprintf(stdout, "selinux_check_access(%s, %s, %s, %s) => %d\n", scon, argv[0]->z,
+	//		argv[1]->z,
+	//		argv[2]->z, *res);
 #endif
 
 	sqlite3_result_int(context, 0 == *res);
@@ -867,8 +867,9 @@ static void selinuxCheckAccessFunction(sqlite3_context *context, int argc,
 static void selinuxGetContextFunction(sqlite3_context *context, int argc,
 		sqlite3_value **argv) {
 
-	security_context_t con;
-	int rc = getcon(&con);
+	security_context_t con=strdup("unconfined_u:object_r:sesqlite_public:s0");
+	//int rc = getcon(&con);
+	int rc = 0;	
 	if (rc == -1) {
 		fprintf(stderr,
 				"Error: unable to retrieve the current security context.\n");
@@ -993,6 +994,126 @@ int initializeSeSqliteObjects(sqlite3 *db) {
 	return rc;
 }
 
+
+
+int create_security_context_column(void *pUserData, int type, void *pNew, 
+	char **zColumn) {
+
+    sqlite3* db = pUserData;
+    Column *pCol;
+    char *zName = 0;
+    char *zType = 0;
+    int op = 0;
+    int nExtra = 0;
+    Expr *pExpr;
+    int c = 0;
+    int i = 0;
+
+    *zColumn = 0;
+    *zColumn = sqlite3MPrintf(db, SECURITY_CONTEXT_COLUMN_DEFINITION);
+    sqlite3Dequote(*zColumn);
+
+    Table *p = pNew;
+#if SQLITE_MAX_COLUMN
+  if( p->nCol+1>db->aLimit[SQLITE_LIMIT_COLUMN] ){
+    //sqlite3ErrorMsg(pParse, "too many columns on %s", p->zName);
+    return;
+  }
+#endif
+    zName = sqlite3MPrintf(db, SECURITY_CONTEXT_COLUMN_NAME);
+    sqlite3Dequote(zName);
+    for(i=0; i<p->nCol; i++){
+	if( STRICMP(zName, p->aCol[i].zName) ){
+      //sqlite3ErrorMsg(pParse, "object name reserved for internal use: %s", zName);
+	    sqlite3DbFree(db, zName);
+	    sqlite3DbFree(db, *zColumn);
+	    return;
+	}
+    }
+
+    if( (p->nCol & 0x7)==0 ){
+	Column *aNew;
+	aNew = sqlite3DbRealloc(db,p->aCol,(p->nCol+8)*sizeof(p->aCol[0]));
+	if( aNew==0 ){
+	    //sqlite3ErrorMsg(pParse, "memory error");
+	    sqlite3DbFree(db, zName);
+	    sqlite3DbFree(db, *zColumn);
+	return;
+	}
+	p->aCol = aNew;
+    }
+    pCol = &p->aCol[p->nCol];
+    memset(pCol, 0, sizeof(p->aCol[0]));
+    pCol->zName = zName;
+
+    zType = sqlite3MPrintf(db, SECURITY_CONTEXT_COLUMN_TYPE);
+    sqlite3Dequote(zType);
+    fprintf(stdout, "\n\n aaaaaa: %s\n\n", zType);
+    pCol->zType = sqlite3MPrintf(db, zType);
+    pCol->affinity = SQLITE_AFF_TEXT;
+    p->nCol++;
+    //p->aCol[p->nCol].isHidden = 1;
+
+    /**
+    *generate expression for DEFAULT value
+    */
+    op = 151;
+    nExtra = 7;
+    pExpr = sqlite3DbMallocZero(db, sizeof(Expr)+nExtra);
+    pExpr->op = (u8)op;
+    pExpr->iAgg = -1;
+    pExpr->u.zToken = (char*)&pExpr[1];
+    memcpy(pExpr->u.zToken, SECURITY_CONTEXT_COLUMN_DEFAULT_FUNC, strlen(SECURITY_CONTEXT_COLUMN_DEFAULT_FUNC) - 2);
+    pExpr->u.zToken[strlen(SECURITY_CONTEXT_COLUMN_DEFAULT_FUNC) - 2] = 0;
+    sqlite3Dequote(pExpr->u.zToken);
+    pExpr->flags |= EP_DblQuoted;
+#if SQLITE_MAX_EXPR_DEPTH>0
+    pExpr->nHeight = 1;
+#endif 
+    pCol->pDflt = pExpr;
+    pCol->zDflt = sqlite3DbStrNDup(db, SECURITY_CONTEXT_COLUMN_DEFAULT_FUNC
+	      , strlen(SECURITY_CONTEXT_COLUMN_DEFAULT_FUNC));
+      
+      
+    /* Loop through the columns of the table to see if any of them contain the token "hidden".
+     ** If so, set the Column.isHidden flag and remove the token from
+     ** the type string.  */
+    int iCol;
+    for (iCol = 0; iCol < p->nCol; iCol++) {
+	char *zType = p->aCol[iCol].zType;
+	char *zName = p->aCol[iCol].zName;
+	int nType;
+	int i = 0;
+	if (!zType)
+	continue;
+	nType = sqlite3Strlen30(zType);
+	if ( sqlite3StrNICmp("hidden", zType, 6)
+			|| (zType[6] && zType[6] != ' ')) {
+	    for (i = 0; i < nType; i++) {
+		if ((0 == sqlite3StrNICmp(" hidden", &zType[i], 7))
+				&& (zType[i + 7] == '\0' || zType[i + 7] == ' ')) {
+		    i++;
+		    break;
+		}
+	    }
+	}
+	if (i < nType) {
+	    int j;
+	    int nDel = 6 + (zType[i + 6] ? 1 : 0);
+	    for (j = i; (j + nDel) <= nType; j++) {
+		    zType[j] = zType[j + nDel];
+	    }
+	    if (zType[i] == '\0' && i > 0) {
+		    assert(zType[i-1]==' ');
+		    zType[i - 1] = '\0';
+	    }
+	    fprintf(stdout, "\n\nbbbbbb: %s\n\n", zName);
+	    p->aCol[iCol].isHidden = 1;
+	}
+    }
+  return SQLITE_OK;
+}
+
 /*
  * Function: sqlite3SelinuxInit
  * Purpose: Initialize SeSqlite and register objects, authorizer and functions.
@@ -1004,7 +1125,9 @@ int initializeSeSqliteObjects(sqlite3 *db) {
  */
 int sqlite3SelinuxInit(sqlite3 *db) {
 //retrieve current security context
-	int rc = getcon(&scon);
+	//int rc = getcon(&scon);
+	scon = strdup("unconfined_u:object_r:sesqlite_public:s0");	
+	int rc = 0;
 	if (rc == -1) {
 		fprintf(stderr,
 				"Error: unable to retrieve the current security context.\n");
@@ -1028,6 +1151,9 @@ int sqlite3SelinuxInit(sqlite3 *db) {
 				0, 0);
 	}
 
+	if(rc == SQLITE_OK){
+		rc =sqlite3_set_add_extra_column(db, create_security_context_column, db); 
+	}
 // set the authorizer
 	if (rc == SQLITE_OK) {
 		rc = sqlite3_set_authorizer(db, selinuxAuthorizer, db);
@@ -1035,6 +1161,7 @@ int sqlite3SelinuxInit(sqlite3 *db) {
 
 	return rc;
 }
+
 
 /* Runtime-loading extension support */
 

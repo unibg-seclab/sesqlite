@@ -1392,6 +1392,15 @@ static char *createTableStmt(sqlite3 *db, Table *p){
     zEnd = "\n)";
   }
   n += 35 + 6*p->nCol;
+
+#if defined(SQLITE_ENABLE_SELINUX)
+  for(pCol=p->aCol, i=0; i<p->nCol; i++, pCol++){
+      if(0 ==sqlite3StrNICmp(pCol->zName, "security_context", 16)) {
+	  n += identLength(pCol->zType) + 5;
+	  n += identLength(pCol->zDflt) + 5; /*check the offset*/
+      }
+  }
+#endif
   zStmt = sqlite3DbMallocRaw(0, n);
   if( zStmt==0 ){
     db->mallocFailed = 1;
@@ -1423,11 +1432,16 @@ static char *createTableStmt(sqlite3 *db, Table *p){
     testcase( pCol->affinity==SQLITE_AFF_NUMERIC );
     testcase( pCol->affinity==SQLITE_AFF_INTEGER );
     testcase( pCol->affinity==SQLITE_AFF_REAL );
-    
+
     zType = azType[pCol->affinity - SQLITE_AFF_TEXT];
-    len = sqlite3Strlen30(zType);
     assert( pCol->affinity==SQLITE_AFF_NONE 
             || pCol->affinity==sqlite3AffinityType(zType) );
+#if defined(SQLITE_ENABLE_SELINUX)
+    if(0 ==sqlite3StrNICmp(pCol->zName, "security_context", 16)) {
+	zType = " hidden TEXT DEFAULT (getcon())";
+    }
+#endif
+    len = sqlite3Strlen30(zType);
     memcpy(&zStmt[k], zType, len);
     k += len;
     assert( k<=n );
@@ -1577,35 +1591,68 @@ void sqlite3EndTable(
       }
     }
 
-#if defined(SQLITE_ENABLE_SELINUX)
-		//do not add extra column to sqlite_*** due to compatibility.
-		if(0!=sqlite3StrNICmp(p->zName, "sqlite_", 7) && 0!=sqlite3StrNICmp(p->zName, "selinux_", 8)) {
-			Column *pCol;
-#if SQLITE_MAX_COLUMN
-			if (p->nCol + 1 > db->aLimit[SQLITE_LIMIT_COLUMN]) {
-				sqlite3ErrorMsg(pParse, "too many columns on %s", p->zName);
-				return;
-			}
-#endif
-			if ((p->nCol & 0x7) == 0) {
-				Column *aNew;
-				aNew = sqlite3DbRealloc(db, p->aCol,
-						(p->nCol + 8) * sizeof(p->aCol[0]));
-				if (aNew == 0) {
-					return;
-				}
-				p->aCol = aNew;
-			}
-			pCol = &p->aCol[p->nCol];
-			memset(pCol, 0, sizeof(p->aCol[0]));
-			char *z = NULL;
-			z = sqlite3DbStrNDup(db, (char*) SECURITY_CONTEXT_COLUMN_NAME, strlen(SECURITY_CONTEXT_COLUMN_NAME) + 1);
-			pCol->zName = z;
 
-			pCol->affinity = SQLITE_AFF_TEXT;
-			p->nCol++;
-		}
+#if defined(SQLITE_ENABLE_SELINUX)
+    int code;
+    int i;
+    int nAlloc;
+    int rc = -1;
+    char *zColumn = 0;
+    Table *pNew;
+    if( pSelect ){
+	code = 0;
+    }else{
+	code = 1;
+    }
+
+    /*
+    ** create a copy of the just created table
+    */
+    pNew = (Table*)sqlite3DbMallocZero(db, sizeof(Table));
+    if( !pNew ) 
+	return;
+    pNew->nRef = 1;
+    pNew->nCol = p->nCol;
+    assert( pNew->nCol>0 );
+    nAlloc = (((pNew->nCol-1)/8)*8)+8;
+    assert( nAlloc>=pNew->nCol && nAlloc%8==0 && nAlloc-pNew->nCol<8 );
+    pNew->aCol = (Column*)sqlite3DbMallocZero(db, sizeof(Column)*nAlloc);
+    pNew->zName = sqlite3MPrintf(db, "%s", p->zName);
+    if( !pNew->aCol || !pNew->zName ){
+	db->mallocFailed = 1;
+	return;
+    }
+    memcpy(pNew->aCol, p->aCol, sizeof(Column)*pNew->nCol);
+    for(i=0; i<pNew->nCol; i++){
+	Column *pCol = &pNew->aCol[i];
+	pCol->zName = sqlite3DbStrDup(db, pCol->zName);
+	pCol->zColl = 0;
+	pCol->zType = 0;
+	pCol->pDflt = 0;
+	pCol->zDflt = 0;
+    }
+    pNew->pSchema = db->aDb[iDb].pSchema;
+    pNew->addColOffset = p->addColOffset;
+    pNew->nRef = 1;
+
+    if( db->xAddExtraColumn ){
+	rc = db->xAddExtraColumn(db->pAuthArg, code, pNew, &zColumn);
+	if(rc == -1){
+	    /*TODO call abort*/
+	    return;	
+	}
+    }
+
+    /*copy back the modified table */ 
+    p = pNew;
+
+    for(i=0; i<p->nCol; i++){
+	Column *pCol = &p->aCol[i];
+	fprintf(stdout, "\n\n pCol->zName: %s\n", pCol->zName);
+	fprintf(stdout, "\n\n pCol->zType: %s\n", pCol->zType);
+    }
 #endif
+
 
     /* Compute the complete text of the CREATE statement */
     if( pSelect ){
@@ -1613,26 +1660,34 @@ void sqlite3EndTable(
     }else{
       n = (int)(pEnd->z - pParse->sNameToken.z) + 1;
 #if defined(SQLITE_ENABLE_SELINUX)
-			if(0!=sqlite3StrNICmp(p->zName, "sqlite_", 7) && 0!=sqlite3StrNICmp(p->zName, "selinux_", 8)) {
-				int length = n + strlen(SECURITY_CONTEXT_COLUMN_DEFINITION) + 1;
-				char *zTmpStmt = NULL;
-				zTmpStmt = (char *) sqlite3_malloc(length * sizeof(char));
-				memset(zTmpStmt, '\0', length * sizeof(char));
-				strncpy(zTmpStmt, pParse->sNameToken.z, n - 1);
-				strcat(zTmpStmt, SECURITY_CONTEXT_COLUMN_DEFINITION);
-				strcat(zTmpStmt, pEnd->z);
+    if(0!=sqlite3StrNICmp(p->zName, "sqlite_", 7) && 0!=sqlite3StrNICmp(p->zName, "selinux_", 8)) {
+	int pStmt = 0;
+	char *zNewStmt = 0;
+	if( pCons->z==0 ){
+	    pCons = pEnd;
+	}
+	/* In order to put the security_context column as the last column of the new table
+	 * we need to split the CREATE TABLE statement */
+	n = strlen(pParse->sNameToken.z) + strlen(zColumn) + 3; /*terminator + separator and space*/
+	pStmt = strlen(pParse->sNameToken.z) - strlen(pCons->z);
+	zNewStmt = (char *) sqlite3_malloc(n * sizeof(char));
+	memset(zNewStmt, '\0', n * sizeof(char));
 
-				zStmt = sqlite3MPrintf(db, "CREATE %s %.*s", zType2, length, zTmpStmt);
-				sqlite3_free(zTmpStmt);
-			}else{
-				zStmt = sqlite3MPrintf(db, "CREATE %s %.*s", zType2, n,
-									pParse->sNameToken.z);
-			}
+	strncpy(zNewStmt, pParse->sNameToken.z, pStmt);
+	strncat(zNewStmt, ", ", 2); /* add separator */
+	strncat(zNewStmt, zColumn, strlen(zColumn)); 
+	strncat(zNewStmt, pCons->z, pCons->n); 
+
+	zStmt = sqlite3MPrintf(db, "CREATE %s %.*s", zType2, n, zNewStmt);
+	sqlite3_free(zNewStmt);
+	sqlite3_free(zColumn);
+    }else{
+	zStmt = sqlite3MPrintf(db, "CREATE %s %.*s", zType2, n, pParse->sNameToken.z);
+    }
 #else
-			zStmt = sqlite3MPrintf(db, "CREATE %s %.*s", zType2, n,
-					pParse->sNameToken.z);
+    zStmt = sqlite3MPrintf(db, "CREATE %s %.*s", zType2, n, pParse->sNameToken.z);
 #endif
-		}
+    }
 
     /* A slot for the record has already been allocated in the 
     ** SQLITE_MASTER table.  We just need to update that slot with all
@@ -1688,7 +1743,7 @@ void sqlite3EndTable(
       db->mallocFailed = 1;
       return;
     }
-    pParse->pNewTable = 0;
+    //pParse->pNewTable = 0;
     db->flags |= SQLITE_InternChanges;
 
 #ifndef SQLITE_OMIT_ALTERTABLE
@@ -1704,45 +1759,6 @@ void sqlite3EndTable(
     }
 #endif
   }
-
-#if	defined(SQLITE_ENABLE_SELINUX)
-	/* Loop through the columns of the table to see if any of them contain the token "hidden".
-	 ** If so, set the Column.isHidden flag and remove the token from
-	 ** the type string.  */
-	int iCol;
-	for (iCol = 0; iCol < p->nCol; iCol++) {
-		char *zType = p->aCol[iCol].zType;
-		char *zName = p->aCol[iCol].zName;
-		int nType;
-		int i = 0;
-		if (!zType)
-		continue;
-		nType = sqlite3Strlen30(zType);
-		if ( sqlite3StrNICmp("hidden", zType, 6)
-				|| (zType[6] && zType[6] != ' ')) {
-			for (i = 0; i < nType; i++) {
-				if ((0 == sqlite3StrNICmp(" hidden", &zType[i], 7))
-						&& (zType[i + 7] == '\0' || zType[i + 7] == ' ')) {
-					i++;
-					break;
-				}
-			}
-		}
-		if (i < nType) {
-			int j;
-			int nDel = 6 + (zType[i + 6] ? 1 : 0);
-			for (j = i; (j + nDel) <= nType; j++) {
-				zType[j] = zType[j + nDel];
-			}
-			if (zType[i] == '\0' && i > 0) {
-				assert(zType[i-1]==' ');
-				zType[i - 1] = '\0';
-			}
-			p->aCol[iCol].isHidden = 1;
-		}
-	}
-#endif
-
 }
 
 #ifndef SQLITE_OMIT_VIEW

@@ -1,5 +1,4 @@
-/*
- * sesqlite.h
+/* * sesqlite.h
  *
  *  Created on: Jun 10, 2014
  *      Author: mutti
@@ -15,14 +14,18 @@ extern "C" {
 
 #define SELINUX_CONTEXT_TABLE		"CREATE TABLE IF NOT EXISTS \
 selinux_context( \
-security_context TEXT, \
+security_context INT, \
 db TEXT, \
 name TEXT, \
 column TEXT, \
 PRIMARY KEY(name, column));"
 
+
 #define SECURITY_CONTEXT_COLUMN_NAME "security_context"
-#define SECURITY_CONTEXT_COLUMN_DEFINITION ", security_context hidden TEXT DEFAULT (getcon())"
+#define SECURITY_CONTEXT_COLUMN_TYPE "hidden text"
+#define SECURITY_CONTEXT_COLUMN_DEFAULT_FUNC "getcon()"
+#define SECURITY_CONTEXT_COLUMN_DEFAULT "DEFAULT (getcon())"
+#define SECURITY_CONTEXT_COLUMN_DEFINITION SECURITY_CONTEXT_COLUMN_NAME " " SECURITY_CONTEXT_COLUMN_TYPE " " SECURITY_CONTEXT_COLUMN_DEFAULT
 
 /* SELinux classes */
 #define SELINUX_DB_DATABASE      	0
