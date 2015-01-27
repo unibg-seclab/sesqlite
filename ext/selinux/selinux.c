@@ -909,7 +909,6 @@ static void selinuxGetContextFunction(sqlite3_context *context, int argc,
 	//security_context_t con=strdup("unconfined_u:object_r:sesqlite_public:s0");
 	security_context_t con;
 	int rc = getcon(&con);
-	int rc = 0;	
 	if (rc == -1) {
 		fprintf(stderr,
 				"Error: unable to retrieve the current security context.\n");
