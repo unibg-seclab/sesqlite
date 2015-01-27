@@ -1646,11 +1646,11 @@ void sqlite3EndTable(
     /*copy back the modified table */ 
     p = pNew;
 
-    for(i=0; i<p->nCol; i++){
-	Column *pCol = &p->aCol[i];
-	fprintf(stdout, "\n\n pCol->zName: %s\n", pCol->zName);
-	fprintf(stdout, "\n\n pCol->zType: %s\n", pCol->zType);
-    }
+//    for(i=0; i<p->nCol; i++){
+//	Column *pCol = &p->aCol[i];
+//	fprintf(stdout, "\n\n pCol->zName: %s\n", pCol->zName);
+//	fprintf(stdout, "\n\n pCol->zType: %s\n", pCol->zType);
+//    }
 #endif
 
 
@@ -1677,7 +1677,7 @@ void sqlite3EndTable(
 	strncat(zNewStmt, ", ", 2); /* add separator */
 	strncat(zNewStmt, zColumn, strlen(zColumn)); 
 	strncat(zNewStmt, pCons->z, pCons->n); 
-
+	
 	zStmt = sqlite3MPrintf(db, "CREATE %s %.*s", zType2, n, zNewStmt);
 	sqlite3_free(zNewStmt);
 	sqlite3_free(zColumn);
@@ -1743,7 +1743,7 @@ void sqlite3EndTable(
       db->mallocFailed = 1;
       return;
     }
-    //pParse->pNewTable = 0;
+    pParse->pNewTable = 0;
     db->flags |= SQLITE_InternChanges;
 
 #ifndef SQLITE_OMIT_ALTERTABLE

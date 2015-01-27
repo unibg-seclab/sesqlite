@@ -18,8 +18,12 @@ security_context INT, \
 db TEXT, \
 name TEXT, \
 column TEXT, \
-PRIMARY KEY(name, column));"
+PRIMARY KEY(name, column));" /* use FK */
 
+    /* use rowid */
+#define SELINUX_ID_TABLE		"CREATE TABLE IF NOT EXISTS \
+selinux_id( \
+security_context TEXT UNIQUE)"
 
 #define SECURITY_CONTEXT_COLUMN_NAME "security_context"
 #define SECURITY_CONTEXT_COLUMN_TYPE "hidden text"
