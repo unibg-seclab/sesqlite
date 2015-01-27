@@ -40,11 +40,6 @@ static seSQLiteHash avc; /* HashMap*/
 #endif
 
 
-int idToString(int id, char **con){
-
-}
-
-
 /*
  * Get the column context from sesqlite for the specified table. The string
  * representing the context is allocated using sqlite3_mprintf in *con.
@@ -911,8 +906,9 @@ static void selinuxCheckAccessFunction(sqlite3_context *context, int argc,
 static void selinuxGetContextFunction(sqlite3_context *context, int argc,
 		sqlite3_value **argv) {
 
-	security_context_t con=strdup("unconfined_u:object_r:sesqlite_public:s0");
-	//int rc = getcon(&con);
+	//security_context_t con=strdup("unconfined_u:object_r:sesqlite_public:s0");
+	security_context_t con;
+	int rc = getcon(&con);
 	int rc = 0;	
 	if (rc == -1) {
 		fprintf(stderr,
@@ -1181,9 +1177,8 @@ int create_security_context_column(void *pUserData, int type, void *pNew,
  */
 int sqlite3SelinuxInit(sqlite3 *db) {
 //retrieve current security context
-	//int rc = getcon(&scon);
-	scon = strdup("unconfined_u:object_r:sesqlite_public:s0");	
-	int rc = 0;
+	int rc = getcon(&scon);
+	//scon = strdup("unconfined_u:object_r:sesqlite_public:s0");	
 	if (rc == -1) {
 		fprintf(stderr,
 				"Error: unable to retrieve the current security context.\n");
