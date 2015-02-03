@@ -7,9 +7,12 @@ ENABLE_SELINUX	 = --enable-selinux
 ENABLE_DEBUG	 = --enable-debug
 CONTEXTS		:= sesqlite_contexts
 
-build:
+build: configure
 	mkdir -p build
 	cd build; $(CONF) $(CONFOPTS); make
+
+configure:
+	autoconf -i
 
 all:
 	make build CONFOPTS="$(CONFOPTS) $(ENABLE_SELINUX) $(ENABLE_DEBUG)"
