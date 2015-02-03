@@ -438,7 +438,9 @@ int initializeContext(sqlite3 *db) {
 	char *p, *token, *stoken;
 	FILE* fp = NULL;
 
-	fp = fopen("/home/mutti/git/sesqlite/build/sesqlite_contexts", "rb");
+	//TODO modify the liselinux in order to retrieve the context from the
+	//targeted folder
+	fp = fopen("./sesqlite_contexts", "rb");
 	if (fp == NULL) {
 		fprintf(stderr, "Error. Unable to open '%s' configuration file.\n",
 				"sesqlite_contexts");
@@ -906,7 +908,6 @@ static void selinuxCheckAccessFunction(sqlite3_context *context, int argc,
 static void selinuxGetContextFunction(sqlite3_context *context, int argc,
 		sqlite3_value **argv) {
 
-	//security_context_t con=strdup("unconfined_u:object_r:sesqlite_public:s0");
 	security_context_t con;
 	int rc = getcon(&con);
 	if (rc == -1) {
@@ -1177,7 +1178,6 @@ int create_security_context_column(void *pUserData, int type, void *pNew,
 int sqlite3SelinuxInit(sqlite3 *db) {
 //retrieve current security context
 	int rc = getcon(&scon);
-	//scon = strdup("unconfined_u:object_r:sesqlite_public:s0");	
 	if (rc == -1) {
 		fprintf(stderr,
 				"Error: unable to retrieve the current security context.\n");

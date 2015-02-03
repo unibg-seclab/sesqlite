@@ -205,7 +205,7 @@ puts {INSERT INTO t1 SELECT * FROM t2 WHERE security_context = 'unconfined_u:obj
 puts {BEGIN;}
 puts {
    DROP TABLE t1;
-   CREATE TABLE t1(a INTEGER, b INTEGER, c TEXT, security_context TEXT);
+   CREATE TABLE t1(a INTEGER, b INTEGER, c TEXT);
 }
 puts {COMMIT;}
 
