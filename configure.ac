@@ -702,6 +702,15 @@ AC_ARG_ENABLE(selinux,
 if test x"$use_selinux" != xno; then
   TARGET_HAVE_SELINUX=1
   
+ AC_ARG_ENABLE(selinux-static-context, 
+       AC_HELP_STRING([--enable-selinux-static-context], [use a static security context]),
+       [selinux_static_context=$enableval],
+       [selinux_static_context=no])
+  
+ if test "x$selinux_static_context" != xno; then
+	TARGET_STATIC_CONTEXT=1
+ fi
+
   #check library
   AC_ARG_WITH([selinux-lib],
 	[AC_HELP_STRING([--with-selinux-lib],[specify selinux library])],
@@ -754,6 +763,7 @@ fi
 AC_SUBST(TARGET_SELINUX_LIBS)
 AC_SUBST(TARGET_SELINUX_INC)
 AC_SUBST(TARGET_HAVE_SELINUX)
+AC_SUBST(TARGET_STATIC_CONTEXT)
 
 #########
 # Output the config header

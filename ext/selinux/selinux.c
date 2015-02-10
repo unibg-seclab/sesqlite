@@ -908,8 +908,13 @@ static void selinuxCheckAccessFunction(sqlite3_context *context, int argc,
 static void selinuxGetContextFunction(sqlite3_context *context, int argc,
 		sqlite3_value **argv) {
 
+    	int rc = 0;
 	security_context_t con;
-	int rc = getcon(&con);
+#ifdef SELINUX_STATIC_CONTEXT
+	con = sqlite3_mprintf("%s", "unconfined_u:unconfined_r:unconfined_t:s0");
+#else
+	rc = getcon(&con);
+#endif
 	if (rc == -1) {
 		fprintf(stderr,
 				"Error: unable to retrieve the current security context.\n");
@@ -1176,8 +1181,15 @@ int create_security_context_column(void *pUserData, int type, void *pNew,
  * Return value: 0->OK, other->ERROR (see **pzErr for info about error)
  */
 int sqlite3SelinuxInit(sqlite3 *db) {
-//retrieve current security context
-	int rc = getcon(&scon);
+
+    	int rc = 0;
+#ifdef SELINUX_STATIC_CONTEXT
+	scon = sqlite3_mprintf("%s", "unconfined_u:unconfined_r:unconfined_t:s0");
+#else
+	rc = getcon(&scon);
+#endif
+    
+    //retrieve current security context
 	if (rc == -1) {
 		fprintf(stderr,
 				"Error: unable to retrieve the current security context.\n");
