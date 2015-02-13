@@ -846,7 +846,7 @@ struct sqlite3 {
   void *pUpdateArg;
   void (*xUpdateCallback)(void*,int, const char*,const char*,sqlite_int64);
   /* Callback used to add a column programmatically to a new table */
-  int (*xAddExtraColumn)(void*,int,void*,char**);
+  int (*xAddExtraColumn)(void*,void*,int,void*,char**);
 #ifndef SQLITE_OMIT_WAL
   int (*xWalCallback)(void *, sqlite3 *, const char *, int);
   void *pWalArg;

@@ -2320,7 +2320,7 @@ int sqlite3_set_authorizer(
 
 int sqlite3_set_add_extra_column(
   sqlite3*,
-  int (*xAddExtraColumn)(void*,int,void*,char**),
+  int (*xAddExtraColumn)(void*,void*,int,void*,char**),
   void *pUserData
 );
 

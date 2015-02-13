@@ -1055,10 +1055,11 @@ int initializeSeSqliteObjects(sqlite3 *db) {
 
 
 
-int create_security_context_column(void *pUserData, int type, void *pNew, 
+int create_security_context_column(void *pUserData, void *parse, int type, void *pNew, 
 	char **zColumn) {
 
     sqlite3* db = pUserData;
+    Parse *pParse = parse;
     Column *pCol;
     char *zName = 0;
     char *zType = 0;
@@ -1067,12 +1068,14 @@ int create_security_context_column(void *pUserData, int type, void *pNew,
     Expr *pExpr;
     int c = 0;
     int i = 0;
-
+    int iDb = 0;
+   
     *zColumn = 0;
     *zColumn = sqlite3MPrintf(db, SECURITY_CONTEXT_COLUMN_DEFINITION);
     sqlite3Dequote(*zColumn);
 
     Table *p = pNew;
+    iDb = sqlite3SchemaToIndex(db, p->pSchema);
 #if SQLITE_MAX_COLUMN
   if( p->nCol+1>db->aLimit[SQLITE_LIMIT_COLUMN] ){
     //sqlite3ErrorMsg(pParse, "too many columns on %s", p->zName);
@@ -1168,7 +1171,27 @@ int create_security_context_column(void *pUserData, int type, void *pNew,
 	    p->aCol[iCol].isHidden = 1;
 	}
     }
-  return SQLITE_OK;
+   
+    //assign security context to sql schema object
+    //insert table context
+    sqlite3NestedParse(pParse,
+      "INSERT INTO %Q.%s (security_context, db, name) VALUES(getcon(), '%s', '%s')",
+      pParse->db->aDb[iDb].zName, "selinux_context",
+      pParse->db->aDb[iDb].zName, p->zName
+    );
+    sqlite3ChangeCookie(pParse, iDb);
+
+    //add security context to columns
+    for (iCol = 0; iCol < p->nCol; iCol++) {
+    	sqlite3NestedParse(pParse,
+    	  "INSERT INTO %Q.%s VALUES(getcon(), '%s', '%s', '%s')",
+    	  pParse->db->aDb[iDb].zName, "selinux_context",
+    	  pParse->db->aDb[iDb].zName, p->zName, p->aCol[iCol].zName
+    	);
+    }
+    sqlite3ChangeCookie(pParse, iDb);
+   
+    return SQLITE_OK;
 }
 
 /*

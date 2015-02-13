@@ -1636,7 +1636,7 @@ void sqlite3EndTable(
     pNew->nRef = 1;
 
     if( db->xAddExtraColumn ){
-	rc = db->xAddExtraColumn(db->pAuthArg, code, pNew, &zColumn);
+	rc = db->xAddExtraColumn(db->pAuthArg, pParse, code, pNew, &zColumn);
 	if(rc == -1){
 	    /*TODO call abort*/
 	    return;	

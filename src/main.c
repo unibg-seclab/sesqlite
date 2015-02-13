@@ -1389,7 +1389,7 @@ void *sqlite3_rollback_hook(
 */
 int sqlite3_set_add_extra_column(
   sqlite3 *db,
-  int (*xAddExtraColumn)(void*,int,void*,char**),
+  int (*xAddExtraColumn)(void*,void*,int,void*,char**),
   void *pUserData
 ){
   sqlite3_mutex_enter(db->mutex);

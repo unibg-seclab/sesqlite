@@ -135,7 +135,7 @@ struct sqlite3_api_routines {
   void * (*rollback_hook)(sqlite3*,void(*)(void*),void*);
   int  (*set_authorizer)(sqlite3*,int(*)(void*,int,const char*,const char*,
                          const char*,const char*),void*);
-  int  (*set_add_extra_column)(sqlite3*,int(*)(void*,int,void*,char**),void*);
+  int  (*set_add_extra_column)(sqlite3*,int(*)(void*,void*,int,void*,char**),void*);
   void  (*set_auxdata)(sqlite3_context*,int,void*,void (*)(void*));
   char * (*snprintf)(int,char*,const char*,...);
   int  (*step)(sqlite3_stmt*);
