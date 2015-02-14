@@ -30,8 +30,7 @@ int init_suite1(void) {
 
 	int rc = -1;
 
-	//rc = sqlite3_open("test.db", &db);
-	rc = sqlite3_open(":memory:", &db);
+	rc = sqlite3_open("test.db", &db);
 	if (rc == -1) {
 		fprintf(stderr, "Cannot initialize database.\n");
 		sqlite3_close(db);
@@ -87,11 +86,11 @@ int callback(void *param, int numCols, char **col, char **colName) {
 void test_create_table(void) {
 
 	//create table
-	CU_ASSERT(sqlite3_exec(db, "CREATE TABLE t1(a TEXT,b TEXT);", 0, 0, 0) == SQLITE_OK);
+	//CU_ASSERT(sqlite3_exec(db, "CREATE TABLE t1(a TEXT,b TEXT);", 0, 0, 0) == SQLITE_OK);
 	
-	CU_ASSERT(sqlite3_exec(db, "CREATE TABLE t2(d TEXT,e TEXT);", 0, 0, 0) == SQLITE_OK);
+	//CU_ASSERT(sqlite3_exec(db, "CREATE TABLE t2(d TEXT,e TEXT);", 0, 0, 0) == SQLITE_OK);
 
-	CU_ASSERT(sqlite3_exec(db, "CREATE TABLE t3(f TEXT,g TEXT);", 0, 0, 0) == SQLITE_OK);
+	//CU_ASSERT(sqlite3_exec(db, "CREATE TABLE t3(f TEXT,g TEXT);", 0, 0, 0) == SQLITE_OK);
 
 //check label tables
 	CU_ASSERT(

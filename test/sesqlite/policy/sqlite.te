@@ -26,6 +26,7 @@ allow { unconfined_t } { sqlite_master_t sqlite_temp_master_t selinux_context_t 
 allow { unconfined_t } { sqlite_master_c sqlite_temp_master_c selinux_context_c other_c }:db_column { select update insert drop };
 
 allow { unconfined_t } app_data_db_c:db_column { insert };
+allow { unconfined_t } app_data_db_t:db_column { select update insert };
 allow { unconfined_t } app_data_db_t:db_table { create select insert delete };
 
 allow initrc_t self:db_tuple { select update insert delete };
