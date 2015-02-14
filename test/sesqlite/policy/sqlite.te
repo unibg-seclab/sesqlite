@@ -23,7 +23,7 @@ type other_t, domain;
 type other_c, domain;
 
 allow { unconfined_t } { sqlite_master_t sqlite_temp_master_t selinux_context_t other_t }:db_table { create select update insert delete setattr getattr drop };
-allow { unconfined_t } { sqlite_master_c sqlite_temp_master_c selinux_context_c other_c }:db_column { select update insert drop };
+allow { unconfined_t } { sqlite_master_t sqlite_temp_master_t selinux_context_t other_c }:db_column { select update insert drop };
 
 allow { unconfined_t } app_data_db_c:db_column { insert };
 allow { unconfined_t } app_data_db_t:db_column { select update insert };
