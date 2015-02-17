@@ -1,17 +1,27 @@
 .PHONY: all test clean fresh fresh-test
+.SUFFIXES: .c .o
 
-n = 10
-CFLAGS = -O3
-LFLAGS = -lselinux
+n       := 10
+NAME    := avctest
+CFLAGS  += -O3
+LDFLAGS += -lselinux
 
-all avctest:
-	gcc $(CFLAGS) avctest.c $(LFLAGS) -o avctest
+SRCS    := $(wildcard *.c)
+OBJS    := $(SRCS:.c=.o)
 
-test: avctest
-	@./avctest $(n)
+all: $(NAME)
+
+$(NAME): $(OBJS)
+	gcc $(CFLAGS) $(OBJS) -o $(NAME) $(LDFLAGS)
+
+test: $(NAME)
+	@./$(NAME) $(n)
 
 clean:
-	rm -f avctest
+	@- $(RM) $(NAME)
+	@- $(RM) $(OBJS)
+
+distclean: clean
 
 fresh: | clean all
 

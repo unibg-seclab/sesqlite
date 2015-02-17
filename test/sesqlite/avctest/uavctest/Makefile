@@ -12,7 +12,7 @@ OBJS    := $(SRCS:.c=.o)
 all: $(NAME)
 
 $(NAME): $(OBJS)
-	gcc $(OBJS) -o $(NAME) $(LDFLAGS)
+	gcc $(CFLAGS) $(OBJS) -o $(NAME) $(LDFLAGS)
 
 test: $(NAME)
 	@./$(NAME) $(n)
