@@ -56,7 +56,7 @@ security_context TEXT UNIQUE)"
 #define SELINUX_LOAD_MODULE 		10
 
 /* default target security context */
-#define DEFAULT_TCON          "unconfined_u:object_r:sesqlite_public:s0"
+#define DEFAULT_TCON          "unconfined_u:object_r:sqlite_master_t:s0"
 
 /* indices to bind paramteres in sesqlite_stmt */
 #define SESQLITE_IDX_NAME     1
