@@ -1,11 +1,11 @@
 #!/usr/bin/env python2
 
-from collections import defaultdict, OrderedDict
+from collections import defaultdict
 from os.path import basename
 import numpy as np
-import glob
 import re
 
+# use matplotlib even without X
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -13,16 +13,7 @@ import matplotlib.pyplot as plt
 base = 'results/1/base.out'
 se = 'results/1/se.out'
 no_opt = 'results/1/no-opt.out'
-
-files = glob.glob('results/1/*.out')
-width = .8 / len(files)
-cm = plt.get_cmap('afmhot')
-
-def filter_keys(dct, keys):
-    return OrderedDict((key, dct[key]) for key in keys)
-
-def filename(file):
-    return re.findall(r'\w+', basename(file))[0]
+width = .25
 
 def parsefile(filename):
     data = OrderedDict()
@@ -37,63 +28,54 @@ def getdata(filename):
     ys = map(np.mean, data.values())
     return xs, ys, data
 
-def incr(fr, to):
+def overhead(fr, to):
     return (to - fr) / float(fr)
 
-def printstat(ys, base_ys):
-    print '& $%.2f\\si{\\second}$ & $+%.2f\\%%$ \\\\' % (
-          sum(ys),
-          100 * incr(sum(base_ys), sum(ys)))
-    return [100 * incr(b, y) for b, y in zip(ys_base, ys)]
+def printstat(ys, base_ys, file):
+    print '%s & $%.2f\\si{\\second}$ & $+%.2f\\%%$ \\\\' % (
+          basename(file), sum(ys), 100 * overhead(sum(base_ys), sum(ys)))
+    return [100 * overhead(b, y) for b, y in zip(ys_base, ys)]
 
+def graph_with_options(xs, xticks, name):
+    plt.xticks(xs +.4, data_base.keys(), rotation=90)
+    plt.xlim(-.2, xs[-1] + 1)
+    plt.ylim(0, 2.5)
+    plt.ylabel('time [s]')
+    plt.tight_layout()
+    plt.legend(loc='upper left')
+    plt.savefig('results/1/%s.pdf' % name)
+    plt.savefig('results/1/%s.png' % name)
+    plt.clf()
+
+# get data
 xs_base, ys_base, data_base = getdata(base)
 xs_se, ys_se, data_se = getdata(se)
 xs_no_opt, ys_no_opt, data_no_opt = getdata(no_opt)
+
+# create arrays
 ys_base = np.array(ys_base)
 ys_se = np.maximum(np.array(ys_se), ys_base)
 ys_no_opt = np.maximum(np.array(ys_no_opt), ys_base)
 
-print base
-printstat(ys_base, ys_base)
-print se
-over_se = printstat(ys_se, ys_base)
-print no_opt
-over_no_opt = printstat(ys_no_opt, ys_base)
-
-for yb, ys, os, yn, on in zip(ys_base, ys_se, over_se, ys_no_opt, over_no_opt):
-    print ( '& $%.2f\\si{\\second}$ '
-            '& $%.2f\\si{\\second}$ ($+%.2f\\%%$) '
-            '& $%.2f\\si{\\second}$ ($+%.2f\\%%$) \\\\' ) % (yb, ys, os, yn, on)
-
-ys_base, ys_se = np.minimum(ys_base, ys_se), np.maximum(ys_base, ys_se)
-rect_base = ys_base
+# graph optimized
 rect_se = ys_se - ys_base
-rect_no_opt = ys_no_opt - ys_se
+plt.bar(xs_se, rect_se, color=plt.get_cmap('Greens')(0.6), label='SeSQLite optimized', width=.8, bottom=ys_base)
+plt.bar(xs_base, ys_base, color=plt.get_cmap('YlOrRd')(0.1), label='SQLite base', width=.8)
+graph_with_options(xs_base, data_base.keys(), 'graph1')
 
-plt.xticks(xs_base +.4, data_base.keys(), rotation=90)
-plt.xlim(-.2, xs_base[-1] + 1)
-plt.ylim(0, 2.5)
+# graph not optimized
+rect_no_opt = ys_no_opt - ys_base
+plt.bar(xs_no_opt, rect_no_opt, color=plt.get_cmap('Reds')(0.8), label='SeSQLite not optimized', width=.8, bottom=ys_base)
+plt.bar(xs_base, ys_base, color=plt.get_cmap('YlOrRd')(0.1), label='SQLite base', width=.8)
+graph_with_options(xs_base, data_base.keys(), 'graph2')
 
-plt.bar(xs_se,   rect_se,   color=plt.get_cmap('Greens')(0.6), label='SeSQLite optimized', width=.8, bottom=rect_base)
-plt.bar(xs_base, rect_base, color=plt.get_cmap('YlOrRd')(0.1), label='SQLite base', width=.8)
+# print in latex format
+printstat(ys_base, ys_base, base)
+over_se = printstat(ys_se, ys_base, se)
+over_no_opt = printstat(ys_no_opt, ys_base, no_opt)
 
-plt.ylabel('time [s]')
-plt.tight_layout()
-plt.legend(loc='upper left')
-plt.savefig('results/1/graph1.pdf')
-plt.savefig('results/1/graph1.png')
-plt.clf()
-
-plt.xticks(xs_base +.4, data_base.keys(), rotation=90)
-plt.ylim(0, 2.5)
-
-plt.bar(xs_no_opt, rect_no_opt, color=plt.get_cmap('Reds')(0.8), label='SeSQLite not optimized', width=.8, bottom=rect_base)
-plt.bar(xs_base,   rect_base,   color=plt.get_cmap('YlOrRd')(0.1), label='SQLite base', width=.8)
-
-plt.ylabel('time [s]')
-plt.tight_layout()
-plt.legend(loc='upper left')
-plt.savefig('results/1/graph2.pdf')
-plt.savefig('results/1/graph2.png')
-plt.clf()
+print "\n== TESTS IN LATEX FORMAT =="
+for test, yb, ys, os, yn, on in zip(data_base.keys(), ys_base, ys_se, over_se, ys_no_opt, over_no_opt):
+    print ( '%s & $%.2f\\si{\\second}$ & $%.2f\\si{\\second}$ ($+%.2f\\%%$)'
+            ' & $%.2f\\si{\\second}$ ($+%.2f\\%%$) \\\\' ) % (tets, yb, ys, os, yn, on)
 
