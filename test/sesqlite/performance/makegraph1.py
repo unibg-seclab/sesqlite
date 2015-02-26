@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from os.path import basename
 import numpy as np
 import re
@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 base = 'results/1/base.out'
 se = 'results/1/se.out'
-no_opt = 'results/1/no-opt.out'
+#no_opt = 'results/1/no-opt.out'
 width = .25
 
 def parsefile(filename):
@@ -50,32 +50,32 @@ def graph_with_options(xs, xticks, name):
 # get data
 xs_base, ys_base, data_base = getdata(base)
 xs_se, ys_se, data_se = getdata(se)
-xs_no_opt, ys_no_opt, data_no_opt = getdata(no_opt)
+#xs_no_opt, ys_no_opt, data_no_opt = getdata(no_opt)
 
 # create arrays
 ys_base = np.array(ys_base)
 ys_se = np.maximum(np.array(ys_se), ys_base)
-ys_no_opt = np.maximum(np.array(ys_no_opt), ys_base)
+#ys_no_opt = np.maximum(np.array(ys_no_opt), ys_base)
 
 # graph optimized
 rect_se = ys_se - ys_base
-plt.bar(xs_se, rect_se, color=plt.get_cmap('Greens')(0.6), label='SeSQLite optimized', width=.8, bottom=ys_base)
+plt.bar(xs_se, rect_se, color=plt.get_cmap('Greens')(0.6), label='SeSQLite', width=.8, bottom=ys_base)
 plt.bar(xs_base, ys_base, color=plt.get_cmap('YlOrRd')(0.1), label='SQLite base', width=.8)
-graph_with_options(xs_base, data_base.keys(), 'graph1')
+graph_with_options(xs_base, data_base.keys(), 'graph')
 
 # graph not optimized
-rect_no_opt = ys_no_opt - ys_base
-plt.bar(xs_no_opt, rect_no_opt, color=plt.get_cmap('Reds')(0.8), label='SeSQLite not optimized', width=.8, bottom=ys_base)
-plt.bar(xs_base, ys_base, color=plt.get_cmap('YlOrRd')(0.1), label='SQLite base', width=.8)
-graph_with_options(xs_base, data_base.keys(), 'graph2')
+#rect_no_opt = ys_no_opt - ys_base
+#plt.bar(xs_no_opt, rect_no_opt, color=plt.get_cmap('Reds')(0.8), label='SeSQLite not optimized', width=.8, bottom=ys_base)
+#plt.bar(xs_base, ys_base, color=plt.get_cmap('YlOrRd')(0.1), label='SQLite base', width=.8)
+#graph_with_options(xs_base, data_base.keys(), 'graph2')
 
 # print in latex format
-printstat(ys_base, ys_base, base)
-over_se = printstat(ys_se, ys_base, se)
-over_no_opt = printstat(ys_no_opt, ys_base, no_opt)
+#printstat(ys_base, ys_base, base)
+#over_se = printstat(ys_se, ys_base, se)
+#over_no_opt = printstat(ys_no_opt, ys_base, no_opt)
 
-print "\n== TESTS IN LATEX FORMAT =="
-for test, yb, ys, os, yn, on in zip(data_base.keys(), ys_base, ys_se, over_se, ys_no_opt, over_no_opt):
-    print ( '%s & $%.2f\\si{\\second}$ & $%.2f\\si{\\second}$ ($+%.2f\\%%$)'
-            ' & $%.2f\\si{\\second}$ ($+%.2f\\%%$) \\\\' ) % (tets, yb, ys, os, yn, on)
+#print "\n== TESTS IN LATEX FORMAT =="
+#for test, yb, ys, os, yn, on in zip(data_base.keys(), ys_base, ys_se, over_se, ys_no_opt, over_no_opt):
+#    print ( '%s & $%.2f\\si{\\second}$ & $%.2f\\si{\\second}$ ($+%.2f\\%%$)'
+#            ' & $%.2f\\si{\\second}$ ($+%.2f\\%%$) \\\\' ) % (tets, yb, ys, os, yn, on)
 
