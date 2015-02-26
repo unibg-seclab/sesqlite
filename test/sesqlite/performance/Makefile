@@ -21,8 +21,8 @@ BIN1			:= speedtest1
 BIN1_SE			:= $(BIN1)_se
 TEST1_DB		:= test1.db
 OUTDIR1			:= results/1
-OUT1_BASE		:= $(OUTDIR1)/base.out
-OUT1_SE			:= $(OUTDIR1)/se.out
+OUT1_BASE		:= $(OUTDIR1)/1.base.out
+OUT1_SE			:= $(OUTDIR1)/2.se.out
 
 ### speedtest8
 
@@ -35,10 +35,10 @@ TEST8_SQL		:= test.sql
 TEST8_TUPLE_SQL		:= test_tuple.sql
 TEST8_TUPLE_STATIC_SQL	:= test_tuple_static.sql
 OUTDIR8			:= results/8
-OUT8_BASE		:= $(OUTDIR8)/base.out
-OUT8_SE			:= $(OUTDIR8)/se.out
-OUT8_TUPLE		:= $(OUTDIR8)/se_tuple.out
-OUT8_TUPLE_STATIC	:= $(OUTDIR8)/se_tuple_static.out
+OUT8_BASE		:= $(OUTDIR8)/1.base.out
+OUT8_SE			:= $(OUTDIR8)/2.se.out
+OUT8_TUPLE		:= $(OUTDIR8)/4.se_tuple.out
+OUT8_TUPLE_STATIC	:= $(OUTDIR8)/3.se_tuple_static.out
 
 
 #########################
