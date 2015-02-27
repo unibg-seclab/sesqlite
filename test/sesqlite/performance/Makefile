@@ -1,110 +1,181 @@
-.PHONY: all clean clean_test_db graph graph_base graph_se test test_se
+.PHONY: all clean clean_test_db \
+	graph results_base results_se \
+	test1 test1_se \
+	test8 test8_se test8_tuple test8_tuple_static
 
-n					= 2
-TOP					= ../../..
-NAME				:= speedtest8
-NAME_SE				:= $(NAME)_se
-TEST_DB				:= test.db
-TEST_SQL			:= test.sql
-TEST_TUPLE_SQL		:= test_tuple.sql
-TEST_TUPLE_SE_SQL	:= test_tuple_se.sql
-
-CONTEXTS			:= sesqlite_contexts
-SQLITE_OBJ			:= sqlite3.o
+n			:= 2
+TOP			:= ../../..
+CONTEXTS		:= sesqlite_contexts
+SQLITE_OBJ		:= sqlite3.o
 SE_SQLITE_OBJ		:= sesqlite3.o
+INCLUDES		:= -I$(TOP)/src
+LDFLAGS			+= -ldl
 
-SRCS				:= $(wildcard *.c)
-OBJS				:= $(SRCS:.c=.o)
-INCLUDES			:= -I$(TOP)/src
-LDFLAGS				+= -ldl
+### speedtest1
 
-BASE_OUT			 = results/base.out
-SE_OUT				 = results/se.out
-SE_TUPLE_OUT		 = results/se_tuple.out
-SE_TUPLE_STATIC_OUT	 = results/se_tuple_static.out
+SRCS1			:= speedtest1.c
+SRCS1_SE		:= speedtest1_se.c
+OBJS1			:= $(SRCS1:.c=.o)
+OBJS1_SE		:= $(SRCS1_SE:.c=.o)
+BIN1			:= speedtest1
+BIN1_SE			:= $(BIN1)_se
+TEST1_DB		:= test1.db
+OUTDIR1			:= results/1
+OUT1_BASE		:= $(OUTDIR1)/1.base.out
+OUT1_SE			:= $(OUTDIR1)/2.se.out
+
+### speedtest8
+
+SRCS8			:= speedtest8.c ts_util.c
+OBJS8			:= $(SRCS8:.c=.o)
+BIN8			:= speedtest8
+BIN8_SE			:= $(BIN8)_se
+TEST8_DB		:= test8.db
+TEST8_SQL		:= test.sql
+TEST8_TUPLE_SQL		:= test_tuple.sql
+TEST8_TUPLE_STATIC_SQL	:= test_tuple_static.sql
+OUTDIR8			:= results/8
+OUT8_BASE		:= $(OUTDIR8)/1.base.out
+OUT8_SE			:= $(OUTDIR8)/2.se.out
+OUT8_TUPLE		:= $(OUTDIR8)/4.se_tuple.out
+OUT8_TUPLE_STATIC	:= $(OUTDIR8)/3.se_tuple_static.out
 
 
-all: $(NAME) $(NAME_SE) $(TEST_SQL) $(TEST_TUPLE_SQL) $(TEST_TUPLE_SE_SQL)
+#########################
+#      COMMON PART      #
+#########################
 
-test: clean_test_db $(TEST_SQL) $(NAME)
-	@ ./$(NAME) -quiet $(TEST_DB) $(TEST_SQL)
-
-test_se: clean_test_db $(CONTEXTS) $(TEST_SQL) $(NAME_SE)
-	@ ./$(NAME_SE) -quiet $(TEST_DB) $(TEST_SQL)
-
-test_tuple: clean_test_db $(CONTEXTS) $(TEST_TUPLE_SQL) $(NAME_SE)
-	@ ./$(NAME_SE) -quiet $(TEST_DB) $(TEST_TUPLE_SQL)
-
-test_tuple_se: clean_test_db $(CONTEXTS) $(TEST_TUPLE_SE_SQL) $(NAME_SE)
-	@ ./$(NAME_SE) -quiet $(TEST_DB) $(TEST_TUPLE_SE_SQL)
-
-$(NAME): $(OBJS) $(SQLITE_OBJ)
-	gcc $(OBJS) $(SQLITE_OBJ) -o $(NAME) $(INCLUDES) $(LDFLAGS)
-
-$(NAME_SE): $(OBJS) $(SE_SQLITE_OBJ)
-	gcc $(OBJS) $(SE_SQLITE_OBJ) -o $(NAME_SE) $(INCLUDES) $(LDFLAGS) -lselinux
-
-$(CONTEXTS):
-	cp $(TOP)/test/sesqlite/policy/$@ .
-
-$(SE_SQLITE_OBJ):
-	@ make performance-selinux -C $(TOP)
-	cp $(TOP)/build/sqlite3.o ./$(SE_SQLITE_OBJ)
-
-$(SQLITE_OBJ):
-	@ make performance -C $(TOP)
-	cp $(TOP)/build/sqlite3.o ./$(SQLITE_OBJ)
+define testout
+	@ make clean_test_db
+	@ $(foreach i, $(shell seq 1 $(n)), echo "$(1) $(i) ..." ; make $(1) >> $@ ; )
+endef
 
 define generate_sql
 	@ echo "[Generating $@]"
 	tclsh $(TOP)/tool/$(1) > $@
 endef
 
-$(TEST_SQL):
-	@ $(call generate_sql,mkspeedsql.tcl)
+all: $(BIN1) $(BIN1_SE) \
+     $(BIN8) $(BIN8_SE) \
+     $(CONTEXTS) \
+     $(TEST8_SQL) $(TEST8_TUPLE_SQL) $(TEST8_TUPLE_STATIC_SQL)
 
-$(TEST_TUPLE_SQL):
-	@ $(call generate_sql,mkspeedsql_tuple.tcl)
+$(SQLITE_OBJ):
+	@ make performance -C $(TOP)
+	cp $(TOP)/build/sqlite3.o ./$(SQLITE_OBJ)
 
-$(TEST_TUPLE_SE_SQL):
-	@ $(call generate_sql,mkspeedsql_tuple_se.tcl)
+$(SE_SQLITE_OBJ):
+	@ make performance-selinux -C $(TOP)
+	cp $(TOP)/build/sqlite3.o ./$(SE_SQLITE_OBJ)
+
+$(CONTEXTS):
+	cp $(TOP)/test/sesqlite/policy/$@ .
+
+graph: graph1 graph8
+
+results_base: $(OUT1_BASE) $(OUT8_BASE)
+
+results_se: $(OUT1_SE) $(OUT8_SE) $(OUT8_TUPLE) $(OUT8_TUPLE_STATIC)
 
 clean_test_db:
-	@- $(RM) $(TEST_DB)*
+	@- $(RM) $(TEST8_DB)* $(TEST1_DB)*
 
 clean: clean_test_db
-	@- $(RM) $(NAME) $(NAME_SE) $(CONTEXTS)
-	@- $(RM) $(OBJS) $(SE_SQLITE_OBJ) $(SQLITE_OBJ)
+	@- $(RM) $(BIN1) $(BIN1_SE) $(BIN8) $(BIN8_SE)
+	@- $(RM) $(OBJS1) $(OBJS8) $(SQLITE_OBJ) $(SE_SQLITE_OBJ)
+	@- $(RM) $(CONTEXTS)
 	@- $(RM) -rf results
 
-define makegraph
-	@ python makegraph.py
-endef
 
-graph_base: $(BASE_OUT)
-	$(call makegraph)
+#########################
+#  SPEEDTEST1 SPECIFIC  #
+#########################
 
-graph_se: $(SE_OUT) $(SE_TUPLE_STATIC_OUT) $(SE_TUPLE_OUT)
-	$(call makegraph)
+$(BIN1): $(SQLITE_OBJ) $(OBJS1)
+	gcc $(SQLITE_OBJ) $(OBJS1) -o $@ $(INCLUDES) $(LDFLAGS)
 
-graph: $(BASE_OUT) $(SE_OUT) $(SE_TUPLE_STATIC_OUT) $(SE_TUPLE_OUT)
-	$(call makegraph)
+$(BIN1_SE): $(SE_SQLITE_OBJ) $(OBJS1_SE)
+	gcc $(SE_SQLITE_OBJ) $(OBJS1_SE) -o $@ $(INCLUDES) $(LDFLAGS) -lselinux
 
-results:
-	@ mkdir -p results
+### tests
 
-define testout
-	@ $(foreach i, $(shell seq 1 $(n)), echo "$(1) $(i) ..." ; make $(1) >> $@ ; )
-endef
+test1: clean_test_db $(BIN1)
+	@ ./$(BIN1) $(TEST1_DB)
 
-$(BASE_OUT): results $(TEST_SQL) $(NAME)
-	@ $(call testout,test)
+test1_se: clean_test_db $(BIN1_SE) $(CONTEXTS)
+	@ ./$(BIN1_SE) $(TEST1_DB)
 
-$(SE_OUT): results $(CONTEXTS) $(TEST_SQL) $(NAME_SE)
-	@ $(call testout,test_se)
+### result files
 
-$(SE_TUPLE_STATIC_OUT): results $(CONTEXTS) $(TEST_TUPLE_SQL) $(NAME_SE)
-	@ $(call testout,test_tuple)
+$(OUTDIR1):
+	mkdir -p $@
 
-$(SE_TUPLE_OUT): results $(CONTEXTS) $(TEST_TUPLE_SE_SQL) $(NAME_SE)
-	@ $(call testout,test_tuple_se)
+$(OUT1_BASE): $(OUTDIR1) $(BIN1)
+	@ $(call testout,test1)
+
+$(OUT1_SE): $(OUTDIR1) $(BIN1_SE)
+	@ $(call testout,test1_se)
+
+# graph
+
+graph1: $(OUT1_BASE) $(OUT1_SE)
+	@ python makegraph1.py
+
+
+#########################
+#  SPEEDTEST8 SPECIFIC  #
+#########################
+
+$(BIN8): $(OBJS8) $(SQLITE_OBJ)
+	gcc $(OBJS8) $(SQLITE_OBJ) -o $@ $(INCLUDES) $(LDFLAGS)
+
+$(BIN8_SE): $(OBJS8) $(SE_SQLITE_OBJ)
+	gcc $(OBJS8) $(SE_SQLITE_OBJ) -o $@ $(INCLUDES) $(LDFLAGS) -lselinux
+
+### sql statements
+
+$(TEST8_SQL):
+	@ $(call generate_sql,mkspeedsql.tcl)
+
+$(TEST8_TUPLE_SQL):
+	@ $(call generate_sql,mkspeedsql_tuple.tcl)
+
+$(TEST8_TUPLE_STATIC_SQL):
+	@ $(call generate_sql,mkspeedsql_tuple_static.tcl)
+
+### tests
+
+test8: clean_test_db $(TEST8_SQL) $(BIN8)
+	@ ./$(BIN8) -quiet $(TEST8_DB) $(TEST8_SQL)
+
+test8_se: clean_test_db $(CONTEXTS) $(TEST8_SQL) $(BIN8_SE)
+	@ ./$(BIN8_SE) -quiet $(TEST8_DB) $(TEST8_SQL)
+
+test8_tuple: clean_test_db $(CONTEXTS) $(TEST8_TUPLE_SQL) $(BIN8_SE)
+	@ ./$(BIN8_SE) -quiet $(TEST8_DB) $(TEST8_TUPLE_SQL)
+
+test8_tuple_static: clean_test_db $(CONTEXTS) $(TEST8_TUPLE_STATIC_SQL) $(BIN8_SE)
+	@ ./$(BIN8_SE) -quiet $(TEST8_DB) $(TEST8_TUPLE_STATIC_SQL)
+
+### result files
+
+$(OUTDIR8):
+	@ mkdir -p $@
+
+$(OUT8_BASE): $(OUTDIR8) $(TEST8_SQL) $(BIN8)
+	@ $(call testout,test8)
+
+$(OUT8_SE): $(OUTDIR8) $(CONTEXTS) $(TEST8_SQL) $(BIN8_SE)
+	@ $(call testout,test8_se)
+
+$(OUT8_TUPLE): $(OUTDIR8) $(CONTEXTS) $(TEST8_TUPLE_SQL) $(BIN8_SE)
+	@ $(call testout,test8_tuple)
+
+$(OUT8_TUPLE_STATIC): $(OUTDIR8) $(CONTEXTS) $(TEST8_TUPLE_STATIC_SQL) $(BIN8_SE)
+	@ $(call testout,test8_tuple_static)
+
+### graph
+
+graph8: $(OUT8_BASE) $(OUT8_SE) $(OUT8_TUPLE) $(OUT8_TUPLE_STATIC)
+	@ python makegraph8.py
+
