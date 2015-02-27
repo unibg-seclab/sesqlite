@@ -1,4 +1,5 @@
-.PHONY: all clean clean_test_db graph \
+.PHONY: all clean clean_test_db \
+	graph graph_base graph_se \
 	graph1 graph1_base graph1_se \
 	graph8 graph8_base graph8_se \
 	test1 test1_se \
@@ -73,6 +74,10 @@ $(CONTEXTS):
 	cp $(TOP)/test/sesqlite/policy/$@ .
 
 graph: graph1 graph8
+
+graph_base: graph1_base graph8_base
+
+graph_se: graph1_base graph8_base
 
 clean_test_db:
 	@- $(RM) $(TEST8_DB)* $(TEST1_DB)*
