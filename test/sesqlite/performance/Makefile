@@ -1,7 +1,5 @@
 .PHONY: all clean clean_test_db \
-	graph graph_base graph_se \
-	graph1 graph1_base graph1_se \
-	graph8 graph8_base graph8_se \
+	graph results_base results_se \
 	test1 test1_se \
 	test8 test8_se test8_tuple test8_tuple_static
 
@@ -75,9 +73,9 @@ $(CONTEXTS):
 
 graph: graph1 graph8
 
-graph_base: graph1_base graph8_base
+results_base: $(OUT1_BASE) $(OUT8_BASE)
 
-graph_se: graph1_base graph8_base
+results_se: $(OUT1_SE) $(OUT8_SE) $(OUT8_TUPLE) $(OUT8_TUPLE_STATIC)
 
 clean_test_db:
 	@- $(RM) $(TEST8_DB)* $(TEST1_DB)*
@@ -121,12 +119,6 @@ $(OUT1_SE): $(OUTDIR1) $(BIN1_SE)
 # graph
 
 graph1: $(OUT1_BASE) $(OUT1_SE)
-	@ python makegraph1.py
-
-graph1_base: $(OUT1_BASE)
-	@ python makegraph1.py
-
-graph1_se: $(OUT1_SE)
 	@ python makegraph1.py
 
 
@@ -185,11 +177,5 @@ $(OUT8_TUPLE_STATIC): $(OUTDIR8) $(CONTEXTS) $(TEST8_TUPLE_STATIC_SQL) $(BIN8_SE
 ### graph
 
 graph8: $(OUT8_BASE) $(OUT8_SE) $(OUT8_TUPLE) $(OUT8_TUPLE_STATIC)
-	@ python makegraph8.py
-
-graph8_base: $(OUT8_BASE)
-	@ python makegraph8.py
-
-graph8_se: $(OUT8_SE) $(OUT8_TUPLE) $(OUT8_TUPLE_STATIC)
 	@ python makegraph8.py
 
