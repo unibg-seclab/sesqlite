@@ -77,8 +77,8 @@ struct seSQLiteHashElem {
 ** A copy of the key is made for HASH_STRING and HASH_BINARY
 ** if the copyKey parameter to HashInit is 1.  
 */
-/* #define HASH_INT       1 // NOT USED */
-/* #define HASH_POINTER   2 // NOT USED */
+#define SESQLITE_HASH_INT       1
+/* #define SESQLITE_HASH_POINTER   2 NOT USED */
 #define SESQLITE_HASH_STRING    3
 #define SESQLITE_HASH_BINARY    4
 

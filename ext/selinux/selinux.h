@@ -5,12 +5,51 @@
  */
 
 #include "sqlite3.h"
+#include "stdio.h"
+#include "stdlib.h"
+
 
 #ifdef __cplusplus
 extern "C" {
 #endif  /* __cplusplus */
 
 #define NELEMS(x)  (sizeof(x) / sizeof(x[0]))
+#define  SOURCE_MASK   0xfff00000
+#define  TARGET_MASK   0xfff00
+#define  CLASS_MASK    0xe0
+#define  PERM_MASK     0xf1
+
+#define  SOURCE_SHIFT  20
+#define  TARGET_SHIFT  8
+#define  CLASS_SHIFT   5
+#define  PERM_SHIFT    0
+
+/* Used for internal representation of security contexts*/
+unsigned int compress(
+	unsigned short source,
+	unsigned short target,
+	unsigned char tclass,
+	unsigned char perm
+){
+	return ( perm   << PERM_SHIFT   )
+	     + ( tclass  << CLASS_SHIFT  )
+	     + ( target << TARGET_SHIFT )
+	     + ( source << SOURCE_SHIFT );
+}
+
+void decompress(
+	unsigned int data,
+	unsigned short* source,
+	unsigned short* target,
+	unsigned char* tclass,
+	unsigned char* perm
+){
+	*source = ( data & SOURCE_MASK ) >> SOURCE_SHIFT;
+	*target = ( data & TARGET_MASK ) >> TARGET_SHIFT;
+	*tclass  = ( data & CLASS_MASK  ) >> CLASS_SHIFT;
+	*perm   = ( data & PERM_MASK   ) >> PERM_SHIFT;
+}
+
 
 #define SELINUX_CONTEXT_TABLE		"CREATE TABLE IF NOT EXISTS \
 selinux_context( \
@@ -26,7 +65,7 @@ selinux_id( \
 security_context TEXT UNIQUE)"
 
 #define SECURITY_CONTEXT_COLUMN_NAME "security_context"
-#define SECURITY_CONTEXT_COLUMN_TYPE "hidden text"
+#define SECURITY_CONTEXT_COLUMN_TYPE "hidden INT"
 #define SECURITY_CONTEXT_COLUMN_DEFAULT_FUNC "getcon()"
 #define SECURITY_CONTEXT_COLUMN_DEFAULT "DEFAULT (getcon())"
 #define SECURITY_CONTEXT_COLUMN_DEFINITION SECURITY_CONTEXT_COLUMN_NAME " " SECURITY_CONTEXT_COLUMN_TYPE " " SECURITY_CONTEXT_COLUMN_DEFAULT
@@ -39,28 +78,29 @@ security_context TEXT UNIQUE)"
 
 /* SELinux permissions */
 /* common database */
-#define SELINUX_CREATE 				0
-#define SELINUX_DROP 				1
-#define SELINUX_GETATTR 			2
-#define SELINUX_SETATTR 			3
+#define SELINUX_CREATE 			0
+#define SELINUX_DROP 			1
+#define SELINUX_GETATTR 		2
+#define SELINUX_SETATTR 		3
 #define SELINUX_RELABEL_FROM 		4
-#define SELINUX_RELABEL_TO 			5
+#define SELINUX_RELABEL_TO 		5
 
 /* db_xxx */
-#define SELINUX_SELECT 				6
-#define SELINUX_UPDATE 				7
-#define SELINUX_INSERT 				8
-#define SELINUX_DELETE 				9
+#define SELINUX_SELECT 			6
+#define SELINUX_UPDATE 			7
+#define SELINUX_INSERT 			8
+#define SELINUX_DELETE 			9
 
 /* other */
 #define SELINUX_LOAD_MODULE 		10
 
-/* default target security context */
-#define DEFAULT_TCON          "unconfined_u:object_r:sqlite_master_t:s0"
+#define SELINUX_NELEM_CLASS		3
+#define SELINUX_NELEM_PERM		10
+
 
 /* indices to bind paramteres in sesqlite_stmt */
-#define SESQLITE_IDX_NAME     1
-#define SESQLITE_IDX_COLUMN   2
+#define SESQLITE_IDX_NAME     		1
+#define SESQLITE_IDX_COLUMN   		2
 
 /* 0 to disable authorizer checks, 1 otherwise */
 int auth_enabled = 1;
