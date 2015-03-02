@@ -56,8 +56,8 @@ puts {
   PRAGMA page_size=1024;
   PRAGMA cache_size=8192;
   PRAGMA locking_mode=EXCLUSIVE;
-  CREATE TABLE t1(a INTEGER, b INTEGER, c TEXT, security_context TEXT);
-  CREATE TABLE t2(a INTEGER, b INTEGER, c TEXT, security_context TEXT);
+  CREATE TABLE t1(a INTEGER, b INTEGER, c TEXT);
+  CREATE TABLE t2(a INTEGER, b INTEGER, c TEXT);
   CREATE INDEX i2a ON t2(a);
   CREATE INDEX i2b ON t2(b);
   SELECT name FROM sqlite_master ORDER BY 1;
@@ -72,7 +72,7 @@ for {set i 1} {$i<=50000} {incr i} {
   set r [expr {int(rand()*500000)}]
   set x [number_name $r]
   lappend t1c_list $x
-  puts "INSERT INTO t1 VALUES($i,$r,'$x', 'unconfined_u:object_r:sesqlite_public:s0');"
+  puts "INSERT INTO t1 VALUES($i,$r,'$x', 'unconfined_u:object_r:sqlite_master_t:s0');"
 }
 puts {COMMIT;}
 
@@ -81,7 +81,7 @@ puts {COMMIT;}
 puts {BEGIN;}
 for {set i 1} {$i<=50000} {incr i} {
   set r [expr {int(rand()*500000)}]
-  puts "INSERT INTO t2 VALUES($i,$r,'[number_name $r]', 'unconfined_u:object_r:sesqlite_public:s0');"
+  puts "INSERT INTO t2 VALUES($i,$r,'[number_name $r]', 'unconfined_u:object_r:sqlite_master_t:s0');"
 }
 puts {COMMIT;}
 
@@ -92,13 +92,14 @@ puts {COMMIT;}
 for {set i 0} {$i<50} {incr i} {
   set lwr [expr {$i*100}]
   set upr [expr {($i+10)*100}]
-  puts "SELECT count(*), avg(b) FROM t1 WHERE b>=$lwr AND b<$upr AND selinux_check_access(security_context, 'db_tuple', 'select');"}
+  puts "SELECT count(*), avg(b) FROM t1 WHERE b>=$lwr AND b<$upr AND security_context = 'unconfined_u:object_r:sqlite_master_t:s0';"
+}
 
 # 50 SELECTs on an LIKE comparison.  There is no index so a full
 # table scan is required.
 #
 for {set i 0} {$i<50} {incr i} {
-  puts "SELECT count(*), avg(b) FROM t1 WHERE c LIKE '%[number_name $i]%' AND selinux_check_access(security_context, 'db_tuple', 'select');"
+  puts "SELECT count(*), avg(b) FROM t1 WHERE c LIKE '%[number_name $i]%' AND security_context = 'unconfined_u:object_r:sqlite_master_t:s0';"
 }
 
 # Create indices
@@ -118,21 +119,21 @@ set sql {}
 for {set i 0} {$i<5000} {incr i} {
   set lwr [expr {$i*100}]
   set upr [expr {($i+10)*100}]
-  puts "SELECT count(*), avg(b) FROM t1 WHERE b>=$lwr AND b<$upr AND selinux_check_access(security_context, 'db_tuple', 'select');"
+  puts "SELECT count(*), avg(b) FROM t1 WHERE b>=$lwr AND b<$upr AND security_context = 'unconfined_u:object_r:sqlite_master_t:s0';"
 }
 
 # 100000 random SELECTs against rowid.
 #
 for {set i 1} {$i<=100000} {incr i} {
   set id [expr {int(rand()*50000)+1}]
-  puts "SELECT c FROM t1 WHERE rowid=$id AND selinux_check_access(security_context, 'db_tuple', 'select');"
+  puts "SELECT c FROM t1 WHERE rowid=$id AND security_context = 'unconfined_u:object_r:sqlite_master_t:s0';"
 }
 
 # 100000 random SELECTs against a unique indexed column.
 #
 for {set i 1} {$i<=100000} {incr i} {
   set id [expr {int(rand()*50000)+1}]
-  puts "SELECT c FROM t1 WHERE a=$id AND selinux_check_access(security_context, 'db_tuple', 'select');"
+  puts "SELECT c FROM t1 WHERE a=$id AND security_context = 'unconfined_u:object_r:sqlite_master_t:s0';"
 }
 
 # 50000 random SELECTs against an indexed column text column
@@ -141,7 +142,7 @@ set nt1c [llength $t1c_list]
 for {set i 0} {$i<50000} {incr i} {
   set r [expr {int(rand()*$nt1c)}]
   set c [lindex $t1c_list $i]
-  puts "SELECT c FROM t1 WHERE c='$c' AND selinux_check_access(security_context, 'db_tuple', 'select');"
+  puts "SELECT c FROM t1 WHERE c='$c' AND security_context = 'unconfined_u:object_r:sqlite_master_t:s0';"
 }
 
 
@@ -154,7 +155,7 @@ puts {BEGIN;}
 for {set i 0} {$i<5000} {incr i} {
   set lwr [expr {$i*2}]
   set upr [expr {($i+1)*2}]
-  puts "UPDATE t1 SET b=b*2 WHERE a>=$lwr AND a<$upr AND selinux_check_access(security_context, 'db_tuple', 'update');"
+  puts "UPDATE t1 SET b=b*2 WHERE a>=$lwr AND a<$upr AND security_context = 'unconfined_u:object_r:sqlite_master_t:s0';"
 }
 puts {COMMIT;}
 
@@ -163,14 +164,14 @@ puts {COMMIT;}
 puts {BEGIN;}
 for {set i 0} {$i<50000} {incr i} {
   set r [expr {int(rand()*500000)}]
-  puts "UPDATE t1 SET b=$r WHERE a=$i AND selinux_check_access(security_context, 'db_tuple', 'update');"
+  puts "UPDATE t1 SET b=$r WHERE a=$i AND security_context = 'unconfined_u:object_r:sqlite_master_t:s0';"
 }
 puts {COMMIT;}
 
 # 1 big text update that touches every row in the table.
 #
 puts {
-  UPDATE t1 SET c=a WHERE selinux_check_access(security_context, 'db_tuple', 'update');
+  UPDATE t1 SET c=a WHERE security_context = 'unconfined_u:object_r:sqlite_master_t:s0';
 }
 
 # Many individual text updates.  Each row in the table is
@@ -179,58 +180,58 @@ puts {
 puts {BEGIN;}
 for {set i 1} {$i<=50000} {incr i} {
   set r [expr {int(rand()*500000)}]
-  puts "UPDATE t1 SET c='[number_name $r]' WHERE a=$i AND selinux_check_access(security_context, 'db_tuple', 'update');"
+  puts "UPDATE t1 SET c='[number_name $r]' WHERE a=$i AND security_context = 'unconfined_u:object_r:sqlite_master_t:s0';"
 }
 puts {COMMIT;}
 
 # Delete all content in a table.
 #
-puts {DELETE FROM t1 WHERE selinux_check_access(security_context, 'db_tuple', 'delete');}
+puts {DELETE FROM t1 WHERE security_context = 'unconfined_u:object_r:sqlite_master_t:s0';}
 
 # Copy one table into another
 #
-puts {INSERT INTO t1 SELECT * FROM t2 WHERE selinux_check_access(security_context, 'db_tuple', 'select');}
+puts {INSERT INTO t1 SELECT * FROM t2 WHERE security_context = 'unconfined_u:object_r:sqlite_master_t:s0';}
 
 # Delete all content in a table, one row at a time.
 #
-puts {DELETE FROM t1 WHERE selinux_check_access(security_context, 'db_tuple', 'delete');}
+puts {DELETE FROM t1 WHERE security_context = 'unconfined_u:object_r:sqlite_master_t:s0';}
 
 # Refill the table yet again
 #
-puts {INSERT INTO t1 SELECT * FROM t2 WHERE selinux_check_access(security_context, 'db_tuple', 'select');}
+puts {INSERT INTO t1 SELECT * FROM t2 WHERE security_context = 'unconfined_u:object_r:sqlite_master_t:s0';}
 
 # Drop the table and recreate it without its indices.
 #
 puts {BEGIN;}
 puts {
    DROP TABLE t1;
-   CREATE TABLE t1(a INTEGER, b INTEGER, c TEXT, security_context TEXT);
+   CREATE TABLE t1(a INTEGER, b INTEGER, c TEXT);
 }
 puts {COMMIT;}
 
 # Refill the table yet again.  This copy should be faster because
 # there are no indices to deal with.
 #
-puts {INSERT INTO t1 SELECT * FROM t2 WHERE selinux_check_access(security_context, 'db_tuple', 'select');}
+puts {INSERT INTO t1 SELECT * FROM t2 WHERE security_context = 'unconfined_u:object_r:sqlite_master_t:s0';}
 
 # Select 20000 rows from the table at random.
 #
 puts {
-  SELECT rowid FROM t1 WHERE selinux_check_access(security_context, 'db_tuple', 'select') ORDER BY random() LIMIT 20000;
+  SELECT rowid FROM t1 WHERE security_context = 'unconfined_u:object_r:sqlite_master_t:s0' ORDER BY random() LIMIT 20000;
 }
 
 # Delete 20000 random rows from the table.
 #
 puts {
   DELETE FROM t1 WHERE rowid IN
-    (SELECT rowid FROM t1 WHERE selinux_check_access(security_context, 'db_tuple', 'select') ORDER BY random() LIMIT 20000);
+    (SELECT rowid FROM t1 WHERE security_context = 'unconfined_u:object_r:sqlite_master_t:s0' ORDER BY random() LIMIT 20000);
 }
-puts {SELECT count(*) FROM t1 WHERE selinux_check_access(security_context, 'db_tuple', 'select');}
+puts {SELECT count(*) FROM t1 WHERE security_context = 'unconfined_u:object_r:sqlite_master_t:s0';}
     
 # Delete 20000 more rows at random from the table.
 #
 puts {
   DELETE FROM t1 WHERE rowid IN
-    (SELECT rowid FROM t1 WHERE selinux_check_access(security_context, 'db_tuple', 'select') ORDER BY random() LIMIT 20000);
+    (SELECT rowid FROM t1 WHERE security_context = 'unconfined_u:object_r:sqlite_master_t:s0' ORDER BY random() LIMIT 20000);
 }
-puts {SELECT count(*) FROM t1 WHERE selinux_check_access(security_context, 'db_tuple', 'select');}
+puts {SELECT count(*) FROM t1 WHERE security_context = 'unconfined_u:object_r:sqlite_master_t:s0';}

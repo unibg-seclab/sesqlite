@@ -41,11 +41,9 @@ void *sesqlite_malloc_and_zero(int n) {
  */
 void seSQLiteHashInit(seSQLiteHash *pNew, int keyClass, int copyKey) {
 	assert(pNew != 0);
-	assert(keyClass>= SESQLITE_HASH_STRING && keyClass<= SESQLITE_HASH_BINARY);
+	assert(keyClass>= SESQLITE_HASH_INT && keyClass<= SESQLITE_HASH_BINARY);
 	pNew->keyClass = keyClass;
-#if 0
-	if( keyClass== SESQLITE_HASH_POINTER || keyClass== SESQLITE_HASH_INT ) copyKey = 0;
-#endif
+	if( keyClass== SESQLITE_HASH_INT ) copyKey = 0;
 	pNew->copyKey = copyKey;
 	pNew->first = 0;
 	pNew->count = 0;
@@ -80,7 +78,6 @@ void seSQLiteHashClear(seSQLiteHash *pH) {
 	pH->count = 0;
 }
 
-#if 0 /* NOT USED */
 /*
  ** Hash and comparison functions when the mode is HASH_INT
  */
@@ -90,22 +87,7 @@ static int seSQLiteIntHash(const void *pKey, int nKey) {
 static int seSQLiteIntCompare(const void *pKey1, int n1, const void *pKey2, int n2) {
 	return n2 - n1;
 }
-#endif
 
-#if 0 /* NOT USED */
-/*
- ** Hash and comparison functions when the mode is HASH_POINTER
- */
-static int seSQLitePtrHash(const void *pKey, int nKey) {
-	uptr x = Addr(pKey);
-	return x ^ (x<<8) ^ (x>>8);
-}
-static int seSQLitePtrCompare(const void *pKey1, int n1, const void *pKey2, int n2) {
-	if( pKey1==pKey2 ) return 0;
-	if( pKey1<pKey2 ) return -1;
-	return 1;
-}
-#endif
 
 /*
  ** Hash and comparison functions when the mode is HASH_STRING
@@ -160,23 +142,13 @@ static int seSQLiteBinCompare(const void *pKey1, int n1, const void *pKey2,
  ** with types "const void*" and "int" and returns an "int".
  */
 static int (*seSQLiteHashFunction(int keyClass))(const void*,int) {
-#if 0  /* HASH_INT and HASH_POINTER are never used */
-			switch( keyClass ) {
-				case SESQLITE_HASH_INT: return &seSQLiteIntHash;
-				case SESQLITE_HASH_POINTER: return &seSQLitePtrHash;
-				case SESQLITE_HASH_STRING: return &seSQLiteStrHash;
-				case SESQLITE_HASH_BINARY: return &seSQLiteBinHash;;
-				default: break;
-			}
-			return 0;
-#else
-			if (keyClass == SESQLITE_HASH_STRING) {
-				return &seSQLiteStrHash;
-			} else {
-				assert(keyClass==SESQLITE_HASH_BINARY);
-				return &seSQLiteBinHash;
-			}
-#endif
+	switch( keyClass ) {
+		case SESQLITE_HASH_INT: return &seSQLiteIntHash;
+		case SESQLITE_HASH_STRING: return &seSQLiteStrHash;
+		case SESQLITE_HASH_BINARY: return &seSQLiteBinHash;
+		default: break;
+	}
+	return 0;
 }
 
 
@@ -187,23 +159,13 @@ static int (*seSQLiteHashFunction(int keyClass))(const void*,int) {
 ** see the header comment on the previous function.
 */
 static int (*seSQLiteCompareFunction(int keyClass))(const void*,int,const void*,int){
-#if 0 /* HASH_INT and HASH_POINTER are never used */
   switch( keyClass ){
     case SESQLITE_HASH_INT:     return &seSQLiteIntCompare;
-    case SESQLITE_HASH_POINTER: return &seSQLitePtrCompare;
     case SESQLITE_HASH_STRING:  return &seSQLiteStrCompare;
     case SESQLITE_HASH_BINARY:  return &seSQLiteBinCompare;
     default: break;
   }
   return 0;
-#else
-  if( keyClass==SESQLITE_HASH_STRING ){
-    return &seSQLiteStrCompare;
-  }else{
-    assert( keyClass==SESQLITE_HASH_BINARY );
-    return &seSQLiteBinCompare;
-  }
-#endif
 }
 
 

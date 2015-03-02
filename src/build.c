@@ -24,6 +24,10 @@
 */
 #include "sqliteInt.h"
 
+#ifdef SQLITE_ENABLE_SELINUX
+# include "selinux.h"
+#endif
+
 /*
 ** This routine is called when a new SQL statement is beginning to
 ** be parsed.  Initialize the pParse structure as needed.
@@ -1492,6 +1496,16 @@ static char *createTableStmt(sqlite3 *db, Table *p){
     zEnd = "\n)";
   }
   n += 35 + 6*p->nCol;
+
+#if defined(SQLITE_ENABLE_SELINUX)
+  for(pCol=p->aCol, i=0; i<p->nCol; i++, pCol++){
+      if(0 ==sqlite3StrNICmp(pCol->zName, "security_context", 16)) {
+	  n += identLength(pCol->zType) + 5;
+	  n += identLength(pCol->zDflt) + 5; /*check the offset*/
+      }
+  }
+#endif
+
   zStmt = sqlite3DbMallocRaw(0, n);
   if( zStmt==0 ){
     db->mallocFailed = 1;
@@ -1525,9 +1539,16 @@ static char *createTableStmt(sqlite3 *db, Table *p){
     testcase( pCol->affinity==SQLITE_AFF_REAL );
     
     zType = azType[pCol->affinity - SQLITE_AFF_TEXT];
-    len = sqlite3Strlen30(zType);
     assert( pCol->affinity==SQLITE_AFF_NONE 
             || pCol->affinity==sqlite3AffinityType(zType, 0) );
+
+#if defined(SQLITE_ENABLE_SELINUX)
+    if(0 ==sqlite3StrNICmp(pCol->zName, "security_context", 16)) {
+	zType = " hidden TEXT DEFAULT (getcon())";
+    }
+#endif
+
+    len = sqlite3Strlen30(zType);
     memcpy(&zStmt[k], zType, len);
     k += len;
     assert( k<=n );
@@ -1871,6 +1892,69 @@ void sqlite3EndTable(
       }
     }
 
+#if defined(SQLITE_ENABLE_SELINUX)
+    int code;
+    int i;
+    int nAlloc;
+    int rc = -1;
+    char *zColumn = 0;
+    Table *pNew;
+    if( pSelect ){
+	code = 0;
+    }else{
+	code = 1;
+    }
+
+    /*
+    ** create a copy of the just created table
+    */
+    pNew = (Table*)sqlite3DbMallocZero(db, sizeof(Table));
+    if( !pNew ) 
+	return;
+    pNew->nRef = 1;
+    pNew->nCol = p->nCol;
+    assert( pNew->nCol>0 );
+    nAlloc = (((pNew->nCol-1)/8)*8)+8;
+    assert( nAlloc>=pNew->nCol && nAlloc%8==0 && nAlloc-pNew->nCol<8 );
+    pNew->aCol = (Column*)sqlite3DbMallocZero(db, sizeof(Column)*nAlloc);
+    pNew->zName = sqlite3MPrintf(db, "%s", p->zName);
+    if( !pNew->aCol || !pNew->zName ){
+	db->mallocFailed = 1;
+	return;
+    }
+    memcpy(pNew->aCol, p->aCol, sizeof(Column)*pNew->nCol);
+    for(i=0; i<pNew->nCol; i++){
+	Column *pCol = &pNew->aCol[i];
+	pCol->zName = sqlite3DbStrDup(db, pCol->zName);
+	pCol->zColl = 0;
+	pCol->zType = 0;
+	pCol->pDflt = 0;
+	pCol->zDflt = 0;
+    }
+    pNew->pSchema = db->aDb[iDb].pSchema;
+    pNew->addColOffset = p->addColOffset;
+    pNew->nRef = 1;
+
+    if( db->xAddExtraColumn ){
+	rc = db->xAddExtraColumn(db->pAuthArg, pParse, code, pNew, &zColumn);
+	if(rc == -1){
+	    /*TODO call abort*/
+	    return;	
+	}
+    }
+
+    /*copy back the modified table */ 
+    p = pNew;
+
+//    for(i=0; i<p->nCol; i++){
+//	Column *pCol = &p->aCol[i];
+//	fprintf(stdout, "\n\n pCol->zName: %s\n", pCol->zName);
+//	fprintf(stdout, "\n\n pCol->zType: %s\n", pCol->zType);
+//    }
+#endif
+
+
+
     /* Compute the complete text of the CREATE statement */
     if( pSelect ){
       zStmt = createTableStmt(db, p);
@@ -1878,9 +1962,37 @@ void sqlite3EndTable(
       Token *pEnd2 = tabOpts ? &pParse->sLastToken : pEnd;
       n = (int)(pEnd2->z - pParse->sNameToken.z);
       if( pEnd2->z[0]!=';' ) n += pEnd2->n;
-      zStmt = sqlite3MPrintf(db, 
-          "CREATE %s %.*s", zType2, n, pParse->sNameToken.z
-      );
+
+#if defined(SQLITE_ENABLE_SELINUX)
+      if(0!=sqlite3StrNICmp(p->zName, "sqlite_", 7) && 0!=sqlite3StrNICmp(p->zName, "selinux_", 8)) {
+        int pStmt = 0;
+        char *zNewStmt = 0;
+        if( pCons->z==0 ){
+            pCons = pEnd2;
+        }
+        /* In order to put the security_context column as the last column of the new table
+         * we need to split the CREATE TABLE statement */
+        n = strlen(pParse->sNameToken.z) + strlen(zColumn) + 3; /*terminator + separator and space*/
+        pStmt = strlen(pParse->sNameToken.z) - strlen(pCons->z);
+        zNewStmt = (char *) sqlite3_malloc(n * sizeof(char));
+        memset(zNewStmt, '\0', n * sizeof(char));
+
+        strncpy(zNewStmt, pParse->sNameToken.z, pStmt);
+        strncat(zNewStmt, ", ", 2); /* add separator */
+        strncat(zNewStmt, zColumn, strlen(zColumn)); 
+        strncat(zNewStmt, pCons->z, pCons->n); 
+        zStmt = sqlite3MPrintf(db, "CREATE %s %.*s", zType2, n, zNewStmt);
+        sqlite3_free(zNewStmt);
+        sqlite3_free(zColumn);
+      }else{
+#endif
+
+        zStmt = sqlite3MPrintf(db, "CREATE %s %.*s", zType2, n, pParse->sNameToken.z);
+
+#if defined(SQLITE_ENABLE_SELINUX)
+      }
+#endif
+
     }
 
     /* A slot for the record has already been allocated in the 

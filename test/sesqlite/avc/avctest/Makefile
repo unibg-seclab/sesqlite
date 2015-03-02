@@ -2,7 +2,7 @@
 .SUFFIXES: .c .o
 
 n       := 10
-NAME    := uavctest
+NAME    := avctest
 CFLAGS  += -O3
 LDFLAGS += -lselinux
 
@@ -12,7 +12,7 @@ OBJS    := $(SRCS:.c=.o)
 all: $(NAME)
 
 $(NAME): $(OBJS)
-	gcc $(OBJS) -o $(NAME) $(LDFLAGS)
+	gcc $(CFLAGS) $(OBJS) -o $(NAME) $(LDFLAGS)
 
 test: $(NAME)
 	@./$(NAME) $(n)

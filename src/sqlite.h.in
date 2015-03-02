@@ -2495,6 +2495,17 @@ int sqlite3_set_authorizer(
 );
 
 /*
+** CAPI3REF: Add extra columns
+**
+** TODO
+*/
+int sqlite3_set_add_extra_column(
+  sqlite3*,
+  int (*xAddExtraColumn)(void*,void*,int,void*,char**),
+  void *pUserData
+);
+
+/*
 ** CAPI3REF: Authorizer Return Codes
 **
 ** The [sqlite3_set_authorizer | authorizer callback function] must

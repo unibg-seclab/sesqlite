@@ -1,32 +1,49 @@
 #include <selinux/selinux.h>
+#include <selinux/avc.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+#include "timer.h"
 
-#define TIMER_GET		(double) clock() / CLOCKS_PER_SEC
-#define TIMER_START		_tstart = TIMER_GET;
-#define TIMER_INIT		double _tstart; TIMER_START;
-#define TIMER_DIFF		(TIMER_GET) - _tstart
+void cleanavc() {
+	avc_reset();
+	avc_cleanup();
+	avc_reset();
+}
 
 int main(int argc, char **argv) {
+	int i, rc;
+	long long diff;
+	struct timespec start, end;
 	int times = 10;
+	int clean_avc = 0;
+
 	if (argc > 1)
 		times = atoi(argv[1]);
+	if (argc > 2)
+		clean_avc = atoi(argv[2]);
 
 	char *scon = "unconfined_u:unconfined_r:unconfined_t:s0-s0:c0.c1023";
 	char *tcon = "unconfined_u:object_r:sesqlite_public:s0";
 	char *clas = "db_column";
 	char *perm = "select";
 
-	TIMER_INIT
+	selinux_check_access(scon, tcon, clas, perm, NULL);
 
-	int i, rc;
-	double diff;
+	if ( clean_avc != 0 )
+		cleanavc();
+
 	for (i = 0; i < times; ++i) {
-		TIMER_START
+
+		if ( clean_avc != 0)
+			cleanavc();
+
+		GETTIME(start)
 		rc = selinux_check_access(scon, tcon, clas, perm, NULL);
-		diff = TIMER_DIFF;
-		printf("%2d) res: %d  time: %f\n", i, rc, TIMER_DIFF);
+		GETTIME(end)
+
+		diff = TIMESPEC_DIFF(start, end);
+		printf("%lld\n", diff);
 	}
 
 	return 0;

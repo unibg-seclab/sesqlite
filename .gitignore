@@ -1,0 +1,34 @@
+*.pydevproject
+.project
+.metadata
+.gradle
+bin/
+tmp/
+target/
+build/
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+.classpath
+.settings/
+.loadpath
+
+# External tool builders
+.externalToolBuilders/
+
+# Locally stored "Eclipse launch configurations"
+*.launch
+
+# CDT-specific
+.cproject
+
+# PDT-specific
+.buildpath
+
+# configure created by autoconfigure
+/configure
+
+#cache
+autom4te.cache/

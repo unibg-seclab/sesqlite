@@ -17,11 +17,10 @@ db_table	*.t2	unconfined_u:object_r:app_data_db_t:s0
 db_table	*.t3	unconfined_u:object_r:app_data_db_t:s0
 db_table	*.*	unconfined_u:object_r:other_t:s0
 
-
 # <column>
-db_column	*.sqlite_master.*	unconfined_u:object_r:sqlite_master_c:s0
-db_column	*.sqlite_temp_master.*	unconfined_u:object_r:sqlite_temp_master_c:s0
-db_column	*.selinux_context.*	unconfined_u:object_r:selinux_context_c:s0
+db_column	*.sqlite_master.*	unconfined_u:object_r:sqlite_master_t:s0
+db_column	*.sqlite_temp_master.*	unconfined_u:object_r:sqlite_temp_master_t:s0
+db_column	*.selinux_context.*	unconfined_u:object_r:selinux_context_t:s0
 db_column	*.t3.g	unconfined_u:object_r:app_data_db_c:s0
 db_column	*.t2.d	unconfined_u:object_r:app_data_db_c:s0
 db_column	*.t2.e	unconfined_u:object_r:app_data_db_c:s0

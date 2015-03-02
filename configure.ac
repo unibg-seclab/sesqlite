@@ -689,10 +689,19 @@ AC_ARG_ENABLE(selinux,
       AC_HELP_STRING([--enable-selinux], [Enable using selinux]),
       [use_selinux=$enableval],
       [use_selinux=no])
-      
+
 if test x"$use_selinux" != xno; then
   TARGET_HAVE_SELINUX=1
-  
+
+ AC_ARG_ENABLE(selinux-static-context, 
+       AC_HELP_STRING([--enable-selinux-static-context], [use a static security context]),
+       [selinux_static_context=$enableval],
+       [selinux_static_context=no])
+
+ if test "x$selinux_static_context" != xno; then
+	TARGET_STATIC_CONTEXT=1
+ fi
+
   #check library
   AC_ARG_WITH([selinux-lib],
 	[AC_HELP_STRING([--with-selinux-lib],[specify selinux library])],
@@ -709,13 +718,13 @@ if test x"$use_selinux" != xno; then
   else
 	TARGET_SELINUX_LIBS="$with_selinux_lib"
   fi
-  
+
   #check headers
   AC_ARG_WITH([selinux-inc],
 	[AC_HELP_STRING([--with-selinux-inc],[specify selinux include paths])],
 	[with_selinux_inc=$withval],
 	[with_selinux_inc="auto"])
-  
+
   if test "x$with_selinux_inc" = xauto; then
 	AC_CHECK_HEADER(selinux.h, [found="yes"], [found="no"
 		for dir in /usr /usr/local; do
@@ -732,7 +741,7 @@ if test x"$use_selinux" != xno; then
   else
 	TARGET_SELINUX_INC="$with_selinux_inc"
   fi
-  
+
   if test x"$found" = xno; then
 	TARGET_SELINUX_LIBS=""
 	TARGET_SELINUX_INC=""
@@ -745,6 +754,7 @@ fi
 AC_SUBST(TARGET_SELINUX_LIBS)
 AC_SUBST(TARGET_SELINUX_INC)
 AC_SUBST(TARGET_HAVE_SELINUX)
+AC_SUBST(TARGET_STATIC_CONTEXT)
 
 #########
 # Output the config header
