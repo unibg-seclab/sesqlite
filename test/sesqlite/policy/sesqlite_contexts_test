@@ -17,7 +17,6 @@ db_table	*.t2	unconfined_u:object_r:app_data_db_t:s0
 db_table	*.t3	unconfined_u:object_r:app_data_db_t:s0
 db_table	*.*	unconfined_u:object_r:other_t:s0
 
-
 # <column>
 db_column	*.sqlite_master.*	unconfined_u:object_r:sqlite_master_t:s0
 db_column	*.sqlite_temp_master.*	unconfined_u:object_r:sqlite_temp_master_t:s0
