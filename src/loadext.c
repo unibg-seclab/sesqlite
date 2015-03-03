@@ -228,7 +228,6 @@ static const sqlite3_api_routines sqlite3Apis = {
   sqlite3_result_value,
   sqlite3_rollback_hook,
   sqlite3_set_authorizer,
-  sqlite3_set_add_extra_column,
   sqlite3_set_auxdata,
   sqlite3_snprintf,
   sqlite3_step,
@@ -401,6 +400,7 @@ static const sqlite3_api_routines sqlite3Apis = {
 #else
   0,
 #endif
+  sqlite3_set_add_extra_column,
 };
 
 /*

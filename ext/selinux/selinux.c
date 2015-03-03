@@ -1179,7 +1179,7 @@ int create_security_context_column(void *pUserData, void *parse, int type, void 
     pCol->zType = sqlite3MPrintf(db, zType);
     pCol->affinity = SQLITE_AFF_INTEGER;
     p->nCol++;
-    p->aCol[p->nCol].isHidden = 1;
+    p->aCol[p->nCol].colFlags |= COLFLAG_HIDDEN;
 
     /**
     *generate expression for DEFAULT value
@@ -1234,7 +1234,7 @@ int create_security_context_column(void *pUserData, void *parse, int type, void 
 		    assert(zType[i-1]==' ');
 		    zType[i - 1] = '\0';
 	    }
-	    p->aCol[iCol].isHidden = 1;
+            p->aCol[iCol].colFlags |= COLFLAG_HIDDEN;
 	}
     }
    
