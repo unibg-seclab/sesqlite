@@ -146,7 +146,7 @@ for {set i 0} {$i<50000} {incr i} {
 
 
 # Vacuum
-puts {VACUUM;}
+# puts {VACUUM;}
 
 # 5000 updates of ranges where the field being compared is indexed.
 #
