@@ -2,6 +2,7 @@
 
 CONF			 = ../configure
 CONFOPTS		 = --enable-option-checking=fatal --enable-load-extension
+CONFOPTS		+= --enable-static
 NO_THREADSAFE		 = --enable-threadsafe=no
 ENABLE_SELINUX	 	 = --enable-selinux
 ENABLE_DEBUG	 	 = --enable-debug
