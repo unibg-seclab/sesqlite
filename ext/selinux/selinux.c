@@ -975,29 +975,28 @@ int prepareSeSQLiteStmt(sqlite3 *db){
 
     int rc = SQLITE_OK;
     rc = sqlite3_exec(db, SELINUX_CONTEXT_TABLE, 0, 0, 0);
-
     if (rc == SQLITE_OK)
 	rc = sqlite3_exec(db, SELINUX_ID_TABLE, 0, 0, 0);
 
     /* prepare statements */
     if (rc == SQLITE_OK)
 	rc = sqlite3_prepare_v2(db,
-	    "SELECT security_context from selinux_id where rowid=(?1);", -1,
+	    "SELECT security_label from selinux_id where rowid=(?1);", -1,
 	    &sesqlite_stmt_id_select, 0);
 
     if (rc == SQLITE_OK)
 	rc = sqlite3_prepare_v2(db,
-	    "SELECT rowid from selinux_id where security_context=(?1);", -1,
+	    "SELECT rowid from selinux_id where security_label=(?1);", -1,
 	    &sesqlite_stmt_con_select, 0);
 
     if (rc == SQLITE_OK)
 	rc = sqlite3_prepare_v2(db,
-	    "INSERT INTO selinux_id values(?1);", -1,
+	    "INSERT INTO selinux_id(security_label) values(?1);", -1,
 	    &sesqlite_stmt_id_insert, 0);
 
     if (rc == SQLITE_OK)
 	rc = sqlite3_prepare_v2(db,
-	    "INSERT INTO selinux_context values(?1, ?2, ?3, ?4);", -1,
+	    "INSERT INTO selinux_context(security_label, db, name, column) values(?1, ?2, ?3, ?4);", -1,
 	    &sesqlite_stmt, 0);
 
 
@@ -1077,13 +1076,13 @@ else
 //      to use it as foreign key in sesqlite_master is not feasible.
 // 		create trigger to delete unused SELinux contexts after table drop
     if (rc == SQLITE_OK) {
-	rc = sqlite3_exec(db, 
-		"CREATE TEMP TRIGGER delete_contexts_after_table_drop "
-		"AFTER DELETE ON sqlite_master "
-		"FOR EACH ROW WHEN OLD.type IN ('table', 'view') "
-		"BEGIN "
-		" DELETE FROM selinux_context WHERE name = OLD.name; "
-		"END;", 0, 0, 0);
+//	rc = sqlite3_exec(db, 
+//		"CREATE TEMP TRIGGER delete_contexts_after_table_drop "
+//		"AFTER DELETE ON sqlite_master "
+//		"FOR EACH ROW WHEN OLD.type IN ('table', 'view') "
+//		"BEGIN "
+//		" DELETE FROM selinux_context WHERE name = OLD.name; "
+//		"END;", 0, 0, 0);
 
 #ifdef SQLITE_DEBUG
 if (rc == SQLITE_OK)
@@ -1095,13 +1094,13 @@ else
 
 // create trigger to update SELinux contexts after table rename
     if (rc == SQLITE_OK) {
-	rc = sqlite3_exec(db,
-		"CREATE TEMP TRIGGER update_contexts_after_rename "
-		"AFTER UPDATE OF name ON sqlite_master "
-		"FOR EACH ROW WHEN NEW.type IN ('table', 'view') "
-		"BEGIN "
-		" UPDATE selinux_context SET name = NEW.name WHERE name = OLD.name; "
-		"END;", 0, 0, 0); 
+//	rc = sqlite3_exec(db,
+//		"CREATE TEMP TRIGGER update_contexts_after_rename "
+//		"AFTER UPDATE OF name ON sqlite_master "
+//		"FOR EACH ROW WHEN NEW.type IN ('table', 'view') "
+//		"BEGIN "
+//		" UPDATE selinux_context SET name = NEW.name WHERE name = OLD.name; "
+//		"END;", 0, 0, 0); 
 
 #ifdef SQLITE_DEBUG
 if (rc == SQLITE_OK)
@@ -1237,11 +1236,10 @@ int create_security_context_column(void *pUserData, void *parse, int type, void 
             p->aCol[iCol].colFlags |= COLFLAG_HIDDEN;
 	}
     }
-   
     //assign security context to sql schema object
     //insert table context
     sqlite3NestedParse(pParse,
-      "INSERT INTO %Q.%s (security_context, db, name) VALUES(getcon(), '%s', '%s')",
+      "INSERT INTO %Q.%s (security_label, db, name) VALUES(getcon(), '%s', '%s')",
       pParse->db->aDb[iDb].zName, "selinux_context",
       pParse->db->aDb[iDb].zName, p->zName
     );
@@ -1250,15 +1248,15 @@ int create_security_context_column(void *pUserData, void *parse, int type, void 
     //add security context to columns
     for (iCol = 0; iCol < p->nCol; iCol++) {
     	sqlite3NestedParse(pParse,
-    	  "INSERT INTO %Q.%s VALUES(getcon(), '%s', '%s', '%s')",
+    	  "INSERT INTO %Q.%s(security_label, db, name, column) VALUES(getcon(), '%s', '%s', '%s')",
     	  pParse->db->aDb[iDb].zName, "selinux_context",
     	  pParse->db->aDb[iDb].zName, p->zName, p->aCol[iCol].zName
     	);
     }
     sqlite3ChangeCookie(pParse, iDb);
-   
+
     sqlite3NestedParse(pParse,
-      "INSERT INTO %Q.%s VALUES(getcon(), '%s', '%s', '%s')",
+      "INSERT INTO %Q.%s(security_label, db, name, column) VALUES(getcon(), '%s', '%s', '%s')",
       pParse->db->aDb[iDb].zName, "selinux_context",
       pParse->db->aDb[iDb].zName, p->zName, "ROWID" 
     );
@@ -1287,7 +1285,16 @@ int sqlite3SelinuxInit(sqlite3 *db) {
 	return -1;
     }
 
-    rc = initializeSeSqliteObjects(db);
+    /* create the SQL function getcon */
+    if (rc == SQLITE_OK) {
+	rc = sqlite3_create_function(db, "getcon", 0,
+	    SQLITE_UTF8 /* | SQLITE_DETERMINISTIC */, 0, selinuxGetContextFunction,
+	    0, 0);
+    }
+
+    if (rc == SQLITE_OK) {
+	rc = initializeSeSqliteObjects(db);
+    }
 
     /* create the SQL function selinux_check_access */
     if (rc == SQLITE_OK) {
@@ -1296,12 +1303,6 @@ int sqlite3SelinuxInit(sqlite3 *db) {
 	    0, 0);
     }
 
-    /* create the SQL function getcon */
-    if (rc == SQLITE_OK) {
-	rc = sqlite3_create_function(db, "getcon", 0,
-	    SQLITE_UTF8 /* | SQLITE_DETERMINISTIC */, 0, selinuxGetContextFunction,
-	    0, 0);
-    }
 
     if(rc == SQLITE_OK)
 	rc =sqlite3_set_add_extra_column(db, create_security_context_column, db); 

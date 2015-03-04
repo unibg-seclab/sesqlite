@@ -53,7 +53,8 @@ void decompress(
 
 #define SELINUX_CONTEXT_TABLE		"CREATE TABLE IF NOT EXISTS \
 selinux_context( \
-security_context INT, \
+security_context INT DEFAULT (getcon()), \
+security_label INT, \
 db TEXT, \
 name TEXT, \
 column TEXT, \
@@ -62,7 +63,8 @@ PRIMARY KEY(name, column));" /* use FK */
     /* use rowid */
 #define SELINUX_ID_TABLE		"CREATE TABLE IF NOT EXISTS \
 selinux_id( \
-security_context TEXT UNIQUE)"
+security_context INT DEFAULT (getcon()), \
+security_label TEXT UNIQUE)"
 
 #define SECURITY_CONTEXT_COLUMN_NAME "security_context"
 #define SECURITY_CONTEXT_COLUMN_TYPE "hidden INT"
