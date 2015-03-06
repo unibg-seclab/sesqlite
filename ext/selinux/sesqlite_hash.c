@@ -16,6 +16,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "sesqlite_hash.h"
 
@@ -299,7 +300,7 @@ void *seSQLiteHashFind(const seSQLiteHash *pH, const void *pKey, int nKey){
   h = (*xHash)(pKey,nKey);
   assert( (pH->htsize & (pH->htsize-1))==0 );
   elem = seSQLiteFindElementGivenHash(pH,pKey,nKey, h & (pH->htsize-1));
-  return elem ? elem->data : 0;
+  return elem ? elem->pData : 0;
 }
 
 /* Insert an element into the hash table pH.  The key is pKey,nKey
@@ -317,7 +318,7 @@ void *seSQLiteHashFind(const seSQLiteHash *pH, const void *pKey, int nKey){
 ** If the "data" parameter to this function is NULL, then the
 ** element corresponding to "key" is removed from the hash table.
 */
-void *seSQLiteHashInsert(seSQLiteHash *pH, const void *pKey, int nKey, void *data){
+void *seSQLiteHashInsert(seSQLiteHash *pH, const void *pKey, int nKey, void *data, int nData, int *nDataOld){
   int hraw;             /* Raw hash value of the key */
   int h;                /* the hash of the key modulo hash table size */
   seSQLiteHashElem *elem;       /* Used to loop thru the element list */
@@ -332,14 +333,18 @@ void *seSQLiteHashInsert(seSQLiteHash *pH, const void *pKey, int nKey, void *dat
   h = hraw & (pH->htsize-1);
   elem = seSQLiteFindElementGivenHash(pH,pKey,nKey,h);
   if( elem ){
-    void *old_data = elem->data;
+    void *old_data = elem->pData;
+    if ( nDataOld != 0 )
+      *nDataOld = elem->nData;
     if( data==0 ){
       seSQLiteRemoveElementGivenHash(pH,elem,h);
     }else{
-      elem->data = data;
+      elem->pData = data;
     }
     return old_data;
   }
+  if ( nDataOld != 0 )
+    *nDataOld = 0;
   if( data==0 ) return 0;
   new_elem = (seSQLiteHashElem*)pH->xMalloc( sizeof(seSQLiteHashElem) );
   if( new_elem==0 ) return data;
@@ -354,6 +359,7 @@ void *seSQLiteHashInsert(seSQLiteHash *pH, const void *pKey, int nKey, void *dat
     new_elem->pKey = (void*)pKey;
   }
   new_elem->nKey = nKey;
+  new_elem->nData = nData;
   pH->count++;
   if( pH->htsize==0 ){
 	  seSQLiteRehash(pH,8);
@@ -370,7 +376,57 @@ void *seSQLiteHashInsert(seSQLiteHash *pH, const void *pKey, int nKey, void *dat
   assert( (pH->htsize & (pH->htsize-1))==0 );
   h = hraw & (pH->htsize-1);
   seSQLiteInsertElement(pH, &pH->sesqlite_ht[h], new_elem);
-  new_elem->data = data;
+  new_elem->pData = data;
   return 0;
+}
+
+void seSQLiteBiHashInit(seSQLiteBiHash* bihash, int keytype, int valtype, int copy) {
+  bihash->key2val = sesqlite_malloc_and_zero(sizeof(seSQLiteHash));
+  bihash->val2key = sesqlite_malloc_and_zero(sizeof(seSQLiteHash));
+  seSQLiteHashInit(bihash->key2val, keytype, copy);
+  seSQLiteHashInit(bihash->val2key, valtype, copy);
+}
+
+void seSQLiteBiHashInsert(seSQLiteBiHash* bihash, const void *pKey, int nKey, const void *pVal, int nVal) {
+
+  // insert new key -> value association
+  int nValOld = 0;
+  void *pValOld = seSQLiteHashInsert(bihash->key2val, pKey, nKey, (void*) pVal, nVal, &nValOld);
+
+  // remove old value -> key association if exists
+  if (pValOld != 0) {
+    if (nValOld != 0)
+      seSQLiteHashInsert(bihash->val2key, pValOld, nValOld, 0, 0, 0);
+    else
+      fprintf(stderr, "ERROR: cannot remove old value -> key association in BiHash (no nVal set).\n");
+  }
+
+  // insert new value -> key association if provided
+  if (pVal != 0) {
+    pValOld = seSQLiteHashInsert(bihash->val2key, pVal, nVal, (void*) pKey, nKey, 0);
+    if (pValOld != 0)
+      fprintf(stderr, "ERROR: value already associated to another key in BiHash (not injective).\n");
+  }
+}
+
+void *seSQLiteBiHashFind(const seSQLiteBiHash* bihash, const void *pKey, int nKey) {
+  return seSQLiteHashFind(bihash->key2val, pKey, nKey);
+}
+
+void *seSQLiteBiHashFindKey(const seSQLiteBiHash* bihash, const void *pValue, int nValue) {
+  return seSQLiteHashFind(bihash->val2key, pValue, nValue);
+}
+
+void seSQLiteBiHashClear(seSQLiteBiHash* bihash) {
+  seSQLiteHashClear(bihash->val2key);
+  seSQLiteHashClear(bihash->key2val);
+}
+
+void seSQLiteBiHashFree(seSQLiteBiHash* bihash) {
+  seSQLiteBiHashClear(bihash);
+  if (bihash->key2val)
+    free(bihash->key2val);
+  if (bihash->val2key)
+    free(bihash->val2key);
 }
 

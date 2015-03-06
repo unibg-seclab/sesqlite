@@ -24,6 +24,7 @@
 
 /* Forward declarations of structures. */
 typedef struct seSQLiteHash seSQLiteHash;
+typedef struct seSQLiteBiHash seSQLiteBiHash;
 typedef struct seSQLiteHashElem seSQLiteHashElem;
 
 /* A complete hash table is an instance of the following structure.
@@ -48,6 +49,12 @@ struct seSQLiteHash {
   } *sesqlite_ht;
 };
 
+/* Bidirection hash table (it just uses two hash tables */
+struct seSQLiteBiHash {
+  seSQLiteHash *key2val;
+  seSQLiteHash *val2key;
+};
+
 /* Each element in the hash table is an instance of the following 
 ** structure.  All elements are stored on a single doubly-linked list.
 **
@@ -56,8 +63,8 @@ struct seSQLiteHash {
 */
 struct seSQLiteHashElem {
   seSQLiteHashElem *next, *prev;   /* Next and previous elements in the table */
-  void *data;              /* Data associated with this element */
-  void *pKey; int nKey;    /* Key associated with this element */
+  void *pData; int nData;          /* Data associated with this element */
+  void *pKey; int nKey;            /* Key associated with this element */
 };
 
 /*
@@ -86,9 +93,19 @@ struct seSQLiteHashElem {
 ** Access routines.  To delete, insert a NULL pointer.
 */
 void seSQLiteHashInit(seSQLiteHash*, int keytype, int copyKey);
-void *seSQLiteHashInsert(seSQLiteHash*, const void *pKey, int nKey, void *pData);
+void *seSQLiteHashInsert(seSQLiteHash*, const void *pKey, int nKey, void *pData, int nData, int *nDataOld);
 void *seSQLiteHashFind(const seSQLiteHash*, const void *pKey, int nKey);
 void seSQLiteHashClear(seSQLiteHash*);
+
+/*
+** Access routines for bidirectional hash tables.
+*/
+void seSQLiteBiHashInit(seSQLiteBiHash*, int keytype, int valtype, int copy);
+void seSQLiteBiHashInsert(seSQLiteBiHash*, const void *pKey, int nKey, const void *pVal, int nVal);
+void *seSQLiteBiHashFind(const seSQLiteBiHash*, const void *pKey, int nKey);
+void *seSQLiteBiHashFindKey(const seSQLiteBiHash*, const void *pVal, int nVal);
+void seSQLiteBiHashClear(seSQLiteBiHash*);
+void seSQLiteBiHashFree(seSQLiteBiHash*);
 
 /*
 ** Macros for looping over all elements of a hash table.  The idiom is

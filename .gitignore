@@ -32,3 +32,6 @@ local.properties
 
 #cache
 autom4te.cache/
+
+# ctags cache
+/tags
