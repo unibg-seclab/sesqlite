@@ -26,7 +26,7 @@
 # include "sqliteicu.h"
 #endif
 #ifdef SQLITE_ENABLE_SELINUX
-# include "selinux.h"
+# include "sesqlite.h"
 #endif
 
 
@@ -1672,10 +1672,11 @@ void *sqlite3_rollback_hook(
 int sqlite3_set_add_extra_column(
   sqlite3 *db,
   int (*xAddExtraColumn)(void*,void*,int,void*,char**),
-  void *pUserData
+  void *pArg
 ){
   sqlite3_mutex_enter(db->mutex);
   db->xAddExtraColumn = xAddExtraColumn;
+  db->pAddColumnArg = pArg;
   sqlite3_mutex_leave(db->mutex);
   return SQLITE_OK;
 }

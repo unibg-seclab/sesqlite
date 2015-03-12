@@ -117,9 +117,11 @@ foreach hdr {
    vdbeInt.h
    wal.h
    whereInt.h
+   sesqlite.h
    sesqlite_hash.h
    sesqlite_vtab.h
-   selinux.h
+   sesqlite_init.h
+   sesqlite_authorizer.h
 } {
   set available_hdr($hdr) 1
 }
@@ -331,9 +333,11 @@ foreach file {
    icu.c
    fts3_icu.c
 
+   sesqlite_compute_label.c
    sesqlite_hash.c
    sesqlite_vtab.c
-   selinux.c
+   sesqlite_init.c
+   sesqlite_authorizer.c
 } {
   copy_file tsrc/$file
 }
