@@ -1954,7 +1954,7 @@ void sqlite3EndTable(
     memset(pCol, 0, sizeof(p->aCol[0]));
 
     if( db->xAddExtraColumn ){
-	rc = db->xAddExtraColumn(db->pAddColumnArg, pParse, code, pCol, &zColumn);
+	rc = db->xAddExtraColumn(db->pAddColumnArg, NULL, code, pNew, &zColumn);
 	if(rc == -1){
 	    /*TODO call abort*/
 	    return;	

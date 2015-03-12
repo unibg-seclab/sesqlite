@@ -142,7 +142,9 @@ int checkAccess(sqlite3 *db, const char *dbname, const char *table, const char *
 	int *res = seSQLiteHashFind(avc, NULL, key);
 	if (res == NULL) {
 		res = sqlite3_malloc(sizeof(int));
-		char *ttcon = seSQLiteBiHashFind(hash_id, NULL, id);
+		int *value = sqlite3_malloc(sizeof(int));
+		*value = id;
+		char *ttcon = seSQLiteBiHashFind(hash_id, value, sizeof(int));
 		sqlite3Dequote(ttcon);
 		*res = selinux_check_access(scon, ttcon, access_vector[tclass].c_name,
 		    access_vector[tclass].perm[perm].p_name, NULL);
@@ -346,6 +348,10 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 		break;
 
 	case SQLITE_READ: /* Table Name    | Column Name     */
+		if (!checkAccess(pdb, dbname, arg1, NULL, SELINUX_DB_TABLE,
+		SELINUX_SELECT)) {
+			rc = SQLITE_DENY;
+		}
 
 		if (!checkAccess(pdb, dbname, arg1, arg2, SELINUX_DB_COLUMN,
 		SELINUX_SELECT)) {
@@ -474,7 +480,9 @@ static void selinuxCheckAccessFunction(sqlite3_context *context, int argc,
     res = seSQLiteHashFind(avc, NULL, key);
     if (res == NULL) { 
 	res = sqlite3_malloc(sizeof(int));
-    	char *ttcon = seSQLiteBiHashFind(hash_id, NULL, id);
+	int *value = sqlite3_malloc(sizeof(int));
+	*value = id;
+    	char *ttcon = seSQLiteBiHashFind(hash_id, value, sizeof(int));
 	*res = selinux_check_access(scon, /* source security context */
 	    ttcon, /* target security context */
 	    argv[1]->z, /* target security class string */
@@ -501,228 +509,135 @@ static void selinuxCheckAccessFunction(sqlite3_context *context, int argc,
     sqlite3_result_int(context, 0 == *res);
 }
 
-/*
- * Inizialize the database objects used by SeSqlite:
- * 1. SeSqlite master table that keeps the permission for the schema level
- * 2. Trigger to delete unused SELinux contexts after a drop table statement
- * 3. Trigger to update SELinux contexts after table rename
- */
-int initializeSeSqliteObjects(sqlite3 *db) {
-    int rc = SQLITE_OK;
-    char *pzErr;
+int create_security_context_column(
+    void *pArg, 
+    void *parse, 
+    int type, 
+    void *pNew, 
+    char **zColumn
+) {
 
-
-
-// 	TODO experiments on why triggers are disabled for sqlite_* tables are required
-//      the easy solution is to allow them. Indexes are also disables, and
-//      enabling them causes the execution to interrupt, so imposing a UNIQUE
-//      or PRIMARY KEY constraint for column 'name' in sqlite_master in order
-//      to use it as foreign key in sesqlite_master is not feasible.
-// 		create trigger to delete unused SELinux contexts after table drop
-//    if (rc == SQLITE_OK) {
-//	rc = sqlite3_exec(db, 
-//		"CREATE TEMP TRIGGER delete_contexts_after_table_drop "
-//		"AFTER DELETE ON sqlite_master "
-//		"FOR EACH ROW WHEN OLD.type IN ('table', 'view') "
-//		"BEGIN "
-//		" DELETE FROM selinux_context WHERE name = OLD.name; "
-//		"END;", 0, 0, 0);
-//
-//#ifdef SQLITE_DEBUG
-//if (rc == SQLITE_OK)
-//    fprintf(stdout, "Trigger 'delete_contexts_after_table_drop' created successfully.\n");
-//else
-//    fprintf(stderr, "Error: unable to create 'delete_contexts_after_table_drop' trigger.\n");
-//#endif
-//    }
-//
-// create trigger to update SELinux contexts after table rename
-//    if (rc == SQLITE_OK) {
-//	rc = sqlite3_exec(db,
-//		"CREATE TEMP TRIGGER update_contexts_after_rename "
-//		"AFTER UPDATE OF name ON sqlite_master "
-//		"FOR EACH ROW WHEN NEW.type IN ('table', 'view') "
-//		"BEGIN "
-//		" UPDATE selinux_context SET name = NEW.name WHERE name = OLD.name; "
-//		"END;", 0, 0, 0); 
-//
-//#ifdef SQLITE_DEBUG
-//if (rc == SQLITE_OK)
-//    fprintf(stdout, " == SeSqlite Initialized == \n\n");
-//else
-//    fprintf(stderr, "Error: unable to create 'update_contexts_after_rename' trigger.\n");
-//#endif
-//    }
-//
-//#ifdef SQLITE_DEBUG
-//if (rc != SQLITE_OK)
-//    fprintf(stderr, "Error: unable to initialize the selinux support for SQLite.\n");
-//#endif
-//
-    return rc;
-}
-
-
-
-int create_security_context_column(void *pUserData, void *parse, int type, void *pNewCol, 
-	char **zColumn) {
-
-    sqlite3* db = pUserData;
-    Parse *pParse = parse;
-   // Column *pCol;
+    Column *pCol;
     char *zName = 0;
     char *zType = 0;
-    int op = 0;
-    int nExtra = 0;
-    Expr *pExpr;
-    int c = 0;
-    int i = 0;
     int iDb = 0;
-   
+    int i = 0;
     *zColumn = NULL;
+
+    sqlite3* db = (sqlite3*) pArg;
+    Parse *pParse = ((Vdbe*) sqlite3_next_stmt(db, 0))->pParse;
+    Table *p = pNew;
+
     *zColumn = sqlite3MPrintf(db, SECURITY_CONTEXT_COLUMN_DEFINITION);
-    sqlite3Dequote(*zColumn);
-
-//    Table *p = pNew;
-//    iDb = sqlite3SchemaToIndex(db, p->pSchema);
-//#if SQLITE_MAX_COLUMN
-//  if( p->nCol+1>db->aLimit[SQLITE_LIMIT_COLUMN] ){
-//    sqlite3ErrorMsg(pParse, "too many columns on %s", p->zName);
-//    return;
-//  }
-//#endif
     zName = sqlite3MPrintf(db, SECURITY_CONTEXT_COLUMN_NAME);
+    sqlite3Dequote(*zColumn);
     sqlite3Dequote(zName);
-//    for(i=0; i<p->nCol; i++){
-//	if( STRICMP(zName, p->aCol[i].zName) ){
-//      sqlite3ErrorMsg(pParse, "object name reserved for internal use: %s", zName);
-//	    sqlite3DbFree(db, zName);
-//	    sqlite3DbFree(db, *zColumn);
-//	    return;
-//	}
-//    }
-//
-//    if( (p->nCol & 0x7)==0 ){
-//	Column *aNew;
-//	aNew = sqlite3DbRealloc(db,p->aCol,(p->nCol+8)*sizeof(p->aCol[0]));
-//	if( aNew==0 ){
-//	    sqlite3ErrorMsg(pParse, "memory error");
-//	    sqlite3DbFree(db, zName);
-//	    sqlite3DbFree(db, *zColumn);
-//	return;
-//	}
-//	p->aCol = aNew;
-//    }
-//    pCol = &p->aCol[p->nCol];
-//    memset(pCol, 0, sizeof(p->aCol[0]));
-    Column *pCol = pNewCol;
-    pCol->zName = zName;
 
+    iDb = sqlite3SchemaToIndex(db, p->pSchema);
+    pCol = &p->aCol[0];
+    for(i=1; i<p->nCol; i++){
+	if( STRICMP(zName, p->aCol[i].zName) ){
+	    sqlite3ErrorMsg(pParse, "object name reserved for internal use: %s", zName);
+	    sqlite3DbFree(db, zName);
+	    sqlite3DbFree(db, *zColumn);
+	    return;
+	}
+    }
+
+    pCol->zName = zName;
     zType = sqlite3MPrintf(db, SECURITY_CONTEXT_COLUMN_TYPE);
-    sqlite3Dequote(sqlite3MPrintf(db, SECURITY_CONTEXT_COLUMN_TYPE));
     pCol->zType = sqlite3MPrintf(db, zType);
     pCol->affinity = SQLITE_AFF_INTEGER;
-//    p->nCol++;
-//    p->aCol[p->nCol].colFlags |= COLFLAG_HIDDEN;
 
-    /**
-    *generate expression for DEFAULT value
-    */
-//    op = 151;
-//    nExtra = 7;
-//    pExpr = sqlite3DbMallocZero(db, sizeof(Expr)+nExtra);
-//    pExpr->op = (u8)op;
-//    pExpr->iAgg = -1;
-//    pExpr->u.zToken = (char*)&pExpr[1];
-//    memcpy(pExpr->u.zToken, SECURITY_CONTEXT_COLUMN_DEFAULT_FUNC, strlen(SECURITY_CONTEXT_COLUMN_DEFAULT_FUNC) - 2);
-//    pExpr->u.zToken[strlen(SECURITY_CONTEXT_COLUMN_DEFAULT_FUNC) - 2] = 0;
-//    sqlite3Dequote(pExpr->u.zToken);
-//    pExpr->flags |= EP_DblQuoted;
-//#if SQLITE_MAX_EXPR_DEPTH>0
-//    pExpr->nHeight = 1;
-//#endif 
-//    pCol->pDflt = pExpr;
-//    pCol->zDflt = sqlite3DbStrNDup(db, SECURITY_CONTEXT_COLUMN_DEFAULT_FUNC
-//	      , strlen(SECURITY_CONTEXT_COLUMN_DEFAULT_FUNC));
-      
-      
-    /* Loop through the columns of the table to see if any of them contain the token "hidden".
-     ** If so, set the Column.isHidden flag and remove the token from
-     ** the type string.  */
-//    int iCol;
-//    for (iCol = 0; iCol < p->nCol; iCol++) {
-//	char *zType = p->aCol[iCol].zType;
-//	char *zName = p->aCol[iCol].zName;
-//	int nType;
-//	int i = 0;
-//	if (!zType)
-//	continue;
-//	nType = sqlite3Strlen30(zType);
-//	if ( sqlite3StrNICmp("hidden", zType, 6)
-//			|| (zType[6] && zType[6] != ' ')) {
-//	    for (i = 0; i < nType; i++) {
-//		if ((0 == sqlite3StrNICmp(" hidden", &zType[i], 7))
-//				&& (zType[i + 7] == '\0' || zType[i + 7] == ' ')) {
-//		    i++;
-//		    break;
-//		}
-//	    }
-//	}
-//	if (i < nType) {
-//	    int j;
-//	    int nDel = 6 + (zType[i + 6] ? 1 : 0);
-//	    for (j = i; (j + nDel) <= nType; j++) {
-//		    zType[j] = zType[j + nDel];
-//	    }
-//	    if (zType[i] == '\0' && i > 0) {
-//		    assert(zType[i-1]==' ');
-//		    zType[i - 1] = '\0';
-//	    }
-//            p->aCol[iCol].colFlags |= COLFLAG_HIDDEN;
-//	}
-//    }
     //assign security context to sql schema object
     //insert table context
-//    sqlite3NestedParse(pParse,
-//      "INSERT INTO %Q.%s (security_context, security_label, db, name) VALUES(\
-//	%d, %d,\
-//	'%s',\
-//	'%s')",
-//      pParse->db->aDb[iDb].zName, SELINUX_CONTEXT,
-//      lookup_security_context(hash_id, pParse->db->aDb[iDb].zName, SELINUX_CONTEXT),
-//      lookup_security_label(hash_id, 0, pParse->db->aDb[iDb].zName, p->zName, NULL),
-//      pParse->db->aDb[iDb].zName, p->zName
-//    );
-//    sqlite3ChangeCookie(pParse, iDb);
-//
-//    //add security context to columns
-//    for (iCol = 0; iCol < p->nCol; iCol++) {
-//    	sqlite3NestedParse(pParse,
-//    	  "INSERT INTO %Q.%s(security_context, security_label, db, name, column) VALUES(\
-//	    %d, %d,\
-//	    '%s',\
-//	    '%s',\
-//	    '%s')",
-//    	  pParse->db->aDb[iDb].zName, SELINUX_CONTEXT,
-//	  lookup_security_context(hash_id, pParse->db->aDb[iDb].zName, SELINUX_CONTEXT),
-//	  lookup_security_label(hash_id, 1, pParse->db->aDb[iDb].zName, p->zName, p->aCol[iCol].zName),
-//    	  pParse->db->aDb[iDb].zName, p->zName, p->aCol[iCol].zName
-//    	);
-//    }
-//    sqlite3ChangeCookie(pParse, iDb);
-//
-//    sqlite3NestedParse(pParse,
-//      "INSERT INTO %Q.%s(security_context, security_label, db, name, column) VALUES(\
-//	%d, %d,\
-//	'%s',\
-//	'%s',\
-//	'%s')",
-//      pParse->db->aDb[iDb].zName, SELINUX_CONTEXT,
-//      lookup_security_context(hash_id, pParse->db->aDb[iDb].zName, SELINUX_CONTEXT),
-//      lookup_security_label(hash_id, 1, pParse->db->aDb[iDb].zName, p->zName, "ROWID"),
-//      pParse->db->aDb[iDb].zName, p->zName, "ROWID" 
-//    );
-//    sqlite3ChangeCookie(pParse, iDb);
+    sqlite3NestedParse(pParse,
+      "INSERT INTO %Q.%s (security_context, security_label, db, name) VALUES(\
+	%d, %d,\
+	'%s',\
+	'%s')",
+      pParse->db->aDb[iDb].zName, SELINUX_CONTEXT,
+      lookup_security_context(hash_id, pParse->db->aDb[iDb].zName, SELINUX_CONTEXT),
+      lookup_security_label(hash_id, 0, pParse->db->aDb[iDb].zName, p->zName, NULL),
+      pParse->db->aDb[iDb].zName, p->zName
+    );
+    sqlite3ChangeCookie(pParse, iDb);
+
+    //add security context to columns
+    int iCol;
+    for (iCol = 0; iCol < p->nCol; iCol++) {
+    	sqlite3NestedParse(pParse,
+    	  "INSERT INTO %Q.%s(security_context, security_label, db, name, column) VALUES(\
+	    %d, %d,\
+	    '%s',\
+	    '%s',\
+	    '%s')",
+    	  pParse->db->aDb[iDb].zName, SELINUX_CONTEXT,
+	  lookup_security_context(hash_id, pParse->db->aDb[iDb].zName, SELINUX_CONTEXT),
+	  lookup_security_label(hash_id, 1, pParse->db->aDb[iDb].zName, p->zName, p->aCol[iCol].zName),
+    	  pParse->db->aDb[iDb].zName, p->zName, p->aCol[iCol].zName
+    	);
+    }
+    sqlite3ChangeCookie(pParse, iDb);
+
+    sqlite3NestedParse(pParse,
+      "INSERT INTO %Q.%s(security_context, security_label, db, name, column) VALUES(\
+	%d, %d,\
+	'%s',\
+	'%s',\
+	'%s')",
+      pParse->db->aDb[iDb].zName, SELINUX_CONTEXT,
+      lookup_security_context(hash_id, pParse->db->aDb[iDb].zName, SELINUX_CONTEXT),
+      lookup_security_label(hash_id, 1, pParse->db->aDb[iDb].zName, p->zName, "ROWID"),
+      pParse->db->aDb[iDb].zName, p->zName, "ROWID" 
+    );
+    sqlite3ChangeCookie(pParse, iDb);
+
+    return SQLITE_OK;
+}
+
+static int selinux_schemachange_callback(
+    void* pArg,                  /* the user argument (the db in our case) */
+    int op,                      /* the schema operation that triggered the callback */
+    const char* zDb,             /* the name of the database */
+    const char* zTable,          /* the name of the table */
+    void* arg1,                  /* arg1 depends on the op */
+    void* arg2                   /* arg2 depends on the op */
+){
+    sqlite3 *db = (sqlite3*) pArg;
+    Parse *pParse = ((Vdbe*) sqlite3_next_stmt(db, 0))->pParse;
+
+    switch( op ){
+
+    case SQLITE_SCHEMA_CREATE_TABLE:
+	break;
+
+    case SQLITE_SCHEMA_DROP_TABLE:
+	sqlite3NestedParse(pParse,
+	    "DELETE FROM %s.%s WHERE db = '%s' AND name = '%s'",
+	    zDb, SELINUX_CONTEXT, zDb, zTable);
+	break;
+
+    case SQLITE_SCHEMA_ALTER_RENAME:
+	sqlite3NestedParse(pParse,
+	    "UPDATE %s.%s SET name = '%s' WHERE db = '%s' AND name = '%s'",
+	    zDb, SELINUX_CONTEXT, zTable, zDb, arg1);
+	break;
+
+    case SQLITE_SCHEMA_ALTER_ADD:
+    	sqlite3NestedParse(pParse,
+    	  "INSERT INTO %s.%s(security_context, security_label, db, name, column) VALUES(\
+	    %d, %d,\
+	    '%s',\
+	    '%s',\
+	    '%s')",
+    	  zDb, SELINUX_CONTEXT,
+	  lookup_security_context(hash_id, (char *) zDb, SELINUX_CONTEXT),
+	  lookup_security_label(hash_id, 1, (char *) zDb,  (char *) zTable, arg1),
+    	  (char *) zDb, (char *) zTable, arg1);
+	break;
+
+    }
 
     return SQLITE_OK;
 }
@@ -770,20 +685,6 @@ fprintf(stdout, "\n == SeSqlite Initialization == \n");
     if(rc != SQLITE_OK)
 	return rc;
 
-//    /* create the SQL function getcon */
-//    rc = sqlite3_create_function(db, "getSecurityContext", 0,
-//	SQLITE_UTF8 /* | SQLITE_DETERMINISTIC */, db, selinuxGetSecurityContextFunction,
-//	0, 0);
-//    if(rc != SQLITE_OK)
-//	return rc;
-//
-//    /* create the SQL function getcon */
-//    rc = sqlite3_create_function(db, "getSecurityLabel", 0,
-//	SQLITE_UTF8 /* | SQLITE_DETERMINISTIC */, db, selinuxGetSecurityLabelFunction,
-//	0, 0);
-//    if(rc != SQLITE_OK)
-//	return rc;
-
     rc = initialize(db);
     if(rc != SQLITE_OK)
 	return rc;
@@ -800,9 +701,14 @@ fprintf(stdout, "\n == SeSqlite Initialization == \n");
     if(rc != SQLITE_OK)
 	return rc;
 
-    rc =sqlite3_set_add_extra_column(db, create_security_context_column, db); 
+    rc =sqlite3_set_add_extra_column(db, create_security_context_column, db);
     if (rc != SQLITE_OK)
 	return rc;
+
+    /* set the schemachange_callback */
+    rc = sqlite3_schemachange_hook(db, selinux_schemachange_callback, db);
+    if (rc != SQLITE_OK)
+        return rc;
 
     /* create the SQL function selinux_check_access */
     rc = sqlite3_create_function(db, "selinux_check_access", 3,
@@ -833,8 +739,8 @@ fprintf(stdout, "\n == SeSqlite Initialization == \n");
     assert( scon_id != 0);
 
     /* set the authorizer */
-//    if (rc == SQLITE_OK)
-//	rc = sqlite3_set_authorizer(db, selinuxAuthorizer, db);
+    if (rc == SQLITE_OK)
+	rc = sqlite3_set_authorizer(db, selinuxAuthorizer, db);
 
     return rc;
 }
