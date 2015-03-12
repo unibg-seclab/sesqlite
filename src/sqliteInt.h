@@ -1056,6 +1056,10 @@ struct sqlite3 {
 
   /* Callback used to add a column programmatically to a new table */
   int (*xAddExtraColumn)(void*,void*,int,void*,char**);                             /* Add extra column callback */
+
+  /* Callback used for schema notification changes */
+  int (*xSchemaChangeCallback)(void*,int,const char*,const char*,void*,void*);
+  void *pSchemaChangeArg;
 };
 
 /*

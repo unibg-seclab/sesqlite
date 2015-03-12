@@ -1679,6 +1679,20 @@ int sqlite3_set_add_extra_column(
   sqlite3_mutex_leave(db->mutex);
   return SQLITE_OK;
 }
+/*
+** Register a callback that is invoked every time a schema change happens.
+*/
+int sqlite3_schemachange_hook(
+  sqlite3 *db,              /* Attach the hook to this database */
+  int (*xSchemaChangeCallback)(void*,int,const char*,const char*,void*,void*),
+  void *pArg                /* Argument to the function */
+){
+  sqlite3_mutex_enter(db->mutex);
+  db->xSchemaChangeCallback = xSchemaChangeCallback;
+  db->pSchemaChangeArg = pArg;
+  sqlite3_mutex_leave(db->mutex);
+  return SQLITE_OK;
+}
 
 #ifndef SQLITE_OMIT_WAL
 /*

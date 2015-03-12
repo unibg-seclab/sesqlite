@@ -580,6 +580,19 @@ void sqlite3AlterRenameTable(
   /* Drop and reload the internal table schema. */
   reloadTableSchema(pParse, pTab, zName);
 
+#ifndef SQLITE_OMIT_SCHEMACHANGE_NOTIFICATIONS
+  if( db->xSchemaChangeCallback ){
+    db->xSchemaChangeCallback(
+      db->pSchemaChangeArg,
+      SQLITE_SCHEMA_ALTER_RENAME,
+      zDb,
+      zName,
+      (void*) zTabName,
+      NULL
+    );
+  }
+#endif
+
 exit_rename_table:
   sqlite3SrcListDelete(db, pSrc);
   sqlite3DbFree(db, zName);
@@ -716,7 +729,6 @@ void sqlite3AlterFinishAddColumn(Parse *pParse, Token *pColDef){
       zDb, SCHEMA_TABLE(iDb), pNew->addColOffset, zCol, pNew->addColOffset+1,
       zTab
     );
-    sqlite3DbFree(db, zCol);
     db->flags = savedDbFlags;
   }
 
@@ -728,6 +740,23 @@ void sqlite3AlterFinishAddColumn(Parse *pParse, Token *pColDef){
 
   /* Reload the schema of the modified table. */
   reloadTableSchema(pParse, pTab, pTab->zName);
+
+#ifndef SQLITE_OMIT_SCHEMACHANGE_NOTIFICATIONS
+  if( db->xSchemaChangeCallback ){
+    db->xSchemaChangeCallback(
+      db->pSchemaChangeArg,
+      SQLITE_SCHEMA_ALTER_ADD,
+      zDb,
+      zTab,
+      zCol,
+      NULL
+    );
+  }
+#endif
+
+  if( zCol ){
+    sqlite3DbFree(db, zCol);
+  }
 }
 
 /*

@@ -984,6 +984,20 @@ void sqlite3StartTable(
     sqlite3VdbeAddOp3(v, OP_Insert, 0, reg3, reg1);
     sqlite3VdbeChangeP5(v, OPFLAG_APPEND);
     sqlite3VdbeAddOp0(v, OP_Close);
+
+#ifndef SQLITE_OMIT_SCHEMACHANGE_NOTIFICATIONS
+    if( db->xSchemaChangeCallback ){
+      db->xSchemaChangeCallback(
+        db->pSchemaChangeArg,
+        SQLITE_SCHEMA_CREATE_TABLE,
+        db->aDb[iDb].zName,
+        zName,
+        NULL,
+        NULL
+      );
+    }
+#endif
+
   }
 
   /* Normal (non-error) return. */
@@ -1954,7 +1968,6 @@ void sqlite3EndTable(
 #endif
 
 
-
     /* Compute the complete text of the CREATE statement */
     if( pSelect ){
       zStmt = createTableStmt(db, p);
@@ -2064,6 +2077,7 @@ void sqlite3EndTable(
       p->addColOffset = 13 + sqlite3Utf8CharLen(zName, nName);
     }
 #endif
+
   }
 }
 
@@ -2581,6 +2595,21 @@ void sqlite3DropTable(Parse *pParse, SrcList *pName, int isView, int noErr){
     sqlite3ClearStatTables(pParse, iDb, "tbl", pTab->zName);
     sqlite3FkDropTable(pParse, pName, pTab);
     sqlite3CodeDropTable(pParse, pTab, iDb, isView);
+
+#ifndef SQLITE_OMIT_SCHEMACHANGE_NOTIFICATIONS
+    int isViewCopy = isView;
+    if( db->xSchemaChangeCallback ){
+      db->xSchemaChangeCallback(
+        db->pSchemaChangeArg,
+        SQLITE_SCHEMA_DROP_TABLE,
+        db->aDb[iDb].zName,
+        pTab->zName,
+        (void*) &isViewCopy,
+        pTab->pSelect
+      );
+    }
+#endif
+
   }
 
 exit_drop_table:

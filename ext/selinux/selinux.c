@@ -69,7 +69,7 @@ int insertId(sqlite3 *db, char *con){
 	rc = sqlite3_reset(sesqlite_stmt_id_insert);
     
 	rowid = sqlite3_last_insert_rowid(db);
-	seSQLiteHashInsert(&hash_id, NULL, rowid, ttcon);
+	seSQLiteHashInsert(&hash_id, NULL, rowid, ttcon, 0, 0);
    }
 
    return rowid;
@@ -134,7 +134,7 @@ fprintf(stdout, "Hash hint: db=%s, table=%s, column=%s -> %d\n", dbname, table,
 #endif
 	    id = insertId(db, security_context_new);
 	    *value = id;
-	    seSQLiteHashInsert(&hash, key, strlen(key), value);
+	    seSQLiteHashInsert(&hash, key, strlen(key), value, 0, 0);
 #ifdef SQLITE_DEBUG
 fprintf(stdout, "Compute New Context: db=%s, table=%s, column=%s -> %d\n", dbname, table,
     (column ? column : "NULL"), id);
@@ -169,7 +169,7 @@ int checkAccess(sqlite3 *db, const char *dbname, const char *table, const char *
 		*res = selinux_check_access(scon, ttcon, access_vector[tclass].c_name,
 		    access_vector[tclass].perm[perm].p_name, NULL);
 
-		seSQLiteHashInsert(&avc, NULL, key, res);
+		seSQLiteHashInsert(&avc, NULL, key, res, 0, 0);
 	}
 
 	// DO NOT FREE key AND res
@@ -895,7 +895,7 @@ int insertKey(sqlite3 *db, char *dbName, char *tName, char *cName, char *con) {
     value =sqlite3_malloc(sizeof(int));
     *value = id;
 
-    seSQLiteHashInsert(&hash, key, strlen(key), value);
+    seSQLiteHashInsert(&hash, key, strlen(key), value, 0, 0);
 
     // DO NOT FREE key
     return SQLITE_OK;
@@ -944,7 +944,7 @@ static void selinuxCheckAccessFunction(sqlite3_context *context, int argc,
 	    argv[2]->z, /* requested permissions string */
 	    NULL /* auxiliary audit data */
 	    );
-	seSQLiteHashInsert(&avc, NULL, key, res);
+	seSQLiteHashInsert(&avc, NULL, key, res, 0, 0);
     }
 #else
     *res = selinux_check_access(scon, /* source security context */

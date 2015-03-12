@@ -401,6 +401,7 @@ static const sqlite3_api_routines sqlite3Apis = {
   0,
 #endif
   sqlite3_set_add_extra_column,
+  sqlite3_schemachange_hook,
 };
 
 /*

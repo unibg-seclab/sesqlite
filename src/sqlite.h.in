@@ -7336,6 +7336,36 @@ int sqlite3_pragma_add(
   void *pData
 );
 
+/*
+** CAPI3REF: Schema change notifications.
+**
+** Register a callback that is invoked every time a schema change happens.
+*/
+int sqlite3_schemachange_hook(
+  sqlite3 *db,
+  int (*xSchemaChangeCallback)(void*,int,const char*,const char*,void*,void*),
+  void *pArg
+);
+
+/*
+** CAPI3REF: Schema Change Notification Codes
+**
+** The [sqlite3_schemachange_hook()] interface registers a callback function
+** that is invoked every time a schema change occurs. These are the integer
+** action codes that the callback may be passed.
+**
+** These action code values signify what kind of operation occurred.
+** The 3rd parameter is the name of the database ("main", "temp",
+** etc.) if applicable.)^  ^The 4th parameters to the callback function
+** is the name of the table on which the schema change occurred.
+** The 5th and 6th will be parameters or NULL depending on which of these
+** codes is used as the second parameter.
+*/
+/******************************************* 3rd ************ 4th ***********/
+#define SQLITE_SCHEMA_CREATE_TABLE   1   /* NULL            NULL            */
+#define SQLITE_SCHEMA_DROP_TABLE     2   /* isView          pSelect         */
+#define SQLITE_SCHEMA_ALTER_RENAME   3   /* Old name        NULL            */
+#define SQLITE_SCHEMA_ALTER_ADD      4   /* Column def      NULL            */
 
 /*
 ** Undo the hack that converts floating point types to integer for
