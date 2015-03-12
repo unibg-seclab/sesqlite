@@ -1231,7 +1231,7 @@ static int selinux_schemachange_callback(
   void* arg2                   /* arg2 depends on the op */
 ){
   sqlite3 *db = (sqlite3*) pArg;
-  Parse *pParse = sqlite3_next_stmt(db, 0);
+  Parse *pParse = ((Vdbe*) sqlite3_next_stmt(db, 0))->pParse;
 
   switch( op ){
 
