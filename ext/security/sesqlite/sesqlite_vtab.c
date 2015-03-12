@@ -5,7 +5,6 @@
  *      Author: mutti
  */
 
-#include "sesqlite_hash.h"
 #include "sesqlite_vtab.h"
 
 int setHashMap(seSQLiteHash *h) {

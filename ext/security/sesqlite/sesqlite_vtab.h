@@ -5,6 +5,9 @@
  *      Author: mutti
  */
 
+#include "sesqlite.h"
+#include "sesqlite_hash.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif  /* __cplusplus */

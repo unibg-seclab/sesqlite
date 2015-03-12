@@ -17,10 +17,7 @@
 #ifndef _HASH_H_
 #define _HASH_H_
 
-#include <assert.h>
-#include <stdlib.h>
-#include <string.h>
-#include "sqlite3.h"
+#include "sesqlite.h"
 
 /* Forward declarations of structures. */
 typedef struct seSQLiteHash seSQLiteHash;

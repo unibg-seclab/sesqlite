@@ -13,10 +13,6 @@
  ** We've modified it slightly to serve as a standalone hash table
  ** implementation for the full-text indexing module.
  */
-#include <assert.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
 
 #include "sesqlite_hash.h"
 
