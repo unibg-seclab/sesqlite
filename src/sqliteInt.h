@@ -1054,7 +1054,6 @@ struct sqlite3 {
   ExtPragma *pPragmaList;       /* head of the extended pragmas linked list */
 #endif
 
-<<<<<<< Updated upstream
   /* Callback used to add a column programmatically to a new table */
   int (*xAddExtraColumn)(void*,void*,int,void*,char**);                             /* Add extra column callback */
   void *pAddColumnArg;         /* 1st argument to the add extra column function */
