@@ -1240,13 +1240,13 @@ static int selinux_schemachange_callback(
 
   case SQLITE_SCHEMA_DROP_TABLE:
     sqlite3NestedParse(pParse,
-      "DELETE FROM %s.%s WHERE db = %s AND name = %s",
+      "DELETE FROM %s.%s WHERE db = '%s' AND name = '%s'",
       zDb, "selinux_context", zDb, zTable);
     break;
 
   case SQLITE_SCHEMA_ALTER_RENAME:
     sqlite3NestedParse(pParse,
-      "UPDATE %s.%s SET name = %s WHERE db = %s AND name = %s",
+      "UPDATE %s.%s SET name = '%s' WHERE db = '%s' AND name = '%s'",
       zDb, "selinux_context", zTable, zDb, arg1);
     break;
 
