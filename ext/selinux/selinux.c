@@ -1069,47 +1069,6 @@ else
 #endif
     }
 
-// 	TODO experiments on why triggers are disabled for sqlite_* tables are required
-//      the easy solution is to allow them. Indexes are also disables, and
-//      enabling them causes the execution to interrupt, so imposing a UNIQUE
-//      or PRIMARY KEY constraint for column 'name' in sqlite_master in order
-//      to use it as foreign key in sesqlite_master is not feasible.
-// 		create trigger to delete unused SELinux contexts after table drop
-    if (rc == SQLITE_OK) {
-//	rc = sqlite3_exec(db, 
-//		"CREATE TEMP TRIGGER delete_contexts_after_table_drop "
-//		"AFTER DELETE ON sqlite_master "
-//		"FOR EACH ROW WHEN OLD.type IN ('table', 'view') "
-//		"BEGIN "
-//		" DELETE FROM selinux_context WHERE name = OLD.name; "
-//		"END;", 0, 0, 0);
-
-#ifdef SQLITE_DEBUG
-if (rc == SQLITE_OK)
-    fprintf(stdout, "Trigger 'delete_contexts_after_table_drop' created successfully.\n");
-else
-    fprintf(stderr, "Error: unable to create 'delete_contexts_after_table_drop' trigger.\n");
-#endif
-    }
-
-// create trigger to update SELinux contexts after table rename
-    if (rc == SQLITE_OK) {
-//	rc = sqlite3_exec(db,
-//		"CREATE TEMP TRIGGER update_contexts_after_rename "
-//		"AFTER UPDATE OF name ON sqlite_master "
-//		"FOR EACH ROW WHEN NEW.type IN ('table', 'view') "
-//		"BEGIN "
-//		" UPDATE selinux_context SET name = NEW.name WHERE name = OLD.name; "
-//		"END;", 0, 0, 0); 
-
-#ifdef SQLITE_DEBUG
-if (rc == SQLITE_OK)
-    fprintf(stdout, " == SeSqlite Initialized == \n\n");
-else
-    fprintf(stderr, "Error: unable to create 'update_contexts_after_rename' trigger.\n");
-#endif
-    }
-
 #ifdef SQLITE_DEBUG
 if (rc != SQLITE_OK)
     fprintf(stderr, "Error: unable to initialize the selinux support for SQLite.\n");
@@ -1117,8 +1076,6 @@ if (rc != SQLITE_OK)
 
     return rc;
 }
-
-
 
 int create_security_context_column(void *pUserData, void *parse, int type, void *pNew, 
 	char **zColumn) {
@@ -1134,7 +1091,7 @@ int create_security_context_column(void *pUserData, void *parse, int type, void 
     int c = 0;
     int i = 0;
     int iDb = 0;
-   
+
     *zColumn = 0;
     *zColumn = sqlite3MPrintf(db, SECURITY_CONTEXT_COLUMN_DEFINITION);
     sqlite3Dequote(*zColumn);
@@ -1265,6 +1222,42 @@ int create_security_context_column(void *pUserData, void *parse, int type, void 
     return SQLITE_OK;
 }
 
+static int selinux_schemachange_callback(
+  void* pArg,                  /* the user argument (the db in our case) */
+  int op,                      /* the schema operation that triggered the callback */
+  const char* zDb,             /* the name of the database */
+  const char* zTable,          /* the name of the table */
+  void* arg1,                  /* arg1 depends on the op */
+  void* arg2                   /* arg2 depends on the op */
+){
+  sqlite3 *db = (sqlite3*) pArg;
+  Parse *pParse = sqlite3_next_stmt(db, 0);
+
+  switch( op ){
+
+  case SQLITE_SCHEMA_CREATE_TABLE:
+    break;
+
+  case SQLITE_SCHEMA_DROP_TABLE:
+    sqlite3NestedParse(pParse,
+      "DELETE FROM %s.%s WHERE db = %s AND name = %s",
+      zDb, "selinux_context", zDb, zTable);
+    break;
+
+  case SQLITE_SCHEMA_ALTER_RENAME:
+    sqlite3NestedParse(pParse,
+      "UPDATE %s.%s SET name = %s WHERE db = %s AND name = %s",
+      zDb, "selinux_context", zTable, zDb, arg1);
+    break;
+
+  case SQLITE_SCHEMA_ALTER_ADD:
+    break;
+
+  }
+
+  return 0;
+}
+
 /*
  * Function: sqlite3SelinuxInit
  * Purpose: Initialize SeSqlite and register objects, authorizer and functions.
@@ -1278,36 +1271,31 @@ int sqlite3SelinuxInit(sqlite3 *db) {
 
     int rc = 0;
 
-    /* retrieve current security context */
-    if (rc == -1) {
-	fprintf(stderr,
-	    "Error: unable to retrieve the current security context.\n");
-	return -1;
-    }
-
     /* create the SQL function getcon */
-    if (rc == SQLITE_OK) {
+    if (rc == SQLITE_OK)
 	rc = sqlite3_create_function(db, "getcon", 0,
 	    SQLITE_UTF8 /* | SQLITE_DETERMINISTIC */, 0, selinuxGetContextFunction,
 	    0, 0);
-    }
-
-    if (rc == SQLITE_OK) {
-	rc = initializeSeSqliteObjects(db);
-    }
 
     /* create the SQL function selinux_check_access */
-    if (rc == SQLITE_OK) {
+    if (rc == SQLITE_OK)
 	rc = sqlite3_create_function(db, "selinux_check_access", 3,
 	    SQLITE_UTF8 /* | SQLITE_DETERMINISTIC */, 0, selinuxCheckAccessFunction,
 	    0, 0);
-    }
 
+    /* initialize SeSQLite objects */
+    if (rc == SQLITE_OK)
+	rc = initializeSeSqliteObjects(db);
 
+    /* set the extra_column_callback */
     if(rc == SQLITE_OK)
-	rc =sqlite3_set_add_extra_column(db, create_security_context_column, db); 
+	rc =sqlite3_set_add_extra_column(db, create_security_context_column, db);
 
-    /* set the authorizer */
+    /* set the schemachange_callback */
+    if( rc == SQLITE_OK )
+	rc = sqlite3_schemachange_hook(db, selinux_schemachange_callback, db);
+
+    /* set the authorizer_authorizer */
     if (rc == SQLITE_OK)
 	rc = sqlite3_set_authorizer(db, selinuxAuthorizer, db);
 
