@@ -1,4 +1,5 @@
 
+#if !defined(SQLITE_CORE) || defined(SQLITE_ENABLE_SELINUX)
 
 #include "sesqlite.h"
 
@@ -149,4 +150,5 @@ int lookup_security_label(sqlite3 *db,
 //    sqlite3_result_int(context, *(int *) id);
 //}
 
+#endif /* !defined(SQLITE_CORE) || defined(SQLITE_ENABLE_SELINUX) */
 

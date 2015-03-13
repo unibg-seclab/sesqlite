@@ -1,4 +1,6 @@
 
+#if !defined(SQLITE_CORE) || defined(SQLITE_ENABLE_SELINUX)
+
 #include "sesqlite_init.h"
 
 int set_hash(seSQLiteHash *arg){
@@ -500,3 +502,6 @@ int initialize(sqlite3 *db){
 
     return rc;
 }
+
+#endif /* !defined(SQLITE_CORE) || defined(SQLITE_ENABLE_SELINUX) */
+

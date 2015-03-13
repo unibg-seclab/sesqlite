@@ -14,6 +14,8 @@
  ** implementation for the full-text indexing module.
  */
 
+#if !defined(SQLITE_CORE) || defined(SQLITE_ENABLE_SELINUX)
+
 #include "sesqlite_hash.h"
 
 void *sesqlite_malloc_and_zero(int n) {
@@ -425,4 +427,6 @@ void seSQLiteBiHashFree(seSQLiteBiHash* bihash) {
   if (bihash->val2key)
     free(bihash->val2key);
 }
+
+#endif /* !defined(SQLITE_CORE) || defined(SQLITE_ENABLE_SELINUX) */
 

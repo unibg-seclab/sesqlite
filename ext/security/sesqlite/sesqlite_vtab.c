@@ -5,6 +5,8 @@
  *      Author: mutti
  */
 
+#if !defined(SQLITE_CORE) || defined(SQLITE_ENABLE_SELINUX)
+
 #include "sesqlite_vtab.h"
 
 int setHashMap(seSQLiteHash *h) {
@@ -162,3 +164,6 @@ static int seslite_update(sqlite3_vtab *pVtab, int argc, sqlite3_value ** argv,
 		sqlite3_int64 *pRowId) {
 	return SQLITE_OK;
 }
+
+#endif /* !defined(SQLITE_CORE) || defined(SQLITE_ENABLE_SELINUX) */
+
