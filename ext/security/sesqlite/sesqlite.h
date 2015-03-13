@@ -130,7 +130,7 @@ SELINUX_RELABEL_TO }, { "select", SELINUX_SELECT },
 
 int lookup_security_context(seSQLiteBiHash *hash, char *db_name, char *tbl_name);
 
-int lookup_security_label(seSQLiteBiHash *hash, int type, char *db_name, char *tbl_name, char *col_name);
+int lookup_security_label(sqlite3 *db, sqlite3_stmt *stmt, seSQLiteBiHash *hash, int type, char *db_name, char *tbl_name, char *col_name);
 
 
 /* */

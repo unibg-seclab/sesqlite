@@ -558,7 +558,7 @@ int create_security_context_column(
 	'%s')",
       pParse->db->aDb[iDb].zName, SELINUX_CONTEXT,
       lookup_security_context(hash_id, pParse->db->aDb[iDb].zName, SELINUX_CONTEXT),
-      lookup_security_label(hash_id, 0, pParse->db->aDb[iDb].zName, p->zName, NULL),
+      lookup_security_label(db, stmt_insert_id, hash_id, 0, pParse->db->aDb[iDb].zName, p->zName, NULL),
       pParse->db->aDb[iDb].zName, p->zName
     );
     sqlite3ChangeCookie(pParse, iDb);
@@ -574,7 +574,7 @@ int create_security_context_column(
 	    '%s')",
     	  pParse->db->aDb[iDb].zName, SELINUX_CONTEXT,
 	  lookup_security_context(hash_id, pParse->db->aDb[iDb].zName, SELINUX_CONTEXT),
-	  lookup_security_label(hash_id, 1, pParse->db->aDb[iDb].zName, p->zName, p->aCol[iCol].zName),
+	  lookup_security_label(db, stmt_insert_id, hash_id, 1, pParse->db->aDb[iDb].zName, p->zName, p->aCol[iCol].zName),
     	  pParse->db->aDb[iDb].zName, p->zName, p->aCol[iCol].zName
     	);
     }
@@ -588,7 +588,7 @@ int create_security_context_column(
 	'%s')",
       pParse->db->aDb[iDb].zName, SELINUX_CONTEXT,
       lookup_security_context(hash_id, pParse->db->aDb[iDb].zName, SELINUX_CONTEXT),
-      lookup_security_label(hash_id, 1, pParse->db->aDb[iDb].zName, p->zName, "ROWID"),
+      lookup_security_label(db, stmt_insert_id, hash_id, 1, pParse->db->aDb[iDb].zName, p->zName, "ROWID"),
       pParse->db->aDb[iDb].zName, p->zName, "ROWID" 
     );
     sqlite3ChangeCookie(pParse, iDb);
@@ -633,7 +633,7 @@ static int selinux_schemachange_callback(
 	    '%s')",
     	  zDb, SELINUX_CONTEXT,
 	  lookup_security_context(hash_id, (char *) zDb, SELINUX_CONTEXT),
-	  lookup_security_label(hash_id, 1, (char *) zDb,  (char *) zTable, arg1),
+	  lookup_security_label(db, stmt_insert_id, hash_id, 1, (char *) zDb,  (char *) zTable, arg1),
     	  (char *) zDb, (char *) zTable, arg1);
 	break;
 
