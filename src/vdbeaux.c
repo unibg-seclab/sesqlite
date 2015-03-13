@@ -3995,3 +3995,88 @@ void sqlite3VtabImportErrmsg(Vdbe *p, sqlite3_vtab *pVtab){
   pVtab->zErrMsg = 0;
 }
 #endif /* SQLITE_OMIT_VIRTUALTABLE */
+
+#ifdef SQLITE_ENABLE_PREUPDATE_HOOK
+
+/*
+** If the second argument is not NULL, release any allocations associated 
+** with the memory cells in the p->aMem[] array. Also free the UnpackedRecord
+** structure itself, using sqlite3DbFree().
+**
+** This function is used to free UnpackedRecord structures allocated by
+** the vdbeUnpackRecord() function found in vdbeapi.c.
+*/
+static void vdbeFreeUnpacked(sqlite3 *db, UnpackedRecord *p){
+  if( p ){
+    int i;
+    for(i=0; i<p->nField; i++){
+      Mem *pMem = &p->aMem[i];
+      if( pMem->zMalloc ) sqlite3VdbeMemRelease(pMem);
+    }
+    sqlite3DbFree(db, p);
+  }
+}
+
+/*
+** Invoke the pre-update hook. If this is an UPDATE or DELETE pre-update call,
+** then cursor passed as the second argument should point to the row about
+** to be update or deleted. If the application calls sqlite3_preupdate_old(),
+** the required value will be read from the row the cursor points to.
+*/
+int sqlite3VdbePreUpdateHook(
+  Vdbe *v,                        /* Vdbe pre-update hook is invoked by */
+  VdbeCursor *pCsr,               /* Cursor to grab old.* values from */
+  int op,                         /* SQLITE_INSERT, UPDATE or DELETE */
+  const char *zDb,                /* Database name */
+  Table *pTab,                    /* Modified table */
+  i64 iKey1,                      /* Initial key value */
+  int iReg                        /* Register for new.* record */
+){
+  sqlite3 *db = v->db;
+  i64 iKey2;
+  PreUpdate preupdate;
+  const char *zTbl = pTab->zName;
+  static const u8 fakeSortOrder = 0;
+  int rc;
+
+  assert( db->pPreUpdate==0 );
+  memset(&preupdate, 0, sizeof(PreUpdate));
+  if( op==SQLITE_UPDATE ){
+    iKey2 = v->aMem[iReg].u.i;
+  }else{
+    iKey2 = iKey1;
+  }
+
+  assert( pCsr->nField==pTab->nCol 
+       || (pCsr->nField==pTab->nCol+1 && op==SQLITE_DELETE && iReg==-1)
+  );
+
+  preupdate.v = v;
+  preupdate.pCsr = pCsr;
+  preupdate.op = op;
+  preupdate.iNewReg = iReg;
+  preupdate.keyinfo.db = db;
+  preupdate.keyinfo.enc = ENC(db);
+  preupdate.keyinfo.nField = pTab->nCol;
+  preupdate.keyinfo.aSortOrder = (u8*)&fakeSortOrder;
+  preupdate.iKey1 = iKey1;
+  preupdate.iKey2 = iKey2;
+  preupdate.iPKey = pTab->iPKey;
+
+  db->pPreUpdate = &preupdate;
+  rc = db->xPreUpdateCallback(db->pPreUpdateArg, db, op, zDb, zTbl, iKey1, iKey2);
+  db->pPreUpdate = 0;
+  sqlite3DbFree(db, preupdate.aRecord);
+  vdbeFreeUnpacked(db, preupdate.pUnpacked);
+  vdbeFreeUnpacked(db, preupdate.pNewUnpacked);
+  if( preupdate.aNew ){
+    int i;
+    for(i=0; i<pCsr->nField; i++){
+      sqlite3VdbeMemRelease(&preupdate.aNew[i]);
+    }
+    sqlite3DbFree(db, preupdate.aNew);
+  }
+
+  return rc;
+}
+#endif /* SQLITE_ENABLE_PREUPDATE_HOOK */

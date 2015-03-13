@@ -132,6 +132,7 @@ struct SqliteDb {
   char *zNull;               /* Text to substitute for an SQL NULL value */
   SqlFunc *pFunc;            /* List of SQL functions */
   Tcl_Obj *pUpdateHook;      /* Update hook script (if any) */
+  Tcl_Obj *pPreUpdateHook;   /* Pre-update hook script (if any) */
   Tcl_Obj *pRollbackHook;    /* Rollback hook script (if any) */
   Tcl_Obj *pWalHook;         /* WAL hook script (if any) */
   Tcl_Obj *pUnlockNotify;    /* Unlock notify script (if any) */
@@ -510,6 +511,9 @@ static void DbDeleteCmd(void *db){
   if( pDb->pUpdateHook ){
     Tcl_DecrRefCount(pDb->pUpdateHook);
   }
+  if( pDb->pPreUpdateHook ){
+    Tcl_DecrRefCount(pDb->pPreUpdateHook);
+  }
   if( pDb->pRollbackHook ){
     Tcl_DecrRefCount(pDb->pRollbackHook);
   }
@@ -675,6 +679,42 @@ static void DbUnlockNotify(void **apArg, int nArg){
   }
 }
 #endif
+
+#ifdef SQLITE_ENABLE_PREUPDATE_HOOK
+/*
+** Pre-update hook callback.
+*/
+static int DbPreUpdateHandler(
+  void *p, 
+  sqlite3 *db,
+  int op,
+  const char *zDb, 
+  const char *zTbl, 
+  sqlite_int64 iKey1,
+  sqlite_int64 iKey2
+){
+  SqliteDb *pDb = (SqliteDb *)p;
+  Tcl_Obj *pCmd;
+  static const char *azStr[] = {"DELETE", "INSERT", "UPDATE"};
+
+  assert( (SQLITE_DELETE-1)/9 == 0 );
+  assert( (SQLITE_INSERT-1)/9 == 1 );
+  assert( (SQLITE_UPDATE-1)/9 == 2 );
+  assert( pDb->pPreUpdateHook );
+  assert( db==pDb->db );
+  assert( op==SQLITE_INSERT || op==SQLITE_UPDATE || op==SQLITE_DELETE );
+
+  pCmd = Tcl_DuplicateObj(pDb->pPreUpdateHook);
+  Tcl_IncrRefCount(pCmd);
+  Tcl_ListObjAppendElement(0, pCmd, Tcl_NewStringObj(azStr[(op-1)/9], -1));
+  Tcl_ListObjAppendElement(0, pCmd, Tcl_NewStringObj(zDb, -1));
+  Tcl_ListObjAppendElement(0, pCmd, Tcl_NewStringObj(zTbl, -1));
+  Tcl_ListObjAppendElement(0, pCmd, Tcl_NewWideIntObj(iKey1));
+  Tcl_ListObjAppendElement(0, pCmd, Tcl_NewWideIntObj(iKey2));
+  Tcl_EvalObjEx(pDb->interp, pCmd, TCL_EVAL_DIRECT);
+  Tcl_DecrRefCount(pCmd);
+}
+#endif /* SQLITE_ENABLE_PREUPDATE_HOOK */
 
 static void DbUpdateHandler(
   void *p, 
@@ -1623,6 +1663,7 @@ static int DbObjCmd(void *cd, Tcl_Interp *interp, int objc,Tcl_Obj *const*objv){
     "errorcode",          "eval",              "exists",
     "function",           "incrblob",          "interrupt",
     "last_insert_rowid",  "nullvalue",         "onecolumn",
+    "preupdate",
     "profile",            "progress",          "rekey",
     "restore",            "rollback_hook",     "status",
     "timeout",            "total_changes",     "trace",
@@ -1637,6 +1678,7 @@ static int DbObjCmd(void *cd, Tcl_Interp *interp, int objc,Tcl_Obj *const*objv){
     DB_ERRORCODE,         DB_EVAL,             DB_EXISTS,
     DB_FUNCTION,          DB_INCRBLOB,         DB_INTERRUPT,
     DB_LAST_INSERT_ROWID, DB_NULLVALUE,        DB_ONECOLUMN,
+    DB_PREUPDATE,
     DB_PROFILE,           DB_PROGRESS,         DB_REKEY,
     DB_RESTORE,           DB_ROLLBACK_HOOK,    DB_STATUS,
     DB_TIMEOUT,           DB_TOTAL_CHANGES,    DB_TRACE,
@@ -2820,6 +2862,90 @@ static int DbObjCmd(void *cd, Tcl_Interp *interp, int objc,Tcl_Obj *const*objv){
   }
 
   /*
+  **    $db preupdate_hook count
+  **    $db preupdate_hook hook ?SCRIPT?
+  **    $db preupdate_hook new INDEX
+  **    $db preupdate_hook old INDEX
+  */
+  case DB_PREUPDATE: {
+#ifndef SQLITE_ENABLE_PREUPDATE_HOOK
+    Tcl_AppendResult(interp, "preupdate_hook was omitted at compile-time");
+    rc = TCL_ERROR;
+#else
+    static const char *azSub[] = {"count", "depth", "hook", "new", "old", 0};
+    enum DbPreupdateSubCmd {
+      PRE_COUNT, PRE_DEPTH, PRE_HOOK, PRE_NEW, PRE_OLD
+    };
+    int iSub;
+
+    if( objc<3 ){
+      Tcl_WrongNumArgs(interp, 2, objv, "SUB-COMMAND ?ARGS?");
+    }
+    if( Tcl_GetIndexFromObj(interp, objv[2], azSub, "sub-command", 0, &iSub) ){
+      return TCL_ERROR;
+    }
+
+    switch( (enum DbPreupdateSubCmd)iSub ){
+      case PRE_COUNT: {
+        int nCol = sqlite3_preupdate_count(pDb->db);
+        Tcl_SetObjResult(interp, Tcl_NewIntObj(nCol));
+        break;
+      }
+
+      case PRE_HOOK: {
+        if( objc>4 ){
+          Tcl_WrongNumArgs(interp, 2, objv, "hook ?SCRIPT?");
+          return TCL_ERROR;
+        }
+        DbHookCmd(interp, pDb, (objc==4 ? objv[3] : 0), &pDb->pPreUpdateHook);
+        break;
+      }
+
+      case PRE_DEPTH: {
+        Tcl_Obj *pRet;
+        if( objc!=3 ){
+          Tcl_WrongNumArgs(interp, 3, objv, "");
+          return TCL_ERROR;
+        }
+        pRet = Tcl_NewIntObj(sqlite3_preupdate_depth(pDb->db));
+        Tcl_SetObjResult(interp, pRet);
+        break;
+      }
+
+      case PRE_NEW:
+      case PRE_OLD: {
+        int iIdx;
+        sqlite3_value *pValue;
+        if( objc!=4 ){
+          Tcl_WrongNumArgs(interp, 3, objv, "INDEX");
+          return TCL_ERROR;
+        }
+        if( Tcl_GetIntFromObj(interp, objv[3], &iIdx) ){
+          return TCL_ERROR;
+        }
+
+        if( iSub==PRE_OLD ){
+          rc = sqlite3_preupdate_old(pDb->db, iIdx, &pValue);
+        }else{
+          assert( iSub==PRE_NEW );
+          rc = sqlite3_preupdate_new(pDb->db, iIdx, &pValue);
+        }
+
+        if( rc==SQLITE_OK ){
+          Tcl_Obj *pObj;
+          pObj = Tcl_NewStringObj((char*)sqlite3_value_text(pValue), -1);
+          Tcl_SetObjResult(interp, pObj);
+        }else{
+          Tcl_AppendResult(interp, sqlite3_errmsg(pDb->db), 0);
+          return TCL_ERROR;
+        }
+      }
+    }
+#endif /* SQLITE_ENABLE_PREUPDATE_HOOK */
+    break;
+  }
+
+  /*
   **    $db wal_hook ?script?
   **    $db update_hook ?script?
   **    $db rollback_hook ?script?
@@ -2859,6 +2985,9 @@ static int DbObjCmd(void *cd, Tcl_Interp *interp, int objc,Tcl_Obj *const*objv){
       }
     }
 
+#ifdef SQLITE_ENABLE_PREUPDATE_HOOK
+    sqlite3_preupdate_hook(pDb->db, (pDb->pPreUpdateHook?DbPreUpdateHandler:0), pDb);
+#endif
     sqlite3_update_hook(pDb->db, (pDb->pUpdateHook?DbUpdateHandler:0), pDb);
     sqlite3_rollback_hook(pDb->db,(pDb->pRollbackHook?DbRollbackHandler:0),pDb);
     sqlite3_wal_hook(pDb->db,(pDb->pWalHook?DbWalHandler:0),pDb);

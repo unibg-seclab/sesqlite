@@ -359,7 +359,13 @@ void sqlite3DeleteFrom(
   ** It is easier just to erase the whole table. Prior to version 3.6.5,
   ** this optimization caused the row change count (the value returned by 
   ** API function sqlite3_count_changes) to be set incorrectly.  */
-  if( rcauth==SQLITE_OK && pWhere==0 && !pTrigger && !IsVirtual(pTab) 
+  if( rcauth==SQLITE_OK
+   && pWhere==0
+   && !pTrigger
+   && !IsVirtual(pTab) 
+#ifdef SQLITE_ENABLE_PREUPDATE_HOOK
+   && db->xPreUpdateCallback==0
+#endif
    && 0==sqlite3FkRequired(pParse, pTab, 0, 0)
   ){
     assert( !isView );
@@ -669,12 +675,19 @@ void sqlite3GenerateRowDelete(
 
   /* Delete the index and table entries. Skip this step if pTab is really
   ** a view (in which case the only effect of the DELETE statement is to
-  ** fire the INSTEAD OF triggers).  */ 
+  ** fire the INSTEAD OF triggers).  
+  **
+  ** If variable 'count' is non-zero, then this OP_Delete instruction should
+  ** invoke the update-hook. The pre-update-hook, on the other hand should
+  ** be invoked unless table pTab is a system table. The difference is that
+  ** the update-hook is not invoked for rows removed by REPLACE, but the 
+  ** pre-update-hook is.
+  */ 
   if( pTab->pSelect==0 ){
     sqlite3GenerateRowIndexDelete(pParse, pTab, iDataCur, iIdxCur, 0);
     sqlite3VdbeAddOp2(v, OP_Delete, iDataCur, (count?OPFLAG_NCHANGE:0));
     if( count ){
-      sqlite3VdbeChangeP4(v, -1, pTab->zName, P4_TRANSIENT);
+      sqlite3VdbeChangeP4(v, -1, (char*)pTab, P4_TABLE);
     }
   }
 

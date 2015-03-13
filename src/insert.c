@@ -1344,9 +1344,21 @@ void sqlite3GenerateConstraintChecks(
           sqlite3MultiWrite(pParse);
           sqlite3GenerateRowDelete(pParse, pTab, pTrigger, iDataCur, iIdxCur,
                                    regNewData, 1, 0, OE_Replace, 1);
-        }else if( pTab->pIndex ){
-          sqlite3MultiWrite(pParse);
-          sqlite3GenerateRowIndexDelete(pParse, pTab, iDataCur, iIdxCur, 0);
+        }else{
+#ifdef SQLITE_ENABLE_PREUPDATE_HOOK
+          if( HasRowid(pTab) ){
+            /* This OP_Delete opcode fires the pre-update-hook only. It does
+            ** not modify the b-tree. It is more efficient to let the coming
+            ** OP_Insert replace the existing entry than it is to delete the
+            ** existing entry and then insert a new one. */
+            sqlite3VdbeAddOp2(v, OP_Delete, iDataCur, OPFLAG_ISNOOP);
+            sqlite3VdbeChangeP4(v, -1, (char *)pTab, P4_TABLE);
+          }
+#endif /* SQLITE_ENABLE_PREUPDATE_HOOK */
+          if( pTab->pIndex ){
+            sqlite3MultiWrite(pParse);
+            sqlite3GenerateRowIndexDelete(pParse, pTab, iDataCur, iIdxCur, 0);
+          }
         }
         seenReplace = 1;
         break;
@@ -1602,7 +1614,7 @@ void sqlite3CompleteInsertion(
   }
   sqlite3VdbeAddOp3(v, OP_Insert, iDataCur, regRec, regNewData);
   if( !pParse->nested ){
-    sqlite3VdbeChangeP4(v, -1, pTab->zName, P4_TRANSIENT);
+    sqlite3VdbeChangeP4(v, -1, (char *)pTab, P4_TABLE);
   }
   sqlite3VdbeChangeP5(v, pik_flags);
 }
@@ -1978,7 +1990,7 @@ static int xferOptimization(
     sqlite3VdbeAddOp2(v, OP_RowData, iSrc, regData);
     sqlite3VdbeAddOp3(v, OP_Insert, iDest, regData, regRowid);
     sqlite3VdbeChangeP5(v, OPFLAG_NCHANGE|OPFLAG_LASTROWID|OPFLAG_APPEND);
-    sqlite3VdbeChangeP4(v, -1, pDest->zName, 0);
+    sqlite3VdbeChangeP4(v, -1, (char*)pDest, P4_TABLE);
     sqlite3VdbeAddOp2(v, OP_Next, iSrc, addr1); VdbeCoverage(v);
     sqlite3VdbeAddOp2(v, OP_Close, iSrc, 0);
     sqlite3VdbeAddOp2(v, OP_Close, iDest, 0);

@@ -59,6 +59,7 @@ struct VdbeOp {
     KeyInfo *pKeyInfo;     /* Used when p4type is P4_KEYINFO */
     int *ai;               /* Used when p4type is P4_INTARRAY */
     SubProgram *pProgram;  /* Used when p4type is P4_SUBPROGRAM */
+    Table *pTab;           /* Used when p4type is P4_TABLE */
     int (*xAdvance)(BtCursor *, int *);
   } p4;
 #ifdef SQLITE_ENABLE_EXPLAIN_COMMENTS
@@ -119,6 +120,7 @@ typedef struct VdbeOpList VdbeOpList;
 #define P4_INTARRAY (-15) /* P4 is a vector of 32-bit integers */
 #define P4_SUBPROGRAM  (-18) /* P4 is a pointer to a SubProgram structure */
 #define P4_ADVANCE  (-19) /* P4 is a pointer to BtreeNext() or BtreePrev() */
+#define P4_TABLE    (-20) /* P4 is a pointer to a Table structure */
 
 /* Error message codes for OP_Halt */
 #define P5_ConstraintNotNull 1
