@@ -55,9 +55,16 @@ xs_se, ys_se, data_se = getdata(se)
 # create arrays
 ys_base = np.array(ys_base)
 ys_se = np.array(ys_se)
-print '\n'.join('base:{:4.2f} se:{:4.2f} ({:3.2%})'.format(b, s, o)
-                for b, s, o in zip(ys_base, ys_se, ((ys_se - ys_base) / ys_base)))
 
+# print data
+print '\n===== SeSQLite Overhead ====='
+print '\n'.join('base:{:4.3f} se:{:4.3f} ({:+3.3%})'.format(b, s, o)
+                for b, s, o in zip(ys_base, ys_se, ((ys_se - ys_base) / ys_base)))
+print '\n=========== Total ==========='
+print 'base:{:4.3f} se:{:4.3f} ({:+3.3%})'.format(
+    sum(ys_base), sum(ys_se), overhead(sum(ys_base), sum(ys_se)))
+
+# we cannot improve!
 ys_se = np.maximum(ys_se, ys_base)
 #ys_no_opt = np.maximum(np.array(ys_no_opt), ys_base)
 
