@@ -10,8 +10,8 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-base = 'results/1/base.out'
-se = 'results/1/se.out'
+base = 'results/1/1.base.out'
+se = 'results/1/2.se.out'
 #no_opt = 'results/1/no-opt.out'
 width = .25
 
@@ -54,7 +54,11 @@ xs_se, ys_se, data_se = getdata(se)
 
 # create arrays
 ys_base = np.array(ys_base)
-ys_se = np.maximum(np.array(ys_se), ys_base)
+ys_se = np.array(ys_se)
+print '\n'.join('base:{:4.2f} se:{:4.2f} ({:3.2%})'.format(b, s, o)
+                for b, s, o in zip(ys_base, ys_se, ((ys_se - ys_base) / ys_base)))
+
+ys_se = np.maximum(ys_se, ys_base)
 #ys_no_opt = np.maximum(np.array(ys_no_opt), ys_base)
 
 # graph optimized

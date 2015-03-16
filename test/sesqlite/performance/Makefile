@@ -92,10 +92,10 @@ clean: clean_test_db
 #########################
 
 $(BIN1): $(SQLITE_OBJ) $(OBJS1)
-	gcc $(SQLITE_OBJ) $(OBJS1) -o $@ $(INCLUDES) $(LDFLAGS)
+	gcc -g $(SQLITE_OBJ) $(OBJS1) -o $@ $(INCLUDES) $(LDFLAGS)
 
 $(BIN1_SE): $(SE_SQLITE_OBJ) $(OBJS1_SE)
-	gcc $(SE_SQLITE_OBJ) $(OBJS1_SE) -o $@ $(INCLUDES) $(LDFLAGS) -lselinux
+	gcc -g $(SE_SQLITE_OBJ) $(OBJS1_SE) -o $@ $(INCLUDES) $(LDFLAGS) -lselinux
 
 ### tests
 
@@ -127,10 +127,10 @@ graph1: $(OUT1_BASE) $(OUT1_SE)
 #########################
 
 $(BIN8): $(OBJS8) $(SQLITE_OBJ)
-	gcc $(OBJS8) $(SQLITE_OBJ) -o $@ $(INCLUDES) $(LDFLAGS)
+	gcc -g $(OBJS8) $(SQLITE_OBJ) -o $@ $(INCLUDES) $(LDFLAGS)
 
 $(BIN8_SE): $(OBJS8) $(SE_SQLITE_OBJ)
-	gcc $(OBJS8) $(SE_SQLITE_OBJ) -o $@ $(INCLUDES) $(LDFLAGS) -lselinux
+	gcc -g $(OBJS8) $(SE_SQLITE_OBJ) -o $@ $(INCLUDES) $(LDFLAGS) -lselinux
 
 ### sql statements
 

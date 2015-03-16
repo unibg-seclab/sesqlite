@@ -59,6 +59,7 @@ static struct Global {
   const char *zNN;           /* Might be NOT NULL */
   const char *zPK;           /* Might be UNIQUE or PRIMARY KEY */
   unsigned int x, y;         /* Pseudo-random number generator state */
+  int allResults;            /* All the results */
   int nResult;               /* Size of the current result */
   char zResult[3000];        /* Text of the current result */
 } g;
@@ -358,6 +359,7 @@ void speedtest1_run(void){
   assert( g.pStmt );
   g.nResult = 0;
   while( sqlite3_step(g.pStmt)==SQLITE_ROW ){
+    g.allResults++;
     n = sqlite3_column_count(g.pStmt);
     for(i=0; i<n; i++){
       const char *z = (const char*)sqlite3_column_text(g.pStmt, i);
@@ -1167,6 +1169,7 @@ int main(int argc, char **argv){
   g.zNN = "";
   g.zPK = "UNIQUE";
   g.szTest = 100;
+  g.allResults = 0;
   for(i=1; i<argc; i++){
     const char *z = argv[i];
     if( z[0]=='-' ){
@@ -1373,6 +1376,7 @@ int main(int argc, char **argv){
     printf("-- Schema Heap Usage:           %d bytes\n", iCur); 
     sqlite3_db_status(g.db, SQLITE_DBSTATUS_STMT_USED, &iCur, &iHi, 0);
     printf("-- Statement Heap Usage:        %d bytes\n", iCur); 
+    printf("-- Steps:                       %d\n", g.allResults);
   }
 #endif
 
