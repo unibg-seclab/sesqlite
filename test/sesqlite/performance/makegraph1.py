@@ -39,7 +39,7 @@ def printstat(ys, base_ys, file):
 def graph_with_options(xs, xticks, name):
     plt.xticks(xs +.4, data_base.keys(), rotation=90)
     plt.xlim(-.2, xs[-1] + 1)
-    plt.ylim(0, 2.5)
+    #plt.ylim(0, 2.5)
     plt.ylabel('time [s]')
     plt.tight_layout()
     plt.legend(loc='upper left')
