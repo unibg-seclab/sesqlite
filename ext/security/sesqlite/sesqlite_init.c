@@ -379,7 +379,14 @@ int initialize_internal_table(sqlite3 *db, int isOpen){
 	    const char *tblName = sqlite3_column_text(check_context_stmt, 4);
 	    const char *colName = sqlite3_column_text(check_context_stmt, 5);
 	    int id = sqlite3_column_int(check_context_stmt, 2);
-	    insert_key(db, (char *) dbName, (char *) tblName, strlen(colName) == 0 ? NULL : (char *) colName, id);
+	    insert_key(
+	        db,
+	        (char *) dbName,
+	        (char *) tblName,
+	        (colName == 0 || strlen(colName) == 0) ?
+	            NULL : (char *) colName,
+	        id
+	    );
 
 	}
 
