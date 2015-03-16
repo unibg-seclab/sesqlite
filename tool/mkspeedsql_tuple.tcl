@@ -72,7 +72,7 @@ for {set i 1} {$i<=50000} {incr i} {
   set r [expr {int(rand()*500000)}]
   set x [number_name $r]
   lappend t1c_list $x
-  puts "INSERT INTO t1(a,b,c) VALUES($i,$r,'$x');"
+  puts "INSERT INTO t1(security_context,a,b,c) VALUES(8,$i,$r,'$x');"
 }
 puts {COMMIT;}
 
@@ -81,7 +81,7 @@ puts {COMMIT;}
 puts {BEGIN;}
 for {set i 1} {$i<=50000} {incr i} {
   set r [expr {int(rand()*500000)}]
-  puts "INSERT INTO t2(a,b,c) VALUES($i,$r,'[number_name $r]');"
+  puts "INSERT INTO t2(security_context,a,b,c) VALUES(8,$i,$r,'[number_name $r]');"
 }
 puts {COMMIT;}
 
