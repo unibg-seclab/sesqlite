@@ -1,7 +1,7 @@
 .PHONY: all clean clean_test_db \
 	graph results_base results_se \
-	test1 test1_se \
-	test8 test8_se test8_tuple test8_tuple_static
+	graph1 test1 test1_se \
+	graph8 test8 test8_se test8_tuple test8_tuple_static
 
 n			:= 2
 TOP			:= ../../..
