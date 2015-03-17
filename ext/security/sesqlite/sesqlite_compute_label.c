@@ -103,7 +103,40 @@ int lookup_security_label(sqlite3 *db,
 //static void selinuxGetSecurityContextFunction(sqlite3_context *context, int argc,
 //		sqlite3_value **argv) {
 //
-//    assert(argc == 2);
+//
+//
+//
+//    int rc = SQLITE_OK;
+//    int rowid = 0;
+//    int *id = NULL;
+//    char *context = NULL;
+//
+//    if(type){
+//	compute_sql_context(0, db_name, tbl_name, col_name, 
+//	    sesqlite_contexts->column_context, &context);
+//
+//    }else{
+//	compute_sql_context(0, db_name, tbl_name, NULL, 
+//	    sesqlite_contexts->table_context, &context);
+//    }
+//
+//    assert(context != NULL);
+//    id = seSQLiteBiHashFindKey(hash, context, strlen(context));
+//    if(id == NULL){
+//	sqlite3_bind_int(stmt, 1, lookup_security_context(hash, db_name, SELINUX_ID));
+//	sqlite3_bind_text(stmt, 2, context, strlen(context),
+//	    SQLITE_TRANSIENT);
+//
+//	rc = sqlite3_step(stmt);
+//	rc = sqlite3_reset(stmt);
+//
+//	rowid = sqlite3_last_insert_rowid(db);
+//	id = sqlite3_malloc(sizeof(int));
+//	*id = rowid;
+//	seSQLiteBiHashInsert(hash, id, sizeof(int), context, strlen(context));
+//    }
+//
+//    return *(int *) id;
 //
 //    int *id = NULL;
 //    char *sec_context = NULL;
@@ -119,7 +152,7 @@ int lookup_security_label(sqlite3 *db,
 //    sqlite3_free(sec_context);
 //    sqlite3_result_int(context, *(int *) id);
 //}
-//
+
 //static void selinuxGetSecurityLabelFunction(sqlite3_context *context, int argc,
 //		sqlite3_value **argv) {
 //

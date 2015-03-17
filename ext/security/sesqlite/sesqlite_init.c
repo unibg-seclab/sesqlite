@@ -1,17 +1,24 @@
 
 #if !defined(SQLITE_CORE) || defined(SQLITE_ENABLE_SELINUX)
 
+#ifndef SQLITE_CORE
+#include "sqlite3ext.h"
+SQLITE_EXTENSION_INIT1
+#else
+#include "sqlite3.h"
+#endif
+
 #include "sesqlite_init.h"
 
-int set_hash(seSQLiteHash *arg){
-    init_hash = arg;
-    return SQLITE_OK;
-}
+security_context_t scon = NULL;
+security_context_t tcon = NULL;
+int scon_id = 0;
+int tcon_id = 0;
 
-int set_hash_id(seSQLiteBiHash *arg){
-    init_hash_id = arg;
-    return SQLITE_OK;
-}
+seSQLiteHash *hash = NULL;
+seSQLiteBiHash *hash_id = NULL;
+
+struct sesqlite_context *sesqlite_contexts = NULL;
 
 int open_or_reopen(sqlite3 *db){
     int isNew = 0;
@@ -75,11 +82,11 @@ int insert_context(sqlite3 *db, int isColumn, char *dbName, char *tblName,
     rc = compute_sql_context(isColumn, dbName, tblName, colName, con, &sec_label); 
     assert( sec_label != NULL);
 
-    value = seSQLiteBiHashFindKey(init_hash_id, sec_label, strlen(sec_label));
+    value = seSQLiteBiHashFindKey(hash_id, sec_label, strlen(sec_label));
     if(value == NULL){
 	rc = compute_sql_context(0, dbName, tblName, NULL, tuple_context, &sec_context); 
 
-	tid = seSQLiteBiHashFindKey(init_hash_id, sec_context, strlen(sec_context));
+	tid = seSQLiteBiHashFindKey(hash_id, sec_context, strlen(sec_context));
 	assert(tid != NULL); /* check if SELinux can compute a security context */
 
 	sqlite3_bind_int(stmt_init_id, 1, *(int *)tid);
@@ -92,7 +99,7 @@ int insert_context(sqlite3 *db, int isColumn, char *dbName, char *tblName,
 	rowid = sqlite3_last_insert_rowid(db);
 	value = sqlite3_malloc(sizeof(int));
 	*value = rowid;
-	seSQLiteBiHashInsert(init_hash_id, value, sizeof(int), sec_label, strlen(sec_label));
+	seSQLiteBiHashInsert(hash_id, value, sizeof(int), sec_label, strlen(sec_label));
 	sqlite3_free(sec_context);
 	
     }	
@@ -111,7 +118,7 @@ void insert_key(sqlite3 *db, char *dbName, char *tName, char *cName, int id) {
 
     value =sqlite3_malloc(sizeof(int));
     *value = id;
-    seSQLiteHashInsert(init_hash, key, strlen(key), value, sizeof(int), 0);
+    seSQLiteHashInsert(hash, key, strlen(key), value, sizeof(int), 0);
 #ifdef SQLITE_DEBUG
 fprintf(stdout, "Database: %s Table: %s %s%s Context found: %d\n",
     dbName, tName, cName == NULL ? "" : "Column:", cName == NULL ? "" : cName, id);
@@ -311,7 +318,7 @@ int initialize_mapping(sqlite3* db){
 	struct sesqlite_context_element *pp;
 	pp = sesqlite_contexts->tuple_context;
 	while (pp != NULL) {
-	    value = seSQLiteBiHashFindKey(init_hash_id, pp->security_context, strlen(pp->security_context));
+	    value = seSQLiteBiHashFindKey(hash_id, pp->security_context, strlen(pp->security_context));
 	    if(value == NULL){
 		sqlite3_bind_int(stmt_insert, 1, 0);
 		sqlite3_bind_text(stmt_insert, 2, pp->security_context, strlen(pp->security_context),
@@ -323,7 +330,7 @@ int initialize_mapping(sqlite3* db){
 
 		value = sqlite3_malloc(sizeof(int));
 		*value = id;
-		seSQLiteBiHashInsert(init_hash_id, value, sizeof(int), pp->security_context, strlen(pp->security_context));
+		seSQLiteBiHashInsert(hash_id, value, sizeof(int), pp->security_context, strlen(pp->security_context));
 	    }
 	    pp = pp->next;
 	}
@@ -335,7 +342,7 @@ int initialize_mapping(sqlite3* db){
 
 
     compute_sql_context(0, "main", "selinux_id", NULL, sesqlite_contexts->tuple_context, &result);
-    value = seSQLiteBiHashFindKey(init_hash_id, result, strlen(result));
+    value = seSQLiteBiHashFindKey(hash_id, result, strlen(result));
     assert(value != NULL);
     sqlite3_bind_int(stmt_update, 1, *(int *)value);
 
@@ -368,7 +375,7 @@ int initialize_internal_table(sqlite3 *db, int isOpen){
 
 	    value = sqlite3_malloc(sizeof(int));
 	    *value = rowid;
-	    seSQLiteBiHashInsert(init_hash_id, value, sizeof(int), ttcon, strlen(ttcon));
+	    seSQLiteBiHashInsert(hash_id, value, sizeof(int), ttcon, strlen(ttcon));
 	}
 
 	rc = sqlite3_prepare_v2(db,
@@ -480,12 +487,73 @@ int initialize_internal_table(sqlite3 *db, int isOpen){
 }
 
 
-int initialize(sqlite3 *db){
+//int initialize(sqlite3 *db){
+//
+//    int rc = SQLITE_OK;
+//    int isOpen = -1;
+//
+//    isOpen = open_or_reopen(db);
+//
+//    rc = create_internal_table(db);
+//    if(rc != SQLITE_OK)
+//	return rc;
+//
+//    rc = prepare_stmt(db);
+//    if(rc != SQLITE_OK)
+//	return rc;
+//	
+//    if(!isOpen){
+//	rc = initialize_mapping(db);
+//	if(rc != SQLITE_OK)
+//	    return rc;
+//    }
+//
+//    /* in-memory representation of sesqlite_contexts file */
+//    rc = initialize_internal_table(db, isOpen);
+//    if(rc != SQLITE_OK)
+//	return rc;
+//
+//
+//    return rc;
+//}
+
+
+/*
+ * Function: sqlite3SelinuxInit
+ * Purpose: Initialize SeSqlite and register objects, authorizer and functions.
+ * 			This function is called by the SQLite core in case the SQLITE_CORE
+ * 			compile flag has been enabled or at runtime when the extension is loaded.
+ * Parameters:
+ * 				sqlite3 *db: a pointer to the SQLite database.
+ * Return value: 0->OK, other->ERROR (see **pzErr for info about error)
+ */
+int sqlite3SelinuxInit(sqlite3 *db) {
 
     int rc = SQLITE_OK;
     int isOpen = -1;
 
+#ifdef SQLITE_DEBUG
+fprintf(stdout, "\n == SeSqlite Initialization == \n");
+#endif
+
+    /* Allocate and initialize the hash-table used to store tokenizers. */
+    hash = sqlite3_malloc(sizeof(seSQLiteHash));
+    hash_id = sqlite3_malloc(sizeof(seSQLiteBiHash));
+    if( !hash )
+	return SQLITE_NOMEM;
+    else
+	seSQLiteHashInit(hash, SESQLITE_HASH_STRING, 0); /* init */
+
+    if( !hash_id )
+	return SQLITE_NOMEM;
+    else
+	seSQLiteBiHashInit(hash_id, SESQLITE_HASH_BINARY, SESQLITE_HASH_STRING, 0); /* init mapping */
+
     isOpen = open_or_reopen(db);
+
+    rc = context_reload(db);
+    if(rc != SQLITE_OK)
+	return rc;
 
     rc = create_internal_table(db);
     if(rc != SQLITE_OK)
@@ -506,9 +574,46 @@ int initialize(sqlite3 *db){
     if(rc != SQLITE_OK)
 	return rc;
 
+    /* register module */
+//    rc = sqlite3_create_module(db, "selinuxModule", &sesqlite_mod, NULL);
+//    if (rc != SQLITE_OK)
+//	return rc;
+
+    rc = initialize_authorizer(db);
+    if(rc != SQLITE_OK)
+	return rc;
+
+#ifdef SELINUX_STATIC_CONTEXT
+    scon = sqlite3_mprintf("%s", "unconfined_u:unconfined_r:unconfined_t:s0");
+    tcon = sqlite3_mprintf("%s", "unconfined_u:object_r:unconfined_t:s0");
+#else
+    rc = getcon(&scon);
+    if(security_compute_create_raw(scon, scon, 4, &tcon) < 0){
+	fprintf(stderr, "SELinux could not compute a default context\n");
+	return SQLITE_ERROR;
+    }
+#endif
+
+    scon_id = insert_id(db, "main", scon);
+    assert( scon_id != 0);
+    tcon_id = insert_id(db, "main", tcon);
+    assert( scon_id != 0);
 
     return rc;
 }
+
+
+/* Runtime-loading extension support */
+
+#if !SQLITE_CORE
+int sqlite3_extension_init(sqlite3 *db, char **pzErrMsg,
+		const sqlite3_api_routines *pApi) {
+	SQLITE_EXTENSION_INIT2(pApi);
+	return sqlite3SelinuxInit(db);
+}
+#endif
+
+
 
 #endif /* !defined(SQLITE_CORE) || defined(SQLITE_ENABLE_SELINUX) */
 

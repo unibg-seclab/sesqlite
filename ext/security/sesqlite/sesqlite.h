@@ -15,6 +15,16 @@
 
 #include "sesqlite_hash.h"
 
+
+extern security_context_t scon;
+extern security_context_t tcon;
+extern int scon_id;
+extern int tcon_id;
+
+extern seSQLiteHash *hash;
+extern seSQLiteBiHash *hash_id;
+
+
 #define SECURITY_CONTEXT_COLUMN_NAME "security_context"
 #define SECURITY_CONTEXT_COLUMN_TYPE "hidden INT"
 //#define SECURITY_CONTEXT_COLUMN_DEFAULT_FUNC "getcon()"
@@ -67,7 +77,23 @@ const char *authtype[] = { "SQLITE_COPY", "SQLITE_CREATE_INDEX",
 
 
 
-struct sesqlite_context *sesqlite_contexts = NULL;
+extern struct sesqlite_context *sesqlite_contexts;
+
+int lookup_security_context(seSQLiteBiHash *hash, 
+	char *db_name, 
+	char *tbl_name);
+
+int lookup_security_label(sqlite3 *db, 
+	sqlite3_stmt *stmt, 
+	seSQLiteBiHash *hash, 
+	int type, 
+	char *db_name, 
+	char *tbl_name, 
+	char *col_name);
+
+
+/* */
+int sqlite3SelinuxInit(sqlite3 *db);
 
 struct sesqlite_context {
 
@@ -128,12 +154,5 @@ SELINUX_RELABEL_TO }, { "select", SELINUX_SELECT },
 		SELINUX_DELETE }, } }, };
 
 
-int lookup_security_context(seSQLiteBiHash *hash, char *db_name, char *tbl_name);
-
-int lookup_security_label(sqlite3 *db, sqlite3_stmt *stmt, seSQLiteBiHash *hash, int type, char *db_name, char *tbl_name, char *col_name);
-
-
-/* */
-int sqlite3SelinuxInit(sqlite3 *db);
 
 

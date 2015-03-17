@@ -2,34 +2,17 @@
 
 #if !defined(SQLITE_CORE) || defined(SQLITE_ENABLE_SELINUX)
 
-#ifndef SQLITE_CORE
-#include "sqlite3ext.h"
-SQLITE_EXTENSION_INIT1
-#else
-#include "sqlite3.h"
-#endif
-
 #include "sesqlite_authorizer.h"
 
 #define USE_AVC
-
-/* source (process) security context */
-security_context_t scon = NULL;
-security_context_t tcon = NULL;
-int scon_id = 0;
-int tcon_id = 0;
 
 /* prepared statements to query schema sesqlite_master (bind it before use) */
 sqlite3_stmt *stmt_insert_context;
 sqlite3_stmt *stmt_insert_id;
 
-seSQLiteHash *hash = NULL;
-seSQLiteBiHash *hash_id = NULL;
-
 #ifdef USE_AVC
 seSQLiteHash *avc; /* HashMap*/
 #endif
-
 
 int insert_id(sqlite3 *db, char *db_name, char *sec_label){
 
@@ -548,6 +531,7 @@ int create_security_context_column(
     zType = sqlite3MPrintf(db, SECURITY_CONTEXT_COLUMN_TYPE);
     pCol->zType = sqlite3MPrintf(db, zType);
     pCol->affinity = SQLITE_AFF_INTEGER;
+    pCol->colFlags |= COLFLAG_HIDDEN;
 
     //assign security context to sql schema object
     //insert table context
@@ -642,52 +626,16 @@ static int selinux_schemachange_callback(
     return SQLITE_OK;
 }
 
-/*
- * Function: sqlite3SelinuxInit
- * Purpose: Initialize SeSqlite and register objects, authorizer and functions.
- * 			This function is called by the SQLite core in case the SQLITE_CORE
- * 			compile flag has been enabled or at runtime when the extension is loaded.
- * Parameters:
- * 				sqlite3 *db: a pointer to the SQLite database.
- * Return value: 0->OK, other->ERROR (see **pzErr for info about error)
- */
-int sqlite3SelinuxInit(sqlite3 *db) {
+int initialize_authorizer(sqlite3 *db){
 
     int rc = SQLITE_OK;
 
-#ifdef SQLITE_DEBUG
-fprintf(stdout, "\n == SeSqlite Initialization == \n");
-#endif
-
-    /* Allocate and initialize the hash-table used to store tokenizers. */
-    hash = sqlite3_malloc(sizeof(seSQLiteHash));
-    hash_id = sqlite3_malloc(sizeof(seSQLiteBiHash));
+    /* initialize avc cache */
     avc = sqlite3_malloc(sizeof(seSQLiteHash));
-    if( !hash )
-	return SQLITE_NOMEM;
-    else
-	seSQLiteHashInit(hash, SESQLITE_HASH_STRING, 0); /* init */
-
-    if( !hash_id )
-	return SQLITE_NOMEM;
-    else
-	seSQLiteBiHashInit(hash_id, SESQLITE_HASH_BINARY, SESQLITE_HASH_STRING, 0); /* init mapping */
-
     if( !avc )
 	return SQLITE_NOMEM;
     else
 	seSQLiteHashInit(avc, SESQLITE_HASH_INT, 0); /* init avc */
-
-    set_hash(hash);
-    set_hash_id(hash_id);
-
-    rc = context_reload(db);
-    if(rc != SQLITE_OK)
-	return rc;
-
-    rc = initialize(db);
-    if(rc != SQLITE_OK)
-	return rc;
 
     rc = sqlite3_prepare_v2(db,
 	"INSERT INTO selinux_id(security_context, security_label) values(?1, ?2);", -1,
@@ -717,43 +665,11 @@ fprintf(stdout, "\n == SeSqlite Initialization == \n");
     if (rc != SQLITE_OK)
 	return rc;
 
-    /* register module */
-    rc = sqlite3_create_module(db, "selinuxModule", &sesqlite_mod, NULL);
-    if (rc != SQLITE_OK)
-	return rc;
-
-#ifdef SELINUX_STATIC_CONTEXT
-    scon = sqlite3_mprintf("%s", "unconfined_u:unconfined_r:unconfined_t:s0");
-    tcon = sqlite3_mprintf("%s", "unconfined_u:object_r:unconfined_t:s0");
-#else
-    rc = getcon(&scon);
-    if(security_compute_create_raw(scon, scon, 4, &tcon) < 0){
-	fprintf(stderr, "SELinux could not compute a default context\n");
-	return SQLITE_ERROR;
-    }
-#endif
-
-    scon_id = insert_id(db, "main", scon);
-    assert( scon_id != 0);
-    tcon_id = insert_id(db, "main", tcon);
-    assert( scon_id != 0);
-
     /* set the authorizer */
-    if (rc == SQLITE_OK)
-	rc = sqlite3_set_authorizer(db, selinuxAuthorizer, db);
+    rc = sqlite3_set_authorizer(db, selinuxAuthorizer, db);
+	return rc;
 
     return rc;
 }
-
-
-/* Runtime-loading extension support */
-
-#if !SQLITE_CORE
-int sqlite3_extension_init(sqlite3 *db, char **pzErrMsg,
-		const sqlite3_api_routines *pApi) {
-	SQLITE_EXTENSION_INIT2(pApi);
-	return sqlite3SelinuxInit(db);
-}
-#endif
 
 #endif /* !defined(SQLITE_CORE) || defined(SQLITE_ENABLE_SELINUX) */
