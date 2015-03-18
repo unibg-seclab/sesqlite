@@ -81,25 +81,32 @@ if ( pLimit != 0){
  
   int myop = 27;
   char *sec_sec = strdup("selinux_check_access");
+  char *tbl_con = sqlite3MPrintf(db, "%s", pSrc->a[0].zName);
   char *sec_con = strdup("security_context");
   char *tuple = strdup("db_tuple");
   char *action = strdup("select");
   int i_sec_con = strlen(sec_con) + 1; /* +1 per nExtra */
+  int i_tbl_con = strlen(tbl_con) + 1; /* +1 per nExtra */
   int i_tuple = strlen(tuple) + 1; /* +1 per nExtra */
   int i_action = strlen(action) + 1; /* +1 per nExtra */
   int i_ss = strlen(sec_sec) + 1; /* +1 per nExtra */
 
   Expr *pNewSS = sqlite3DbMallocZero(db, sizeof(Expr)+i_ss);
+  Expr *pNewTC = sqlite3DbMallocZero(db, sizeof(Expr)+i_tbl_con);
   Expr *pNewSC = sqlite3DbMallocZero(db, sizeof(Expr)+i_sec_con);
   Expr *pNewT = sqlite3DbMallocZero(db, sizeof(Expr)+i_tuple);
   Expr *pNewA = sqlite3DbMallocZero(db, sizeof(Expr)+i_action);
   Expr *pAnd = sqlite3DbMallocZero(db, sizeof(Expr));
+  Expr *pNewTT = sqlite3DbMallocZero(db, sizeof(Expr));
 
     pNewSS->op = (u8)153;
     pNewSS->iAgg = -1;
 
     pNewSC->op = (u8)27;
     pNewSC->iAgg = -1;
+
+    pNewTC->op = (u8)27;
+    pNewTC->iAgg = -1;
 
     pNewT->op = (u8)97;
     pNewT->iAgg = -1;
@@ -110,43 +117,59 @@ if ( pLimit != 0){
     pAnd->op = (u8)72;
     pAnd->iAgg = -1;
 
+    pNewTT->op = (u8)122;
+    pNewTT->iAgg = -1;
+
         pNewSS->u.zToken = (char*)&pNewSS[1];
         pNewSC->u.zToken = (char*)&pNewSC[1];
+        pNewTC->u.zToken = (char*)&pNewTC[1];
         pNewT->u.zToken = (char*)&pNewT[1];
         pNewA->u.zToken = (char*)&pNewA[1];
 
     memcpy(pNewSS->u.zToken, sec_sec, strlen(sec_sec));
     memcpy(pNewSC->u.zToken, sec_con, strlen(sec_con));
+    memcpy(pNewTC->u.zToken, tbl_con, strlen(tbl_con));
     memcpy(pNewT->u.zToken, tuple, strlen(tuple));
     memcpy(pNewA->u.zToken, action, strlen(action));
 
     pNewSS->u.zToken[i_ss - 1] = 0;
     pNewSC->u.zToken[i_sec_con - 1] = 0;
+    pNewTC->u.zToken[i_tbl_con - 1] = 0;
     pNewT->u.zToken[i_tuple - 1] = 0;
     pNewA->u.zToken[i_action - 1] = 0;
 
 
     pNewSS->nHeight = 1;
     pNewSC->nHeight = 1;
+    pNewTC->nHeight = 1;
     pNewT->nHeight = 1;
     pNewA->nHeight = 1;
 
+
+pNewTT->pLeft = pNewTC;
+pNewTT->pRight = pNewSC;
+sqlite3ExprSetHeight(pParse, pNewTT);
+
 ExprList *aa;
-aa = sqlite3ExprListAppend(pParse, 0, pNewSC);
+aa = sqlite3ExprListAppend(pParse, 0, pNewTT);
+//aa = sqlite3ExprListAppend(pParse, aa, pNewSC);
 aa = sqlite3ExprListAppend(pParse, aa, pNewT);
 aa = sqlite3ExprListAppend(pParse, aa, pNewA);
 
 pNewSS->x.pList = aa;
 sqlite3ExprSetHeight(pParse, pNewSS);
 
-pAnd->pLeft = pNewSS;
-pAnd->pRight = pWhere;
-sqlite3ExprSetHeight(pParse, pAnd);
-
-  pNew->pWhere = pAnd;
-
-}else
+    if(pWhere){
+	pAnd->pLeft = pNewSS;
+	pAnd->pRight = pWhere;
+	sqlite3ExprSetHeight(pParse, pAnd);
+	pNew->pWhere = pAnd;
+    }else{
+      pNew->pWhere = pNewSS;
+    }
+}else{
   pNew->pWhere = pWhere;
+}
 
   pNew->pGroupBy = pGroupBy;
   pNew->pHaving = pHaving;

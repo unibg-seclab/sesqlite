@@ -497,6 +497,22 @@ void sqlite3Insert(
     pSelect = 0;
   }
 
+//if(sqlite3StrICmp(pTabList->a.zName,"a") == 0){
+//
+//  int ii;
+//  pColumn->a = sqlite3ArrayAllocate(
+//      db,
+//      pColumn->a,
+//      sizeof(pColumn->a[0]),
+//      &pColumn->nId,
+//      &ii);
+//
+//  pColumn->a[ii].zName = sqlite3MPrintf("%s", "security_context");//sqlite3NameFromToken(db, pToken);
+//  //modify pList
+//}
+
+
+
   /* Locate the table into which we will be inserting new information.
   */
   assert( pTabList->nSrc==1 );
