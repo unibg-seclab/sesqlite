@@ -114,6 +114,7 @@ int checkAccess(sqlite3 *db, const char *dbname, const char *table, const char *
 
 	assert(tclass <= NELEMS(access_vector));
 
+	int *res = NULL;
 	int id = getContext(db, dbname, tclass, table, column);
 	assert(id != 0);
 
@@ -122,19 +123,27 @@ int checkAccess(sqlite3 *db, const char *dbname, const char *table, const char *
 		access_vector[tclass].c_code,
 		access_vector[tclass].perm[perm].p_code);
 
-	int *res = seSQLiteHashFind(avc, NULL, key);
-	if (res == NULL) {
-		res = sqlite3_malloc(sizeof(int));
-		int *value = sqlite3_malloc(sizeof(int));
-		*value = id;
-		char *ttcon = seSQLiteBiHashFind(hash_id, value, sizeof(int));
-		sqlite3Dequote(ttcon);
-		*res = selinux_check_access(scon, ttcon, access_vector[tclass].c_name,
-		    access_vector[tclass].perm[perm].p_name, NULL);
-
-		seSQLiteHashInsert(avc, NULL, key, res, 0, 0);
-	}
-
+#ifdef USE_AVC
+    res = seSQLiteHashFind(avc, NULL, key);
+    if (res == NULL) {
+	res = sqlite3_malloc(sizeof(int));
+	int *value = sqlite3_malloc(sizeof(int));
+	*value = id;
+	char *ttcon = seSQLiteBiHashFind(hash_id, value, sizeof(int));
+	sqlite3Dequote(ttcon);
+	*res = selinux_check_access(scon, ttcon, access_vector[tclass].c_name,
+	    access_vector[tclass].perm[perm].p_name, NULL); 
+	seSQLiteHashInsert(avc, NULL, key, res, 0, 0);
+    }
+#else
+    res = sqlite3_malloc(sizeof(int));
+    int *value = sqlite3_malloc(sizeof(int));
+    *value = id;
+    char *ttcon = seSQLiteBiHashFind(hash_id, value, sizeof(int));
+    sqlite3Dequote(ttcon);
+    *res = selinux_check_access(scon, ttcon, access_vector[tclass].c_name,
+	access_vector[tclass].perm[perm].p_name, NULL);
+#endif
 	// DO NOT FREE key AND res
 	return 0 == *res;
 }
@@ -630,12 +639,14 @@ int initialize_authorizer(sqlite3 *db){
 
     int rc = SQLITE_OK;
 
+#ifdef USE_AVC
     /* initialize avc cache */
     avc = sqlite3_malloc(sizeof(seSQLiteHash));
     if( !avc )
 	return SQLITE_NOMEM;
     else
 	seSQLiteHashInit(avc, SESQLITE_HASH_INT, 0); /* init avc */
+#endif
 
     rc = sqlite3_prepare_v2(db,
 	"INSERT INTO selinux_id(security_context, security_label) values(?1, ?2);", -1,
