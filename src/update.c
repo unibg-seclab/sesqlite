@@ -242,6 +242,8 @@ sqlite3ExprSetHeight(pParse, pFName);
 
   if(pWhere)
     pWhere = sqlite3ExprAnd(db, pNewWhere, pWhere);
+  else
+      pWhere = pNewWhere;
 }
 /* ------------------------------------------------------------ */
 
