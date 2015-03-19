@@ -444,6 +444,7 @@ static void selinuxCheckAccessFunction(sqlite3_context *context, int argc,
 
     int *res;
     int id = 0;
+    char *ttcon = NULL;
     id = sqlite3_value_int(argv[0]);
     assert(id != 0);
 
@@ -474,7 +475,7 @@ static void selinuxCheckAccessFunction(sqlite3_context *context, int argc,
 	res = sqlite3_malloc(sizeof(int));
 	int *value = sqlite3_malloc(sizeof(int));
 	*value = id;
-    	char *ttcon = seSQLiteBiHashFind(hash_id, value, sizeof(int));
+    	ttcon = seSQLiteBiHashFind(hash_id, value, sizeof(int));
 	*res = selinux_check_access(scon, /* source security context */
 	    ttcon, /* target security context */
 	    argv[1]->z, /* target security class string */
@@ -484,8 +485,11 @@ static void selinuxCheckAccessFunction(sqlite3_context *context, int argc,
 	seSQLiteHashInsert(avc, NULL, key, res, 0, 0);
     }
 #else
+    int *value = sqlite3_malloc(sizeof(int));
+    *value = id;
+    ttcon = seSQLiteBiHashFind(hash_id, value, sizeof(int));
     *res = selinux_check_access(scon, /* source security context */
-	argv[0]->z, /* target security context */
+	ttcon, /* target security context */
 	argv[1]->z, /* target security class string */
 	argv[2]->z, /* requested permissions string */
 	NULL /* auxiliary audit data */
@@ -493,9 +497,10 @@ static void selinuxCheckAccessFunction(sqlite3_context *context, int argc,
 #endif
 
 #ifdef SQLITE_DEBUG
-    fprintf(stdout, "table: %s, context: %s => %d\n", 
+    fprintf(stdout, "table: %s, context: %s, action: %s => %d\n", 
 	    argv[3]->z, 
-	    scon,
+	    ttcon, 
+	    argv[2]->z,
 	    *res);
 #endif
 
