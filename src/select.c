@@ -78,95 +78,91 @@ Select *sqlite3SelectNew(
   pNew->pSrc = pSrc;
 
 if ( pLimit != 0){
- 
-  int myop = 27;
-  char *sec_sec = strdup("selinux_check_access");
-  char *tbl_con = sqlite3MPrintf(db, "%s", pSrc->a[0].zName);
-  char *sec_con = strdup("security_context");
-  char *tuple = strdup("db_tuple");
-  char *action = strdup("select");
-  int i_sec_con = strlen(sec_con) + 1; /* +1 per nExtra */
-  int i_tbl_con = strlen(tbl_con) + 1; /* +1 per nExtra */
-  int i_tuple = strlen(tuple) + 1; /* +1 per nExtra */
-  int i_action = strlen(action) + 1; /* +1 per nExtra */
-  int i_ss = strlen(sec_sec) + 1; /* +1 per nExtra */
 
-  Expr *pNewSS = sqlite3DbMallocZero(db, sizeof(Expr)+i_ss);
-  Expr *pNewTC = sqlite3DbMallocZero(db, sizeof(Expr)+i_tbl_con);
-  Expr *pNewSC = sqlite3DbMallocZero(db, sizeof(Expr)+i_sec_con);
-  Expr *pNewT = sqlite3DbMallocZero(db, sizeof(Expr)+i_tuple);
-  Expr *pNewA = sqlite3DbMallocZero(db, sizeof(Expr)+i_action);
-  Expr *pAnd = sqlite3DbMallocZero(db, sizeof(Expr));
-  Expr *pNewTT = sqlite3DbMallocZero(db, sizeof(Expr));
+  char *f_name = sqlite3MPrintf(db, "%s", "selinux_check_access");
+  char *f_column = sqlite3MPrintf(db, "%s", "security_context");
+  char *f_class = sqlite3MPrintf(db, "%s", "db_tuple");
+  char *f_action = sqlite3MPrintf(db, "%s", "select");
 
-    pNewSS->op = (u8)153;
-    pNewSS->iAgg = -1;
+  int i;
+  for(i = 0; i < pSrc->nAlloc; i++){
+      Expr *pFName = sqlite3DbMallocZero(db, sizeof(Expr) + strlen(f_name) + 1);
+      Expr *pFTable = sqlite3DbMallocZero(db, sizeof(Expr) + strlen(pSrc->a[i].zName) + 1);
+      Expr *pFColumn = sqlite3DbMallocZero(db, sizeof(Expr) + strlen(f_column) + 1);
+      Expr *pFClass = sqlite3DbMallocZero(db, sizeof(Expr) + strlen(f_class) + 1);
+      Expr *pFAction = sqlite3DbMallocZero(db, sizeof(Expr) + strlen(f_action) + 1);
+      Expr *pFDebug = sqlite3DbMallocZero(db, sizeof(Expr) + strlen(pSrc->a[i].zName) + 1);
 
-    pNewSC->op = (u8)27;
-    pNewSC->iAgg = -1;
+      Expr *pFunction = sqlite3DbMallocZero(db, sizeof(Expr));
 
-    pNewTC->op = (u8)27;
-    pNewTC->iAgg = -1;
+    pFName->op = (u8)153; 
+    pFName->iAgg = -1;
 
-    pNewT->op = (u8)97;
-    pNewT->iAgg = -1;
+    pFTable->op = (u8)27;
+    pFTable->iAgg = -1;
 
-    pNewA->op = (u8)97;
-    pNewA->iAgg = -1;
+    pFColumn->op = (u8)27;
+    pFColumn->iAgg = -1;
 
-    pAnd->op = (u8)72;
-    pAnd->iAgg = -1;
+    pFClass->op = (u8)97;
+    pFClass->iAgg = -1;
 
-    pNewTT->op = (u8)122;
-    pNewTT->iAgg = -1;
+    pFAction->op = (u8)97;
+    pFAction->iAgg = -1;
 
-        pNewSS->u.zToken = (char*)&pNewSS[1];
-        pNewSC->u.zToken = (char*)&pNewSC[1];
-        pNewTC->u.zToken = (char*)&pNewTC[1];
-        pNewT->u.zToken = (char*)&pNewT[1];
-        pNewA->u.zToken = (char*)&pNewA[1];
+    pFDebug->op = (u8)97;
+    pFDebug->iAgg = -1;
 
-    memcpy(pNewSS->u.zToken, sec_sec, strlen(sec_sec));
-    memcpy(pNewSC->u.zToken, sec_con, strlen(sec_con));
-    memcpy(pNewTC->u.zToken, tbl_con, strlen(tbl_con));
-    memcpy(pNewT->u.zToken, tuple, strlen(tuple));
-    memcpy(pNewA->u.zToken, action, strlen(action));
+    pFunction->op = (u8)122;
+    pFunction->iAgg = -1;
 
-    pNewSS->u.zToken[i_ss - 1] = 0;
-    pNewSC->u.zToken[i_sec_con - 1] = 0;
-    pNewTC->u.zToken[i_tbl_con - 1] = 0;
-    pNewT->u.zToken[i_tuple - 1] = 0;
-    pNewA->u.zToken[i_action - 1] = 0;
+        pFName->u.zToken = (char*)&pFName[1];
+        pFTable->u.zToken = (char*)&pFTable[1];
+        pFColumn->u.zToken = (char*)&pFColumn[1];
+        pFClass->u.zToken = (char*)&pFClass[1];
+        pFAction->u.zToken = (char*)&pFAction[1];
+        pFDebug->u.zToken = (char*)&pFDebug[1];
 
+    memcpy(pFName->u.zToken, f_name, strlen(f_name));
+    memcpy(pFTable->u.zToken, pSrc->a[i].zName, strlen(pSrc->a[i].zName));
+    memcpy(pFColumn->u.zToken, f_column, strlen(f_column));
+    memcpy(pFClass->u.zToken, f_class, strlen(f_class));
+    memcpy(pFAction->u.zToken, f_action, strlen(f_action));
+    memcpy(pFDebug->u.zToken, pSrc->a[i].zName, strlen(pSrc->a[i].zName));
 
-    pNewSS->nHeight = 1;
-    pNewSC->nHeight = 1;
-    pNewTC->nHeight = 1;
-    pNewT->nHeight = 1;
-    pNewA->nHeight = 1;
+    pFName->u.zToken[strlen(f_name)] = 0;
+    pFTable->u.zToken[strlen(pSrc->a[i].zName)] = 0;
+    pFColumn->u.zToken[strlen(f_column)] = 0;
+    pFClass->u.zToken[strlen(f_class)] = 0;
+    pFAction->u.zToken[strlen(f_action)] = 0;
+    pFDebug->u.zToken[strlen(pSrc->a[i].zName)] = 0;
 
+    pFName->nHeight = 1;
+    pFTable->nHeight = 1;
+    pFColumn->nHeight = 1;
+    pFClass->nHeight = 1;
+    pFAction->nHeight = 1;
+    pFDebug->nHeight = 1;
 
-pNewTT->pLeft = pNewTC;
-pNewTT->pRight = pNewSC;
-sqlite3ExprSetHeight(pParse, pNewTT);
+    sqlite3ExprAttachSubtrees(db, pFunction, pFTable, pFColumn);
 
-ExprList *aa;
-aa = sqlite3ExprListAppend(pParse, 0, pNewTT);
-//aa = sqlite3ExprListAppend(pParse, aa, pNewSC);
-aa = sqlite3ExprListAppend(pParse, aa, pNewT);
-aa = sqlite3ExprListAppend(pParse, aa, pNewA);
+ExprList *pExprFunction;
+pExprFunction = sqlite3ExprListAppend(pParse, 0, pFunction);
+pExprFunction = sqlite3ExprListAppend(pParse, pExprFunction, pFClass);
+pExprFunction = sqlite3ExprListAppend(pParse, pExprFunction, pFAction);
+pExprFunction = sqlite3ExprListAppend(pParse, pExprFunction, pFDebug);
 
-pNewSS->x.pList = aa;
-sqlite3ExprSetHeight(pParse, pNewSS);
+pFName->x.pList = pExprFunction;
+sqlite3ExprSetHeight(pParse, pFName);
 
-    if(pWhere){
-	pAnd->pLeft = pNewSS;
-	pAnd->pRight = pWhere;
-	sqlite3ExprSetHeight(pParse, pAnd);
-	pNew->pWhere = pAnd;
-    }else{
-      pNew->pWhere = pNewSS;
-    }
+	if(pNew->pWhere)
+	    pNew->pWhere = sqlite3ExprAnd(db, pFName, pNew->pWhere);
+	else
+	    pNew->pWhere = pFName;
+
+  }
+    if(pWhere)
+	    pNew->pWhere = sqlite3ExprAnd(db, pNew->pWhere, pWhere);
 }else{
   pNew->pWhere = pWhere;
 }

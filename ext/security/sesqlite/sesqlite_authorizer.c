@@ -4,7 +4,7 @@
 
 #include "sesqlite_authorizer.h"
 
-#define USE_AVC
+//#define USE_AVC
 
 /* prepared statements to query schema sesqlite_master (bind it before use) */
 sqlite3_stmt *stmt_insert_context;
@@ -114,6 +114,7 @@ int checkAccess(sqlite3 *db, const char *dbname, const char *table, const char *
 
 	assert(tclass <= NELEMS(access_vector));
 
+	int *res = NULL;
 	int id = getContext(db, dbname, tclass, table, column);
 	assert(id != 0);
 
@@ -122,19 +123,27 @@ int checkAccess(sqlite3 *db, const char *dbname, const char *table, const char *
 		access_vector[tclass].c_code,
 		access_vector[tclass].perm[perm].p_code);
 
-	int *res = seSQLiteHashFind(avc, NULL, key);
-	if (res == NULL) {
-		res = sqlite3_malloc(sizeof(int));
-		int *value = sqlite3_malloc(sizeof(int));
-		*value = id;
-		char *ttcon = seSQLiteBiHashFind(hash_id, value, sizeof(int));
-		sqlite3Dequote(ttcon);
-		*res = selinux_check_access(scon, ttcon, access_vector[tclass].c_name,
-		    access_vector[tclass].perm[perm].p_name, NULL);
-
-		seSQLiteHashInsert(avc, NULL, key, res, 0, 0);
-	}
-
+#ifdef USE_AVC
+    res = seSQLiteHashFind(avc, NULL, key);
+    if (res == NULL) {
+	res = sqlite3_malloc(sizeof(int));
+	int *value = sqlite3_malloc(sizeof(int));
+	*value = id;
+	char *ttcon = seSQLiteBiHashFind(hash_id, value, sizeof(int));
+	sqlite3Dequote(ttcon);
+	*res = selinux_check_access(scon, ttcon, access_vector[tclass].c_name,
+	    access_vector[tclass].perm[perm].p_name, NULL); 
+	seSQLiteHashInsert(avc, NULL, key, res, 0, 0);
+    }
+#else
+    res = sqlite3_malloc(sizeof(int));
+    int *value = sqlite3_malloc(sizeof(int));
+    *value = id;
+    char *ttcon = seSQLiteBiHashFind(hash_id, value, sizeof(int));
+    sqlite3Dequote(ttcon);
+    *res = selinux_check_access(scon, ttcon, access_vector[tclass].c_name,
+	access_vector[tclass].perm[perm].p_name, NULL);
+#endif
 	// DO NOT FREE key AND res
 	return 0 == *res;
 }
@@ -484,9 +493,10 @@ static void selinuxCheckAccessFunction(sqlite3_context *context, int argc,
 #endif
 
 #ifdef SQLITE_DEBUG
-    fprintf(stdout, "selinux_check_access(%s, %s, %s, %s) => %d\n", scon, argv[0]->z,
-	argv[1]->z,
-	argv[2]->z, *res);
+    fprintf(stdout, "table: %s, context: %s => %d\n", 
+	    argv[3]->z, 
+	    scon,
+	    *res);
 #endif
 
     sqlite3_result_int(context, 0 == *res);
@@ -630,12 +640,14 @@ int initialize_authorizer(sqlite3 *db){
 
     int rc = SQLITE_OK;
 
+#ifdef USE_AVC
     /* initialize avc cache */
     avc = sqlite3_malloc(sizeof(seSQLiteHash));
     if( !avc )
 	return SQLITE_NOMEM;
     else
 	seSQLiteHashInit(avc, SESQLITE_HASH_INT, 0); /* init avc */
+#endif
 
     rc = sqlite3_prepare_v2(db,
 	"INSERT INTO selinux_id(security_context, security_label) values(?1, ?2);", -1,
@@ -659,7 +671,7 @@ int initialize_authorizer(sqlite3 *db){
         return rc;
 
     /* create the SQL function selinux_check_access */
-    rc = sqlite3_create_function(db, "selinux_check_access", 3,
+    rc = sqlite3_create_function(db, "selinux_check_access", 4,
 	SQLITE_UTF8 /* | SQLITE_DETERMINISTIC */, 0, selinuxCheckAccessFunction,
 	0, 0);
     if (rc != SQLITE_OK)
