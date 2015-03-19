@@ -77,14 +77,21 @@ Select *sqlite3SelectNew(
   if( pSrc==0 ) pSrc = sqlite3DbMallocZero(db, sizeof(*pSrc));
   pNew->pSrc = pSrc;
 
-if ( pLimit != 0){
+  int test = 0;
+  int i;
+  for(i = 0; i < pSrc->nAlloc; i++){
 
+    if(0!=sqlite3StrNICmp(pSrc->a[i].zName, "sqlite_", 7) && 0!=sqlite3StrNICmp(pSrc->a[i].zName, "selinux_", 8)) {
+     test = 1; 
+    }
+  }
+
+if(test){
   char *f_name = sqlite3MPrintf(db, "%s", "selinux_check_access");
   char *f_column = sqlite3MPrintf(db, "%s", "security_context");
   char *f_class = sqlite3MPrintf(db, "%s", "db_tuple");
   char *f_action = sqlite3MPrintf(db, "%s", "select");
 
-  int i;
   for(i = 0; i < pSrc->nAlloc; i++){
       Expr *pFName = sqlite3DbMallocZero(db, sizeof(Expr) + strlen(f_name) + 1);
       Expr *pFTable = sqlite3DbMallocZero(db, sizeof(Expr) + strlen(pSrc->a[i].zName) + 1);

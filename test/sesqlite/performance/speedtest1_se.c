@@ -484,7 +484,7 @@ void testset_main(void){
   speedtest1_exec("BEGIN");
   speedtest1_prepare(
     "SELECT count(*), avg(b), sum(length(c)) FROM t1\n"
-    " WHERE b BETWEEN ?1 AND ?2 AND selinux_check_access(security_context, 'db_tuple', 'select'); -- %d times", n
+    " WHERE b BETWEEN ?1 AND ?2; -- %d times", n
   );
   for(i=1; i<=n; i++){
     x1 = speedtest1_random()%maxb;
@@ -502,7 +502,7 @@ void testset_main(void){
   speedtest1_exec("BEGIN");
   speedtest1_prepare(
     "SELECT count(*), avg(b), sum(length(c)) FROM t1\n"
-    " WHERE c LIKE ?1 AND selinux_check_access(security_context, 'db_tuple', 'select'); -- %d times", n
+    " WHERE c LIKE ?1; -- %d times", n
   );
   for(i=1; i<=n; i++){
     x1 = speedtest1_random()%maxb;
@@ -521,7 +521,7 @@ void testset_main(void){
   speedtest1_begin_test(142, "%d SELECTS w/ORDER BY, unindexed", n);
   speedtest1_exec("BEGIN");
   speedtest1_prepare(
-    "SELECT a, b, c FROM t1 WHERE c LIKE ?1 AND selinux_check_access(security_context, 'db_tuple', 'select')\n"
+    "SELECT a, b, c FROM t1 WHERE c LIKE ?1\n"
     " ORDER BY a; -- %d times", n
   );
   for(i=1; i<=n; i++){
@@ -540,7 +540,7 @@ void testset_main(void){
   speedtest1_begin_test(145, "%d SELECTS w/ORDER BY and LIMIT, unindexed", n);
   speedtest1_exec("BEGIN");
   speedtest1_prepare(
-    "SELECT a, b, c FROM t1 WHERE c LIKE ?1 AND selinux_check_access(security_context, 'db_tuple', 'select')\n"
+    "SELECT a, b, c FROM t1 WHERE c LIKE ?1\n"
     " ORDER BY a LIMIT 10; -- %d times", n
   );
   for(i=1; i<=n; i++){
@@ -572,7 +572,7 @@ void testset_main(void){
   speedtest1_exec("BEGIN");
   speedtest1_prepare(
     "SELECT count(*), avg(b), sum(length(c)) FROM t1\n"
-    " WHERE b BETWEEN ?1 AND ?2 AND selinux_check_access(security_context, 'db_tuple', 'select'); -- %d times", n
+    " WHERE b BETWEEN ?1 AND ?2; -- %d times", n
   );
   for(i=1; i<=n; i++){
     x1 = speedtest1_random()%maxb;
@@ -590,7 +590,7 @@ void testset_main(void){
   speedtest1_exec("BEGIN");
   speedtest1_prepare(
     "SELECT count(*), avg(b), sum(length(c)) FROM t2\n"
-    " WHERE a BETWEEN ?1 AND ?2 AND selinux_check_access(security_context, 'db_tuple', 'select'); -- %d times", n
+    " WHERE a BETWEEN ?1 AND ?2; -- %d times", n
   );
   for(i=1; i<=n; i++){
     x1 = speedtest1_random()%maxb;
@@ -608,7 +608,7 @@ void testset_main(void){
   speedtest1_exec("BEGIN");
   speedtest1_prepare(
     "SELECT count(*), avg(b), sum(length(c)) FROM t1\n"
-    " WHERE c BETWEEN ?1 AND (?1||'~') AND selinux_check_access(security_context, 'db_tuple', 'select'); -- %d times", n
+    " WHERE c BETWEEN ?1 AND (?1||'~'); -- %d times", n
   );
   for(i=1; i<=n; i++){
     x1 = swizzle(i, maxb);
@@ -631,14 +631,14 @@ void testset_main(void){
     g.zNN, g.zPK, g.zNN, g.zNN, g.zWR);
   speedtest1_exec("CREATE INDEX t4b ON t4(b)");
   speedtest1_exec("CREATE INDEX t4c ON t4(c)");
-  speedtest1_exec("INSERT INTO t4(security_context, a, b, c) SELECT 8,a,b,c FROM t1 WHERE selinux_check_access(security_context, 'db_tuple', 'select')");
+  speedtest1_exec("INSERT INTO t4(security_context, a, b, c) SELECT 8,a,b,c FROM t1;");
   speedtest1_exec("COMMIT");
   speedtest1_end_test();
 
   n = sz;
   speedtest1_begin_test(190, "DELETE and REFILL one table", n);
   speedtest1_exec("DELETE FROM t2;");
-  speedtest1_exec("INSERT INTO t2(security_context, a, b, c) SELECT 8,a,b,c FROM t1 WHERE selinux_check_access(security_context, 'db_tuple', 'select');");
+  speedtest1_exec("INSERT INTO t2(security_context, a, b, c) SELECT 8,a,b,c FROM t1;");
   speedtest1_end_test();
 
 
@@ -657,7 +657,7 @@ void testset_main(void){
   speedtest1_begin_test(230, "%d UPDATES, numeric BETWEEN, indexed", n);
   speedtest1_exec("BEGIN");
   speedtest1_prepare(
-    "UPDATE t2 SET d=b*2 WHERE b BETWEEN ?1 AND ?2 AND selinux_check_access(security_context, 'db_tuple', 'select'); -- %d times", n
+    "UPDATE t2 SET d=b*2 WHERE b BETWEEN ?1 AND ?2; -- %d times", n
   );
   for(i=1; i<=n; i++){
     x1 = speedtest1_random()%maxb;
@@ -674,7 +674,7 @@ void testset_main(void){
   speedtest1_begin_test(240, "%d UPDATES of individual rows", n);
   speedtest1_exec("BEGIN");
   speedtest1_prepare(
-    "UPDATE t2 SET d=b*3 WHERE a=?1 AND selinux_check_access(security_context, 'db_tuple', 'select'); -- %d times", n
+    "UPDATE t2 SET d=b*3 WHERE a=?1; -- %d times", n
   );
   for(i=1; i<=n; i++){
     x1 = speedtest1_random()%sz + 1;
@@ -699,7 +699,7 @@ void testset_main(void){
   speedtest1_begin_test(270, "%d DELETEs, numeric BETWEEN, indexed", n);
   speedtest1_exec("BEGIN");
   speedtest1_prepare(
-    "DELETE FROM t2 WHERE b BETWEEN ?1 AND ?2 AND selinux_check_access(security_context, 'db_tuple', 'select'); -- %d times", n
+    "DELETE FROM t2 WHERE b BETWEEN ?1 AND ?2; -- %d times", n
   );
   for(i=1; i<=n; i++){
     x1 = speedtest1_random()%maxb + 1;
@@ -716,7 +716,7 @@ void testset_main(void){
   speedtest1_begin_test(280, "%d DELETEs of individual rows", n);
   speedtest1_exec("BEGIN");
   speedtest1_prepare(
-    "DELETE FROM t3 WHERE a=?1 AND selinux_check_access(security_context, 'db_tuple', 'select'); -- %d times", n
+    "DELETE FROM t3 WHERE a=?1; -- %d times", n
   );
   for(i=1; i<=n; i++){
     x1 = speedtest1_random()%sz + 1;
@@ -735,9 +735,9 @@ void testset_main(void){
   speedtest1_begin_test(300, "Refill a %d-row table using (b&1)==(a&1)", sz);
   speedtest1_exec("DELETE FROM t2;");
   speedtest1_exec("INSERT INTO t2(security_context,a,b,c)\n"
-                  " SELECT 8,a,b,c FROM t1  WHERE (b&1)==(a&1) AND selinux_check_access(security_context, 'db_tuple', 'select');");
+                  " SELECT 8,a,b,c FROM t1  WHERE (b&1)==(a&1);");
   speedtest1_exec("INSERT INTO t2(security_context,a,b,c)\n"
-                  " SELECT 8,a,b,c FROM t1  WHERE (b&1)<>(a&1) AND selinux_check_access(security_context, 'db_tuple', 'select');");
+                  " SELECT 8,a,b,c FROM t1  WHERE (b&1)<>(a&1);");
   speedtest1_end_test();
 
 
@@ -749,11 +749,7 @@ void testset_main(void){
     " WHERE t4.a BETWEEN ?1 AND ?2\n"
     "   AND t3.a=t4.b\n"
     "   AND t2.a=t3.b\n"
-    "   AND t1.c=t2.c\n"
-    "   AND selinux_check_access(t1.security_context, 'db_tuple', 'select')\n"
-    "   AND selinux_check_access(t2.security_context, 'db_tuple', 'select')\n"
-    "   AND selinux_check_access(t3.security_context, 'db_tuple', 'select')\n"
-    "   AND selinux_check_access(t4.security_context, 'db_tuple', 'select');"
+    "   AND t1.c=t2.c;"
   );
   for(i=1; i<=n; i++){
     x1 = speedtest1_random()%sz + 1;
@@ -769,7 +765,7 @@ void testset_main(void){
   speedtest1_prepare(
     "SELECT sum(a), max(c),\n"
     "       avg((SELECT a FROM t2 WHERE 5+t2.b=t1.b) AND rowid<?1), max(c)\n"
-    " FROM t1 WHERE rowid<?1 AND selinux_check_access(security_context, 'db_tuple', 'select');"
+    " FROM t1 WHERE rowid<?1;"
   );
   sqlite3_bind_int(g.pStmt, 1, est_square_root(g.szTest)*50);
   speedtest1_run();
@@ -1021,12 +1017,12 @@ void testset_rtree(int p1, int p2){
 
   speedtest1_begin_test(101, "Copy from rtree to a regular table");
   speedtest1_exec("CREATE TABLE t1(id INTEGER PRIMARY KEY,x0,x1,y0,y1,z0,z1)");
-  speedtest1_exec("INSERT INTO t1(security_context, id, x0, x1, y0, y1, z0, z1) SELECT 8,id,x0,x1,y0,y1,z0,z1 FROM rt1 WHERE selinux_check_access(security_context, 'db_tuple', 'select')");
+  speedtest1_exec("INSERT INTO t1(security_context, id, x0, x1, y0, y1, z0, z1) SELECT 8,id,x0,x1,y0,y1,z0,z1 FROM rt1");
   speedtest1_end_test();
 
   n = g.szTest*20;
   speedtest1_begin_test(110, "%d one-dimensional intersect slice queries", n);
-  speedtest1_prepare("SELECT count(*) FROM rt1 WHERE x0>=?1 AND x1<=?2 AND selinux_check_access(security_context, 'db_tuple', 'select')");
+  speedtest1_prepare("SELECT count(*) FROM rt1 WHERE x0>=?1 AND x1<=?2");
   iStep = mxCoord/n;
   for(i=0; i<n; i++){
     sqlite3_bind_int(g.pStmt, 1, i*iStep);
@@ -1039,7 +1035,7 @@ void testset_rtree(int p1, int p2){
   if( g.bVerify ){
     n = g.szTest*20;
     speedtest1_begin_test(111, "Verify result from 1-D intersect slice queries");
-    speedtest1_prepare("SELECT count(*) FROM t1 WHERE x0>=?1 AND x1<=?2 AND selinux_check_access(security_context, 'db_tuple', 'select')");
+    speedtest1_prepare("SELECT count(*) FROM t1 WHERE x0>=?1 AND x1<=?2");
     iStep = mxCoord/n;
     for(i=0; i<n; i++){
       sqlite3_bind_int(g.pStmt, 1, i*iStep);
@@ -1055,7 +1051,7 @@ void testset_rtree(int p1, int p2){
 
   n = g.szTest*20;
   speedtest1_begin_test(120, "%d one-dimensional overlap slice queries", n);
-  speedtest1_prepare("SELECT count(*) FROM rt1 WHERE y1>=?1 AND y0<=?2 AND selinux_check_access(security_context, 'db_tuple', 'select')");
+  speedtest1_prepare("SELECT count(*) FROM rt1 WHERE y1>=?1 AND y0<=?2");
   iStep = mxCoord/n;
   for(i=0; i<n; i++){
     sqlite3_bind_int(g.pStmt, 1, i*iStep);
@@ -1068,7 +1064,7 @@ void testset_rtree(int p1, int p2){
   if( g.bVerify ){
     n = g.szTest*20;
     speedtest1_begin_test(121, "Verify result from 1-D overlap slice queries");
-    speedtest1_prepare("SELECT count(*) FROM t1 WHERE y1>=?1 AND y0<=?2 AND selinux_check_access(security_context, 'db_tuple', 'select')");
+    speedtest1_prepare("SELECT count(*) FROM t1 WHERE y1>=?1 AND y0<=?2");
     iStep = mxCoord/n;
     for(i=0; i<n; i++){
       sqlite3_bind_int(g.pStmt, 1, i*iStep);
@@ -1086,7 +1082,7 @@ void testset_rtree(int p1, int p2){
   n = g.szTest*20;
   speedtest1_begin_test(125, "%d custom geometry callback queries", n);
   sqlite3_rtree_geometry_callback(g.db, "xslice", xsliceGeometryCallback, 0);
-  speedtest1_prepare("SELECT count(*) FROM rt1 WHERE id MATCH xslice(?1,?2) AND selinux_check_access(security_context, 'db_tuple', 'select')");
+  speedtest1_prepare("SELECT count(*) FROM rt1 WHERE id MATCH xslice(?1,?2)");
   iStep = mxCoord/n;
   for(i=0; i<n; i++){
     sqlite3_bind_int(g.pStmt, 1, i*iStep);
@@ -1102,7 +1098,7 @@ void testset_rtree(int p1, int p2){
   n = g.szTest*80;
   speedtest1_begin_test(130, "%d three-dimensional intersect box queries", n);
   speedtest1_prepare("SELECT count(*) FROM rt1 WHERE x1>=?1 AND x0<=?2"
-                     " AND y1>=?1 AND y0<=?2 AND z1>=?1 AND z0<=?2 AND selinux_check_access(security_context, 'db_tuple', 'select')");
+                     " AND y1>=?1 AND y0<=?2 AND z1>=?1 AND z0<=?2");
   iStep = mxCoord/n;
   for(i=0; i<n; i++){
     sqlite3_bind_int(g.pStmt, 1, i*iStep);
@@ -1114,7 +1110,7 @@ void testset_rtree(int p1, int p2){
 
   n = g.szTest*100;
   speedtest1_begin_test(140, "%d rowid queries", n);
-  speedtest1_prepare("SELECT * FROM rt1 WHERE id=?1 AND selinux_check_access(security_context, 'db_tuple', 'select')");
+  speedtest1_prepare("SELECT * FROM rt1 WHERE id=?1");
   for(i=1; i<=n; i++){
     sqlite3_bind_int(g.pStmt, 1, i);
     speedtest1_run();
