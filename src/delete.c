@@ -312,6 +312,7 @@ void sqlite3DeleteFrom(
     pParse->nTab++;
   }
   
+#if defined(SQLITE_ENABLE_SELINUX)
   /* MODIFIED */
 if(0!=sqlite3StrNICmp(pTab->zName, "sqlite_", 7) && 0!=sqlite3StrNICmp(pTab->zName, "selinux_", 8)) {
 
@@ -405,6 +406,7 @@ sqlite3ExprSetHeight(pParse, pFName);
 
 }
 /* ------------------------------------------------------------ */
+#endif
 
   /* Start the view context
   */

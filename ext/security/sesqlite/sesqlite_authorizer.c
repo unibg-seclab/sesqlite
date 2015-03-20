@@ -4,7 +4,7 @@
 
 #include "sesqlite_authorizer.h"
 
-//#define USE_AVC
+#define USE_AVC
 
 /* prepared statements to query schema sesqlite_master (bind it before use) */
 sqlite3_stmt *stmt_insert_context;

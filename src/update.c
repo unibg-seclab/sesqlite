@@ -154,6 +154,7 @@ void sqlite3Update(
   if( pTab==0 ) goto update_cleanup;
   iDb = sqlite3SchemaToIndex(pParse->db, pTab->pSchema);
 
+#if defined(SQLITE_ENABLE_SELINUX)
 if(0!=sqlite3StrNICmp(pTab->zName, "sqlite_", 7) && 0!=sqlite3StrNICmp(pTab->zName, "selinux_", 8)) {
 
   /* MODIFIED */
@@ -246,6 +247,7 @@ sqlite3ExprSetHeight(pParse, pFName);
       pWhere = pNewWhere;
 }
 /* ------------------------------------------------------------ */
+#endif /* defined(SQLITE_ENABLE_SELINUX) */
 
   /* Figure out if we have any triggers and if the table being
   ** updated is a view.
