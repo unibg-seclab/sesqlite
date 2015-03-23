@@ -29,5 +29,6 @@ allow { unconfined_t initrc_t } app_data_db_t:db_table { create select insert de
 allow { unconfined_t initrc_t } { unconfined_t initrc_t }:db_column { select update insert drop };
 allow { unconfined_t initrc_t } { unconfined_t initrc_t }:db_table { create select update insert delete setattr getattr drop };
 allow { unconfined_t initrc_t } self:db_tuple { select update insert delete };
+allow { unconfined_t initrc_t } sqlite_tuple_t:db_tuple { select update insert delete };
 
 
