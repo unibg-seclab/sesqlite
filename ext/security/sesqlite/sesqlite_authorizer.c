@@ -538,11 +538,26 @@ int create_security_context_column(
 	    sqlite3ErrorMsg(pParse, "object name reserved for internal use: %s", zName);
 	    sqlite3DbFree(db, zName);
 	    sqlite3DbFree(db, *zColumn);
-	    return;
+	    return SQLITE_ERROR;
 	}
     }
 
+    if( (p->nCol & 0x7)==0 ){
+	Column *aNew;
+	aNew = sqlite3DbRealloc(db,p->aCol,(p->nCol+8)*sizeof(p->aCol[0]));
+	if( aNew==0 ){
+	    sqlite3ErrorMsg(pParse, "memory error");
+	    sqlite3DbFree(db, zName);
+	    sqlite3DbFree(db, *zColumn);
+	    return SQLITE_ERROR;
+	}
+	p->aCol = aNew;
+    }
+    pCol = &p->aCol[p->nCol];
+    memset(pCol, 0, sizeof(p->aCol[0]));
     pCol->zName = zName;
+    p->nCol++;
+
     zType = sqlite3MPrintf(db, SECURITY_CONTEXT_COLUMN_TYPE);
     pCol->zType = sqlite3MPrintf(db, zType);
     pCol->affinity = SQLITE_AFF_INTEGER;

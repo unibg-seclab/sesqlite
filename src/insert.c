@@ -14,6 +14,11 @@
 */
 #include "sqliteInt.h"
 
+
+#ifdef SQLITE_ENABLE_SELINUX
+# include "sesqlite.h"
+#endif
+
 /*
 ** Generate code that will 
 **
@@ -497,22 +502,6 @@ void sqlite3Insert(
     pSelect = 0;
   }
 
-//if(sqlite3StrICmp(pTabList->a.zName,"a") == 0){
-//
-//  int ii;
-//  pColumn->a = sqlite3ArrayAllocate(
-//      db,
-//      pColumn->a,
-//      sizeof(pColumn->a[0]),
-//      &pColumn->nId,
-//      &ii);
-//
-//  pColumn->a[ii].zName = sqlite3MPrintf("%s", "security_context");//sqlite3NameFromToken(db, pToken);
-//  //modify pList
-//}
-
-
-
   /* Locate the table into which we will be inserting new information.
   */
   assert( pTabList->nSrc==1 );
@@ -530,6 +519,38 @@ void sqlite3Insert(
     goto insert_cleanup;
   }
   withoutRowid = !HasRowid(pTab);
+
+#if defined(SQLITE_ENABLE_SELINUX)
+if(0!=sqlite3StrNICmp(zTab, "sqlite_", 7) && 0!=sqlite3StrNICmp(zTab, "selinux_", 8)) {
+
+    if(pColumn){
+	int idx;
+	pColumn->a = sqlite3ArrayAllocate(
+	  db,
+	  pColumn->a,
+	  sizeof(pColumn->a[0]),
+	  &pColumn->nId,
+	  &idx
+	);
+	pColumn->a[idx].zName = sqlite3MPrintf(db, "%s", SECURITY_CONTEXT_COLUMN_NAME);
+
+    }
+
+    Expr *pSecurityValue = sqlite3DbMallocZero(db, sizeof(Expr));
+    pSecurityValue->op = (u8)132; 
+    pSecurityValue->iAgg = -1;
+    pSecurityValue->flags |= EP_IntValue;
+    //pSecurityValue->u.zToken = (char*)&pSecurityValue[1];
+    //memcpy(pSecurityValue->u.zToken, val, strlen(val));
+    pSecurityValue->u.iValue = lookup_security_context(hash_id, (char *) zDb, zTab); /* to assign a valid value  */
+    pSecurityValue->nHeight = 1;
+    if(pSelect)
+	pSelect->pEList = sqlite3ExprListAppend(pParse, pSelect->pEList, pSecurityValue);
+    else
+	pList = sqlite3ExprListAppend(pParse, pList, pSecurityValue);
+
+}
+#endif
 
   /* Figure out if we have any triggers and if the table being
   ** inserted into is a view
@@ -741,13 +762,13 @@ void sqlite3Insert(
     }
   }
 
-#ifdef SQLITE_ENABLE_SELINUX
-  else {
-    for(i=0; i<pTab->nCol; i++){
-      nHidden += (IsHiddenColumn(&pTab->aCol[i]) ? 1 : 0);
-    }
-  }
-#endif /* SQLITE_ENABLE_SELINUX */
+//#ifdef SQLITE_ENABLE_SELINUX
+//  else {
+//    for(i=0; i<pTab->nCol; i++){
+//      nHidden += (IsHiddenColumn(&pTab->aCol[i]) ? 1 : 0);
+//    }
+//  }
+//#endif /* SQLITE_ENABLE_SELINUX */
 
   if( pColumn==0 && nColumn && nColumn!=(pTab->nCol-nHidden) ){
     sqlite3ErrorMsg(pParse, 
@@ -942,11 +963,7 @@ void sqlite3Insert(
       }
       if( pColumn==0 ){
         if( IsHiddenColumn(&pTab->aCol[i]) ){
-
-#if	!defined(SQLITE_ENABLE_SELINUX)
           assert( IsVirtual(pTab) );
-#endif
-
           j = -1;
           nHidden++;
         }else{

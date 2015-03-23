@@ -1506,6 +1506,9 @@ struct Table {
 #define TF_Virtual         0x10    /* Is a virtual table */
 #define TF_WithoutRowid    0x20    /* No rowid used. PRIMARY KEY is the key */
 
+#ifdef SQLITE_ENABLE_SELINUX
+#  define IsSecurityColumn(X) (sqlite3StrNICmp((X)->zName, SECURITY_CONTEXT_COLUMN_NAME, 16) == 0)
+#endif
 
 /*
 ** Test to see whether or not a table is a virtual table.  This is

@@ -87,7 +87,7 @@ Select *sqlite3SelectNew(
   }
 
 #if defined(SQLITE_ENABLE_SELINUX)
-if(test){
+if(test && selFlags != 128){
   char *f_name = sqlite3MPrintf(db, "%s", "selinux_check_access");
   char *f_column = sqlite3MPrintf(db, "%s", "security_context");
   char *f_class = sqlite3MPrintf(db, "%s", "db_tuple");
@@ -174,6 +174,7 @@ sqlite3ExprSetHeight(pParse, pFName);
 }else{
   pNew->pWhere = pWhere;
 }
+
 #else
   pNew->pWhere = pWhere;
 #endif /* defined(SQLITE_ENABLE_SELINUX) */
@@ -4165,10 +4166,14 @@ static int selectExpander(Walker *pWalker, Select *p){
             ** for virtual tables), do not include it in the expanded
             ** result-set list.
             */
-            if( IsHiddenColumn(&pTab->aCol[j]) ){
-#ifndef SQLITE_ENABLE_SELINUX
-              assert(IsVirtual(pTab));
+#ifdef SQLITE_ENABLE_SELINUX
+if( IsSecurityColumn(&pTab->aCol[j]) ){
+  continue;
+}
 #endif /* SQLITE_ENABLE_SELINUX */
+
+            if( IsHiddenColumn(&pTab->aCol[j]) ){
+              assert(IsVirtual(pTab));
               continue;
             }
             tableSeen = 1;

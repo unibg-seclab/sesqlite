@@ -1513,9 +1513,8 @@ static char *createTableStmt(sqlite3 *db, Table *p){
 
 //#if defined(SQLITE_ENABLE_SELINUX)
 //  for(pCol=p->aCol, i=0; i<p->nCol; i++, pCol++){
-//      if(0 ==sqlite3StrNICmp(pCol->zName, "security_context", 16)) {
+//      if(0 ==sqlite3StrNICmp(pCol->zName, SECURITY_CONTEXT_COLUMN_NAME, 16)) {
 //	  n += identLength(pCol->zType) + 5;
-//	  n += identLength(pCol->zDflt) + 5; /*check the offset*/
 //      }
 //  }
 //#endif
@@ -1926,7 +1925,7 @@ void sqlite3EndTable(
     if( !pNew ) 
 	return;
     pNew->nRef = 1;
-    pNew->nCol = p->nCol + 1; /* add security context */
+    pNew->nCol = p->nCol; /* add security context */
     assert( pNew->nCol>0 );
     nAlloc = (((pNew->nCol-1)/8)*8)+8;
     assert( nAlloc>=pNew->nCol && nAlloc%8==0 && nAlloc-pNew->nCol<8 );
@@ -1936,10 +1935,10 @@ void sqlite3EndTable(
 	db->mallocFailed = 1;
 	return;
     }
-    memcpy(&pNew->aCol[1], p->aCol, sizeof(Column) * p->nCol);
-    for(i=1; i<pNew->nCol; i++){
+    memcpy(pNew->aCol, p->aCol, sizeof(Column) * p->nCol);
+    for(i=0; i<pNew->nCol; i++){
 	Column *pCol = &pNew->aCol[i];
-	pCol->zName = sqlite3DbStrDup(db, pCol->zName);
+	pCol->zName = sqlite3MPrintf(db, "%s", pCol->zName);
 	pCol->zColl = 0;
 	pCol->zType = 0;
 	pCol->pDflt = 0;
@@ -1947,11 +1946,6 @@ void sqlite3EndTable(
     }
     pNew->pSchema = db->aDb[iDb].pSchema;
     pNew->addColOffset = p->addColOffset;
-    pNew->nRef = 1;
-
-    Column *pCol = NULL;
-    pCol = &pNew->aCol[0];
-    memset(pCol, 0, sizeof(p->aCol[0]));
 
     if( db->xAddExtraColumn ){
 	rc = db->xAddExtraColumn(db->pAddColumnArg, NULL, code, pNew, &zColumn);
@@ -1987,36 +1981,22 @@ void sqlite3EndTable(
         if( pCons->z==0 ){
             pCons = pEnd2;
         }
-        /* In order to put the security_context column as the first column,
-         * split the CREATE TABLE statement */
 
-	/* find the first '(' */
-	char bracket = '(';
-	char *p_bracket = strchr(pParse->sNameToken.z, bracket);
-	int position = p_bracket - pParse->sNameToken.z;
-	
-	/* copy the first part of the entire CREATE statement */
-	char *f_token = NULL;
-	f_token = sqlite3_malloc(position * sizeof(char));
-	strncpy(f_token, pParse->sNameToken.z, position);
-	
+	/* Add security_context column as the latest column of the new table */
+	n = strlen(pParse->sNameToken.z) + strlen(zColumn) + 3; /*terminator + separator and space*/
+	pStmt = strlen(pParse->sNameToken.z) - strlen(pCons->z);
+	zNewStmt = (char *) sqlite3_malloc(n * sizeof(char));
+	memset(zNewStmt, '\0', n * sizeof(char));
 
-        n = strlen(pParse->sNameToken.z) + strlen(zColumn) + 3; /*terminator + separator and space*/
-        pStmt = strlen(pParse->sNameToken.z) - strlen(pCons->z);
-        zNewStmt = (char *) sqlite3_malloc(n * sizeof(char));
-        memset(zNewStmt, '\0', n * sizeof(char));
+	strncpy(zNewStmt, pParse->sNameToken.z, pStmt);
+	strncat(zNewStmt, ", ", 2); /* add separator */
+	strncat(zNewStmt, zColumn, strlen(zColumn)); 
+	strncat(zNewStmt, pCons->z, pCons->n); 
 
-	/* concatenate */
-        strncpy(zNewStmt, f_token, position);
-        strncat(zNewStmt, "(", 1);
-        strncat(zNewStmt, zColumn, strlen(zColumn));
-        strncat(zNewStmt, ", ", 2); /* add separator */
-        strncat(zNewStmt, &(p_bracket[strlen(p_bracket) - (strlen(p_bracket) - 1)]), strlen(p_bracket) - 1); /* do not copy '(' */
-	
-        zStmt = sqlite3MPrintf(db, "CREATE %s %.*s", zType2, n, zNewStmt);
-        sqlite3_free(zNewStmt);
-        sqlite3_free(f_token);
-        sqlite3_free(zColumn);
+	zStmt = sqlite3MPrintf(db, "CREATE %s %.*s", zType2, n, zNewStmt);
+	sqlite3_free(zNewStmt);
+	sqlite3_free(zColumn);
+
       }else{
 #endif
 
