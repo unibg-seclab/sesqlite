@@ -430,7 +430,7 @@ void testset_main(void){
   speedtest1_exec("BEGIN");
   speedtest1_exec("CREATE TABLE t1(a INTEGER %s, b INTEGER %s, c TEXT %s);",
                   g.zNN, g.zNN, g.zNN);
-  speedtest1_prepare("INSERT INTO t1(security_context, a, b, c) VALUES(8,?1,?2,?3); --  %d times", n);
+  speedtest1_prepare("INSERT INTO t1 VALUES(?1,?2,?3); --  %d times", n);
   for(i=1; i<=n; i++){
     x1 = swizzle(i,maxb);
     speedtest1_numbername(x1, zNum, sizeof(zNum));
@@ -448,7 +448,7 @@ void testset_main(void){
   speedtest1_exec("BEGIN");
   speedtest1_exec("CREATE TABLE t2(a INTEGER %s %s, b INTEGER %s, c TEXT %s) %s",
                    g.zNN, g.zPK, g.zNN, g.zNN, g.zWR);
-  speedtest1_prepare("INSERT INTO t2(security_context, a, b, c) VALUES(8,?1,?2,?3); -- %d times", n);
+  speedtest1_prepare("INSERT INTO t2 VALUES(?1,?2,?3); -- %d times", n);
   for(i=1; i<=n; i++){
     x1 = swizzle(i,maxb);
     speedtest1_numbername(x1, zNum, sizeof(zNum));
@@ -466,7 +466,7 @@ void testset_main(void){
   speedtest1_exec("BEGIN");
   speedtest1_exec("CREATE TABLE t3(a INTEGER %s %s, b INTEGER %s, c TEXT %s) %s",
                    g.zNN, g.zPK, g.zNN, g.zNN, g.zWR);
-  speedtest1_prepare("INSERT INTO t3(security_context, a, b, c) VALUES(8,?1,?2,?3); -- %d times", n);
+  speedtest1_prepare("INSERT INTO t3 VALUES(?1,?2,?3); -- %d times", n);
   for(i=1; i<=n; i++){
     x1 = swizzle(i,maxb);
     speedtest1_numbername(x1, zNum, sizeof(zNum));
@@ -631,14 +631,14 @@ void testset_main(void){
     g.zNN, g.zPK, g.zNN, g.zNN, g.zWR);
   speedtest1_exec("CREATE INDEX t4b ON t4(b)");
   speedtest1_exec("CREATE INDEX t4c ON t4(c)");
-  speedtest1_exec("INSERT INTO t4(security_context, a, b, c) SELECT 8,a,b,c FROM t1;");
+  speedtest1_exec("INSERT INTO t4 SELECT * FROM t1");
   speedtest1_exec("COMMIT");
   speedtest1_end_test();
 
   n = sz;
   speedtest1_begin_test(190, "DELETE and REFILL one table", n);
   speedtest1_exec("DELETE FROM t2;");
-  speedtest1_exec("INSERT INTO t2(security_context, a, b, c) SELECT 8,a,b,c FROM t1;");
+  speedtest1_exec("INSERT INTO t2 SELECT * FROM t1;");
   speedtest1_end_test();
 
 
@@ -728,16 +728,16 @@ void testset_main(void){
 
 
   speedtest1_begin_test(290, "Refill two %d-row tables using REPLACE", sz);
-  speedtest1_exec("REPLACE INTO t2(security_context,a,b,c) SELECT security_context,a,b,c FROM t1");
-  speedtest1_exec("REPLACE INTO t3(security_context,a,b,c) SELECT security_context,a,b,c FROM t1");
+  speedtest1_exec("REPLACE INTO t2(a,b,c) SELECT a,b,c FROM t1");
+  speedtest1_exec("REPLACE INTO t3(a,b,c) SELECT a,b,c FROM t1");
   speedtest1_end_test();
 
   speedtest1_begin_test(300, "Refill a %d-row table using (b&1)==(a&1)", sz);
   speedtest1_exec("DELETE FROM t2;");
-  speedtest1_exec("INSERT INTO t2(security_context,a,b,c)\n"
-                  " SELECT 8,a,b,c FROM t1  WHERE (b&1)==(a&1);");
-  speedtest1_exec("INSERT INTO t2(security_context,a,b,c)\n"
-                  " SELECT 8,a,b,c FROM t1  WHERE (b&1)<>(a&1);");
+  speedtest1_exec("INSERT INTO t2(a,b,c)\n"
+                  " SELECT a,b,c FROM t1  WHERE (b&1)==(a&1);");
+  speedtest1_exec("INSERT INTO t2(a,b,c)\n"
+                  " SELECT a,b,c FROM t1  WHERE (b&1)<>(a&1);");
   speedtest1_end_test();
 
 
@@ -749,7 +749,7 @@ void testset_main(void){
     " WHERE t4.a BETWEEN ?1 AND ?2\n"
     "   AND t3.a=t4.b\n"
     "   AND t2.a=t3.b\n"
-    "   AND t1.c=t2.c;"
+    "   AND t1.c=t2.c"
   );
   for(i=1; i<=n; i++){
     x1 = speedtest1_random()%sz + 1;
@@ -997,8 +997,8 @@ void testset_rtree(int p1, int p2){
   speedtest1_begin_test(100, "%d INSERTs into an r-tree", n);
   speedtest1_exec("BEGIN");
   speedtest1_exec("CREATE VIRTUAL TABLE rt1 USING rtree(id,x0,x1,y0,y1,z0,z1)");
-  speedtest1_prepare("INSERT INTO rt1(security_context,id,x0,x1,y0,y1,z0,z1)"
-                     "VALUES(8,?1,?2,?3,?4,?5,?6,?7)");
+  speedtest1_prepare("INSERT INTO rt1(id,x0,x1,y0,y1,z0,z1)"
+                     "VALUES(?1,?2,?3,?4,?5,?6,?7)");
   for(i=1; i<=n; i++){
     twoCoords(p1, p2, mxCoord, &x0, &x1);
     twoCoords(p1, p2, mxCoord, &y0, &y1);
@@ -1017,7 +1017,7 @@ void testset_rtree(int p1, int p2){
 
   speedtest1_begin_test(101, "Copy from rtree to a regular table");
   speedtest1_exec("CREATE TABLE t1(id INTEGER PRIMARY KEY,x0,x1,y0,y1,z0,z1)");
-  speedtest1_exec("INSERT INTO t1(security_context, id, x0, x1, y0, y1, z0, z1) SELECT 8,id,x0,x1,y0,y1,z0,z1 FROM rt1");
+  speedtest1_exec("INSERT INTO t1 SELECT * FROM rt1");
   speedtest1_end_test();
 
   n = g.szTest*20;
@@ -1048,7 +1048,7 @@ void testset_rtree(int p1, int p2){
     }
     speedtest1_end_test();
   }
-
+  
   n = g.szTest*20;
   speedtest1_begin_test(120, "%d one-dimensional overlap slice queries", n);
   speedtest1_prepare("SELECT count(*) FROM rt1 WHERE y1>=?1 AND y0<=?2");
@@ -1077,7 +1077,7 @@ void testset_rtree(int p1, int p2){
     }
     speedtest1_end_test();
   }
-
+  
 
   n = g.szTest*20;
   speedtest1_begin_test(125, "%d custom geometry callback queries", n);
