@@ -6,10 +6,6 @@
 
 #define USE_AVC
 
-/* prepared statements to query schema sesqlite_master (bind it before use) */
-sqlite3_stmt *stmt_insert_context;
-sqlite3_stmt *stmt_insert_id;
-
 #ifdef USE_AVC
 seSQLiteHash *avc; /* HashMap*/
 #endif
@@ -22,12 +18,12 @@ int insert_id(sqlite3 *db, char *db_name, char *sec_label){
 
     value = seSQLiteBiHashFindKey(hash_id, sec_label, strlen(sec_label));
     if(value == NULL){
-	sqlite3_bind_int(stmt_insert_id, 1, lookup_security_context(hash_id, db_name, SELINUX_ID));
-	sqlite3_bind_text(stmt_insert_id, 2, sec_label, strlen(sec_label),
+	sqlite3_bind_int(stmt_insert, 1, lookup_security_context(hash_id, db_name, SELINUX_ID));
+	sqlite3_bind_text(stmt_insert, 2, sec_label, strlen(sec_label),
 	    SQLITE_TRANSIENT);
 
-	rc = sqlite3_step(stmt_insert_id);
-	rc = sqlite3_reset(stmt_insert_id);
+	rc = sqlite3_step(stmt_insert);
+	rc = sqlite3_reset(stmt_insert);
 
 	rowid = sqlite3_last_insert_rowid(db);
 	value = sqlite3_malloc(sizeof(int));
@@ -542,18 +538,23 @@ int create_security_context_column(
     pCol->affinity = SQLITE_AFF_INTEGER;
     pCol->colFlags |= COLFLAG_HIDDEN;
 
-    //assign security context to sql schema object
-    //insert table context
     sqlite3NestedParse(pParse,
       "INSERT INTO %Q.%s (security_context, security_label, db, name) VALUES(\
 	%d, %d,\
 	'%s',\
 	'%s')",
       pParse->db->aDb[iDb].zName, SELINUX_CONTEXT,
-      lookup_security_context(hash_id, pParse->db->aDb[iDb].zName, SELINUX_CONTEXT),
-      lookup_security_label(db, stmt_insert_id, hash_id, 0, pParse->db->aDb[iDb].zName, p->zName, NULL),
-      pParse->db->aDb[iDb].zName, p->zName
-    );
+      lookup_security_context(hash_id, 
+	  pParse->db->aDb[iDb].zName, 
+	  SELINUX_CONTEXT),
+      lookup_security_label(db, 
+	  stmt_insert, 
+	  hash_id, 
+	  0, 
+	  pParse->db->aDb[iDb].zName, 
+	  p->zName, 
+	  NULL),
+      pParse->db->aDb[iDb].zName, p->zName);
     sqlite3ChangeCookie(pParse, iDb);
 
     //add security context to columns
@@ -566,25 +567,41 @@ int create_security_context_column(
 	    '%s',\
 	    '%s')",
     	  pParse->db->aDb[iDb].zName, SELINUX_CONTEXT,
-	  lookup_security_context(hash_id, pParse->db->aDb[iDb].zName, SELINUX_CONTEXT),
-	  lookup_security_label(db, stmt_insert_id, hash_id, 1, pParse->db->aDb[iDb].zName, p->zName, p->aCol[iCol].zName),
-    	  pParse->db->aDb[iDb].zName, p->zName, p->aCol[iCol].zName
-    	);
+	  lookup_security_context(hash_id, 
+	      pParse->db->aDb[iDb].zName, 
+	      SELINUX_CONTEXT),
+	  lookup_security_label(db, 
+	      stmt_insert, 
+	      hash_id, 
+	      1, 
+	      pParse->db->aDb[iDb].zName, 
+	      p->zName, 
+	      p->aCol[iCol].zName),
+    	  pParse->db->aDb[iDb].zName, p->zName, p->aCol[iCol].zName);
     }
     sqlite3ChangeCookie(pParse, iDb);
 
-    sqlite3NestedParse(pParse,
-      "INSERT INTO %Q.%s(security_context, security_label, db, name, column) VALUES(\
-	%d, %d,\
-	'%s',\
-	'%s',\
-	'%s')",
-      pParse->db->aDb[iDb].zName, SELINUX_CONTEXT,
-      lookup_security_context(hash_id, pParse->db->aDb[iDb].zName, SELINUX_CONTEXT),
-      lookup_security_label(db, stmt_insert_id, hash_id, 1, pParse->db->aDb[iDb].zName, p->zName, "ROWID"),
-      pParse->db->aDb[iDb].zName, p->zName, "ROWID" 
-    );
-    sqlite3ChangeCookie(pParse, iDb);
+    if(HasRowid(p)){
+	sqlite3NestedParse(pParse,
+	  "INSERT INTO %Q.%s(security_context, security_label, db, name, column) VALUES(\
+	    %d, %d,\
+	    '%s',\
+	    '%s',\
+	    '%s')",
+	  pParse->db->aDb[iDb].zName, SELINUX_CONTEXT,
+	  lookup_security_context(hash_id, 
+	      pParse->db->aDb[iDb].zName, 
+	      SELINUX_CONTEXT),
+	  lookup_security_label(db, 
+	      stmt_insert, 
+	      hash_id, 
+	      1, 
+	      pParse->db->aDb[iDb].zName, 
+	      p->zName, 
+	      "ROWID"),
+	  pParse->db->aDb[iDb].zName, p->zName, "ROWID");
+	sqlite3ChangeCookie(pParse, iDb);
+    }
 
     return SQLITE_OK;
 }
@@ -625,11 +642,18 @@ static int selinux_schemachange_callback(
 	    '%s',\
 	    '%s')",
     	  zDb, SELINUX_CONTEXT,
-	  lookup_security_context(hash_id, (char *) zDb, SELINUX_CONTEXT),
-	  lookup_security_label(db, stmt_insert_id, hash_id, 1, (char *) zDb,  (char *) zTable, arg1),
+	  lookup_security_context(hash_id, 
+	      (char *) zDb, 
+	      SELINUX_CONTEXT),
+	  lookup_security_label(db, 
+	      stmt_insert, 
+	      hash_id, 
+	      1, 
+	      (char *) zDb, 
+	      (char *) zTable, 
+	      arg1),
     	  (char *) zDb, (char *) zTable, arg1);
 	break;
-
     }
 
     return SQLITE_OK;
@@ -647,18 +671,6 @@ int initialize_authorizer(sqlite3 *db){
     else
 	seSQLiteHashInit(avc, SESQLITE_HASH_INT, 0); /* init avc */
 #endif
-
-    rc = sqlite3_prepare_v2(db,
-	"INSERT INTO selinux_id(security_context, security_label) values(?1, ?2);", -1,
-	&stmt_insert_id, 0);
-    if(rc != SQLITE_OK)
-	return rc;
-
-    rc = sqlite3_prepare_v2(db,
-	"INSERT INTO selinux_context(security_context, security_label, db, name, column) values(?1, ?2, ?3, ?4, ?5);", -1,
-	&stmt_insert_context, 0);
-    if(rc != SQLITE_OK)
-	return rc;
 
     rc =sqlite3_set_add_extra_column(db, create_security_context_column, db);
     if (rc != SQLITE_OK)

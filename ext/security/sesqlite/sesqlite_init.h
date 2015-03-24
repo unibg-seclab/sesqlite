@@ -6,14 +6,6 @@
 
 #include "sesqlite.h"
 
-sqlite3_stmt *stmt_init_id;
-seSQLiteHash *init_hash; /* HashMap*/
-seSQLiteBiHash *init_hash_id; /* HashMap used to map security_context -> int*/
-
-int set_hash(seSQLiteHash *arg);
-
-int set_hash_id(seSQLiteBiHash *arg);
-
 int initialize(sqlite3 *db);
 
 int compute_sql_context(int isColumn, char *dbName, char *tblName,
