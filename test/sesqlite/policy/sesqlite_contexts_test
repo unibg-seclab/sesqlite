@@ -11,6 +11,7 @@ db_database	*	unconfined_u:object_r:sesqlite_db_public:s0
 # <tables>
 db_table	*.sqlite_master	unconfined_u:object_r:sqlite_master_t:s0
 db_table	*.selinux_context	unconfined_u:object_r:selinux_context_t:s0
+db_table	*.selinux_id	unconfined_u:object_r:selinux_context_t:s0
 db_table	*.sqlite_temp_master	unconfined_u:object_r:sqlite_temp_master_t:s0
 
 db_table	*.t1	unconfined_u:object_r:table_all:s0
@@ -24,6 +25,7 @@ db_table	*.*	unconfined_u:object_r:table_other:s0
 db_column	*.sqlite_master.*	unconfined_u:object_r:sqlite_master_t:s0
 db_column	*.sqlite_temp_master.*	unconfined_u:object_r:sqlite_temp_master_t:s0
 db_column	*.selinux_context.*	unconfined_u:object_r:selinux_context_t:s0
+db_column	*.selinux_id.*	unconfined_u:object_r:selinux_context_t:s0
 db_column	*.t1.*	unconfined_u:object_r:column_all:s0
 db_column	*.t2.d	unconfined_u:object_r:column_no_update:s0
 db_column	*.t2.e	unconfined_u:object_r:column_no_update:s0
