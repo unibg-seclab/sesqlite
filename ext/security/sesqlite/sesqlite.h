@@ -15,7 +15,6 @@
 
 #include "sesqlite_hash.h"
 
-
 extern security_context_t scon;
 extern security_context_t tcon;
 extern int scon_id;
@@ -24,12 +23,13 @@ extern int tcon_id;
 extern seSQLiteHash *hash;
 extern seSQLiteBiHash *hash_id;
 
+extern sqlite3_stmt *stmt_insert;
+extern sqlite3_stmt *stmt_update;
+extern sqlite3_stmt *stmt_con_insert;
 
 #define SECURITY_CONTEXT_COLUMN_NAME "security_context"
 #define SECURITY_CONTEXT_COLUMN_TYPE "hidden INT"
-//#define SECURITY_CONTEXT_COLUMN_DEFAULT_FUNC "getcon()"
-//#define SECURITY_CONTEXT_COLUMN_DEFAULT "DEFAULT (getcon())"
-#define SECURITY_CONTEXT_COLUMN_DEFINITION SECURITY_CONTEXT_COLUMN_NAME " " SECURITY_CONTEXT_COLUMN_TYPE //" " SECURITY_CONTEXT_COLUMN_DEFAULT
+#define SECURITY_CONTEXT_COLUMN_DEFINITION SECURITY_CONTEXT_COLUMN_NAME " " SECURITY_CONTEXT_COLUMN_TYPE
 
 #define SELINUX_CONTEXT "selinux_context"
 #define SELINUX_ID "selinux_id"
