@@ -3,8 +3,8 @@
 .PHONY: all clean distclean fresh test
 
 TOP				 = ../../..
-NAME			:= test_sesqlite
-OBJS			+= test_sesqlite1.o sqlite3.o
+NAME			:= test_schema_level
+OBJS			+= test_schema_level.o sqlite3.o
 LDFLAGS			+= -lselinux -lpthread -ldl -lcunit
 
 CUNIT_XML		:= cunit_testall-Results.xml		# do not change
@@ -33,6 +33,9 @@ $(CUNIT_XML): $(CONTEXTS)
 
 $(JUNIT_XML) test: $(NAME) $(CUNIT_XML)
 	@ xsltproc --novalid -o $(JUNIT_XML) $(CUNIT_TO_JUNIT) $(CUNIT_XML)
+
+run: $(NAME)
+	@ ./$(NAME) -auto
 
 clean:
 	@- $(RM) $(NAME) $(OBJS) $(CUNIT_XML) $(JUNIT_XML) $(DB_TEST) $(CONTEXTS)
