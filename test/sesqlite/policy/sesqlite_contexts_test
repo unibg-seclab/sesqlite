@@ -29,6 +29,7 @@ db_column	*.t2.d	unconfined_u:object_r:column_no_update:s0
 db_column	*.t2.e	unconfined_u:object_r:column_no_update:s0
 db_column	*.t3.g	unconfined_u:object_r:column_no_update:s0
 db_column	*.t5.y	unconfined_u:object_r:column_no_drop:s0
+db_column	*.*.ROWID	unconfined_u:object_r:column_all:s0
 db_column	*.*.*	unconfined_u:object_r:column_other:s0
 
 # <tuples>
