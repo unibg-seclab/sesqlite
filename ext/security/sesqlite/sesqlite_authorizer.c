@@ -4,10 +4,13 @@
 
 #include "sesqlite_authorizer.h"
 
+/* Comment the following line to disable the userspace AVC */
 #define USE_AVC
 
 #ifdef USE_AVC
-seSQLiteHash *avc; /* HashMap*/
+static seSQLiteHash *avc; /* userspace AVC HashMap*/
+static int *avc_deny;
+static int *avc_allow;
 #endif
 
 int insert_id(sqlite3 *db, char *db_name, char *sec_label){
@@ -80,14 +83,24 @@ fprintf(stdout, "Hash hint: db=%s, table=%s, column=%s -> %d\n", dbname, table,
 	    security_context_t security_context_new = 0;
 	    int id = 0;
 	    int *value = 0;
-#ifdef SELINUX_STATIC_CONTEXT
-    security_context_new = sqlite3_mprintf("%s", "unconfined_u:object_r:unconfined_t:s0");
-#else
-    if(security_compute_create_raw(scon, scon, (column ? SELINUX_DB_COLUMN : SELINUX_DB_TABLE), &security_context_new) < 0){
-	fprintf(stderr, "SELinux could not compute a default context\n");
-	return SQLITE_ERROR;
-    }
-#endif
+	    switch (tclass) {
+	    case 1: /* table */
+		compute_sql_context(0, 
+		    (char *) dbname, 
+		    (char *) table, 
+		    NULL, 
+		    sesqlite_contexts->table_context, 
+		    &security_context_new); 
+		break;
+	    case 2:
+		compute_sql_context(1, 
+		    (char *) dbname, 
+		    (char *) table, 
+		    (char *) column, 
+		    sesqlite_contexts->column_context, 
+		    &security_context_new); 
+		break;
+	    }
 	    id = insert_id(db, (char *) dbname, security_context_new);
 	    value = sqlite3_malloc(sizeof(int));
 	    *value = id;
@@ -105,43 +118,48 @@ fprintf(stdout, "Compute New Context: db=%s, table=%s, column=%s -> %d\n", dbnam
  * for the classes 'db_table' and 'db_column' and the target context associated with the table/column.
  * Returns 1 if the access has been granted, 0 otherwise.
  */
-int checkAccess(sqlite3 *db, const char *dbname, const char *table, const char *column,
-		int tclass, int perm) {
+int checkAccess(
+	sqlite3 *db,
+	const char *dbname,
+	const char *table,
+	const char *column,
+	int tclass,
+	int perm
+){
+    assert(tclass <= NELEMS(access_vector));
 
-	assert(tclass <= NELEMS(access_vector));
+    int res = 0;
+    int id = getContext(db, dbname, tclass, table, column);
+    assert(id != 0);
 
-	int *res = NULL;
-	int id = getContext(db, dbname, tclass, table, column);
-	assert(id != 0);
-
-	unsigned int key = compress(scon_id,
-		id,
-		access_vector[tclass].c_code,
-		access_vector[tclass].perm[perm].p_code);
+    unsigned int key = compress(
+	scon_id,
+	id,
+	access_vector[tclass].c_code,
+	access_vector[tclass].perm[perm].p_code
+    );
 
 #ifdef USE_AVC
-    res = seSQLiteHashFind(avc, NULL, key);
-    if (res == NULL) {
-	res = sqlite3_malloc(sizeof(int));
-	int *value = sqlite3_malloc(sizeof(int));
-	*value = id;
-	char *ttcon = seSQLiteBiHashFind(hash_id, value, sizeof(int));
-	sqlite3Dequote(ttcon);
-	*res = selinux_check_access(scon, ttcon, access_vector[tclass].c_name,
-	    access_vector[tclass].perm[perm].p_name, NULL); 
-	seSQLiteHashInsert(avc, NULL, key, res, 0, 0);
-    }
-#else
-    res = sqlite3_malloc(sizeof(int));
-    int *value = sqlite3_malloc(sizeof(int));
-    *value = id;
-    char *ttcon = seSQLiteBiHashFind(hash_id, value, sizeof(int));
-    sqlite3Dequote(ttcon);
-    *res = selinux_check_access(scon, ttcon, access_vector[tclass].c_name,
-	access_vector[tclass].perm[perm].p_name, NULL);
+    int *avc_res = seSQLiteHashFind(avc, NULL, key);
+    if ( avc_res!=NULL ){
+	res = ( avc_res==avc_allow ); /* Yes, let's just compare the pointers */
+    }else{
 #endif
-	// DO NOT FREE key AND res
-	return 0 == *res;
+	char *ttcon = seSQLiteBiHashFind(hash_id, &id, sizeof(int));
+	sqlite3Dequote(ttcon);
+	res = ( 0==selinux_check_access(
+	    scon,
+	    ttcon,
+	    access_vector[tclass].c_name,
+	    access_vector[tclass].perm[perm].p_name,
+	    NULL
+	));
+#ifdef USE_AVC
+	seSQLiteHashInsert(avc, NULL, key, (res==1 ? avc_allow : avc_deny), 0, 0);
+    }
+#endif
+
+    return res;
 }
 
 /**
@@ -435,19 +453,20 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 /*
  * Function invoked when using the SQL function selinux_check_access
  */
-static void selinuxCheckAccessFunction(sqlite3_context *context, int argc,
-		sqlite3_value **argv) {
-
-    int *res;
-    int id = 0;
+static void selinuxCheckAccessFunction(
+	sqlite3_context *context,
+	int argc,
+	sqlite3_value **argv
+){
+    int res = 0;
+    int id = sqlite3_value_int(argv[0]);
     char *ttcon = NULL;
-    id = sqlite3_value_int(argv[0]);
     assert(id != 0);
 
 #ifdef USE_AVC
     int tclass = 0;
     int tperm = 0;
-    
+
     int i = 0, j = 0;
     for(i = 0; i <= SELINUX_NELEM_CLASS; i++){
 	if(strcmp(access_vector[i].c_name, argv[1]->z) == 0){
@@ -461,46 +480,48 @@ static void selinuxCheckAccessFunction(sqlite3_context *context, int argc,
 	}
     }
 
-    unsigned int key = compress(scon_id,
+    unsigned int key = compress(
+	scon_id,
 	id,
 	tclass,
-	tperm);
+	tperm
+    );
 
-    res = seSQLiteHashFind(avc, NULL, key);
-    if (res == NULL) { 
-	res = sqlite3_malloc(sizeof(int));
-	int *value = sqlite3_malloc(sizeof(int));
-	*value = id;
-    	ttcon = seSQLiteBiHashFind(hash_id, value, sizeof(int));
-	*res = selinux_check_access(scon, /* source security context */
-	    ttcon, /* target security context */
+    int *avc_res = seSQLiteHashFind(avc, NULL, key);
+    if( avc_res!=NULL ){
+	res = ( avc_res==avc_allow ); /* Yes, let's just compare the pointers */
+    }else{
+	ttcon = seSQLiteBiHashFind(hash_id, &id, sizeof(int));
+	res = ( 0==selinux_check_access(
+	    scon,       /* source security context */
+	    ttcon,      /* target security context */
 	    argv[1]->z, /* target security class string */
 	    argv[2]->z, /* requested permissions string */
-	    NULL /* auxiliary audit data */
-	    );
-	seSQLiteHashInsert(avc, NULL, key, res, 0, 0);
+	    NULL        /* auxiliary audit data */
+	));
+	seSQLiteHashInsert(avc, NULL, key, (res==1 ? avc_allow : avc_deny), 0, 0);
     }
 #else
-    int *value = sqlite3_malloc(sizeof(int));
-    *value = id;
-    ttcon = seSQLiteBiHashFind(hash_id, value, sizeof(int));
-    *res = selinux_check_access(scon, /* source security context */
+    ttcon = seSQLiteBiHashFind(hash_id, &id, sizeof(int));
+    res = ( 0==selinux_check_access(
+	scon,       /* source security context */
 	ttcon, /* target security context */
 	argv[1]->z, /* target security class string */
 	argv[2]->z, /* requested permissions string */
-	NULL /* auxiliary audit data */
-    );
+	NULL        /* auxiliary audit data */
+    ));
 #endif
 
 #ifdef SQLITE_DEBUG
-    fprintf(stdout, "table: %s, context: %s, action: %s => %d\n", 
+    fprintf(stdout, "table: %s, context: %s, action: %s => %s\n", 
 	    argv[3]->z, 
 	    ttcon, 
 	    argv[2]->z,
-	    *res);
+	    (res ? "ALLOW": "DENY")
+    );
 #endif
 
-    sqlite3_result_int(context, 0 == *res);
+    sqlite3_result_int(context, res);
 }
 
 int create_security_context_column(
@@ -680,6 +701,21 @@ static int selinux_schemachange_callback(
     return SQLITE_OK;
 }
 
+int selinux_commit_callback(void *pArg){
+#ifdef SQLITE_DEBUG
+    fprintf(stdout, "Cleaning AVC after commit\n");
+#endif
+    seSQLiteHashClear(avc);
+    return 0;
+}
+
+void selinux_rollback_callback(void *pArg){
+#ifdef SQLITE_DEBUG
+    fprintf(stdout, "Cleaning AVC after rollback\n");
+#endif
+    seSQLiteHashClear(avc);
+}
+
 int initialize_authorizer(sqlite3 *db){
 
     int rc = SQLITE_OK;
@@ -687,10 +723,15 @@ int initialize_authorizer(sqlite3 *db){
 #ifdef USE_AVC
     /* initialize avc cache */
     avc = sqlite3_malloc(sizeof(seSQLiteHash));
-    if( !avc )
+    avc_allow = sqlite3_malloc(sizeof(int));
+    avc_deny  = sqlite3_malloc(sizeof(int));
+    if( !avc || !avc_allow || !avc_deny ){
 	return SQLITE_NOMEM;
-    else
-	seSQLiteHashInit(avc, SESQLITE_HASH_INT, 0); /* init avc */
+    }else{
+	seSQLiteHashInit(avc, SESQLITE_HASH_INT, 1); /* init avc with copy key */
+	*avc_allow = 0;
+	*avc_deny = -1;
+    }
 #endif
 
     rc =sqlite3_set_add_extra_column(db, create_security_context_column, db);
@@ -698,9 +739,13 @@ int initialize_authorizer(sqlite3 *db){
 	return rc;
 
     /* set the schemachange_callback */
-    rc = sqlite3_schemachange_hook(db, selinux_schemachange_callback, db);
-    if (rc != SQLITE_OK)
-        return rc;
+    sqlite3_schemachange_hook(db, selinux_schemachange_callback, db);
+
+    /* set the commit callback */
+    sqlite3_commit_hook(db, selinux_commit_callback, 0);
+
+    /* set the rollback callback */
+    sqlite3_rollback_hook(db, selinux_rollback_callback, 0);
 
     /* create the SQL function selinux_check_access */
     rc = sqlite3_create_function(db, "selinux_check_access", 4,
@@ -711,7 +756,6 @@ int initialize_authorizer(sqlite3 *db){
 
     /* set the authorizer */
     rc = sqlite3_set_authorizer(db, selinuxAuthorizer, db);
-	return rc;
 
     return rc;
 }
