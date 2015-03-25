@@ -80,14 +80,24 @@ fprintf(stdout, "Hash hint: db=%s, table=%s, column=%s -> %d\n", dbname, table,
 	    security_context_t security_context_new = 0;
 	    int id = 0;
 	    int *value = 0;
-#ifdef SELINUX_STATIC_CONTEXT
-    security_context_new = sqlite3_mprintf("%s", "unconfined_u:object_r:unconfined_t:s0");
-#else
-    if(security_compute_create_raw(scon, scon, (column ? SELINUX_DB_COLUMN : SELINUX_DB_TABLE), &security_context_new) < 0){
-	fprintf(stderr, "SELinux could not compute a default context\n");
-	return SQLITE_ERROR;
-    }
-#endif
+	    switch (tclass) {
+	    case 1: /* table */
+		compute_sql_context(0, 
+		    (char *) dbname, 
+		    (char *) table, 
+		    NULL, 
+		    sesqlite_contexts->table_context, 
+		    &security_context_new); 
+		break;
+	    case 2:
+		compute_sql_context(1, 
+		    (char *) dbname, 
+		    (char *) table, 
+		    (char *) column, 
+		    sesqlite_contexts->column_context, 
+		    &security_context_new); 
+		break;
+	    }
 	    id = insert_id(db, (char *) dbname, security_context_new);
 	    value = sqlite3_malloc(sizeof(int));
 	    *value = id;
