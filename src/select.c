@@ -170,7 +170,7 @@ sqlite3ExprSetHeight(pParse, pFName);
 
   }
     if(pWhere)
-	    pNew->pWhere = sqlite3ExprAnd(db, pNew->pWhere, pWhere);
+	    pNew->pWhere = sqlite3ExprAnd(db, pWhere, pNew->pWhere);
 }else{
   pNew->pWhere = pWhere;
 }
