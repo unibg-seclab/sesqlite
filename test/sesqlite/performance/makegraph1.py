@@ -62,8 +62,8 @@ ys_se = np.array(ys_se)
 
 # print data
 print '\n===== SeSQLite Overhead ====='
-print '\n'.join('base:{:4.3f} se:{:4.3f} ({:+3.3%})'.format(b, s, o)
-                for b, s, o in zip(ys_base, ys_se, ((ys_se - ys_base) / ys_base)))
+print '\n'.join('test {} -- base:{:4.3f} se:{:4.3f} ({:+3.3%})'.format(t, b, s, o)
+                for t, b, s, o in zip(data_base.keys(), ys_base, ys_se, ((ys_se - ys_base) / ys_base)))
 print '\n=========== Total ==========='
 print 'base:{:4.3f} se:{:4.3f} ({:+3.3%})'.format(
     sum(ys_base), sum(ys_se), overhead(sum(ys_base), sum(ys_se)))
