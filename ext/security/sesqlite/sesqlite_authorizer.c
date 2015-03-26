@@ -535,19 +535,21 @@ static void selinuxGetconIdFunction(
     sqlite3 *db = sqlite3_user_data(context);
     const char *label = sqlite3_value_text(argv[0]);
     if(security_check_context((char *) label) == 0){
+	//TODO get the db name
+	int id = insert_id(db, "main", (char *) label);
+	sqlite3_result_int(context, id);
 
-	sqlite3_bind_text(stmt_select_id, 1, label, -1, SQLITE_TRANSIENT);
-
-	if( SQLITE_ROW==sqlite3_step(stmt_select_id) )
-	    sqlite3_result_int(context,
-		sqlite3_column_int(stmt_select_id, 0));
-	else
-	    sqlite3_result_error(context,
-		"SeSQLite - The requested label is not registered.", -1);
+//	sqlite3_bind_text(stmt_select_id, 1, label, -1, SQLITE_TRANSIENT);
+//
+//	if( SQLITE_ROW==sqlite3_step(stmt_select_id) )
+//	    sqlite3_result_int(context,
+//		sqlite3_column_int(stmt_select_id, 0));
+//	else
+//	    sqlite3_result_error(context,
+//		"SeSQLite - The requested label is not registered.", -1);
     }else{
 	sqlite3_result_error(context,
 	    "SeSQLite - The requested label is not a valid selinux context.", -1);
-
     }
 	sqlite3_reset(stmt_select_id);
 }
