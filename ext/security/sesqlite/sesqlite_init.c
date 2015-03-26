@@ -20,6 +20,8 @@ seSQLiteBiHash *hash_id = NULL;
 
 sqlite3_stmt *stmt_insert = NULL;
 sqlite3_stmt *stmt_update = NULL;
+sqlite3_stmt *stmt_select_id = NULL;
+sqlite3_stmt *stmt_select_label = NULL;
 sqlite3_stmt *stmt_con_insert = NULL;
 
 struct sesqlite_context *sesqlite_contexts = NULL;
@@ -310,6 +312,18 @@ int prepare_stmt(sqlite3 *db){
     rc = sqlite3_prepare_v2(db,
 	"INSERT INTO selinux_context(security_context, security_label, db, name, column) values(?1, ?2, ?3, ?4, ?5);", -1,
 	&stmt_con_insert, 0);
+    if(rc != SQLITE_OK)
+	return rc;
+
+    rc = sqlite3_prepare_v2(db,
+	"SELECT rowid FROM selinux_id WHERE security_label = ?1;", -1,
+	&stmt_select_id, 0);
+    if(rc != SQLITE_OK)
+	return rc;
+
+    rc = sqlite3_prepare_v2(db,
+	"SELECT security_label FROM selinux_id WHERE rowid = ?1;", -1,
+	&stmt_select_label, 0);
     if(rc != SQLITE_OK)
 	return rc;
 

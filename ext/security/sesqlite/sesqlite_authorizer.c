@@ -524,6 +524,50 @@ static void selinuxCheckAccessFunction(
     sqlite3_result_int(context, res);
 }
 
+/*
+ * Function invoked when using the SQL function getcon_id
+ */
+static void selinuxGetconIdFunction(
+    sqlite3_context *context,
+    int argc,
+    sqlite3_value **argv
+){
+    sqlite3 *db = sqlite3_user_data(context);
+    const char *label = sqlite3_value_text(argv[0]);
+    sqlite3_bind_text(stmt_select_id, 1, label, -1, SQLITE_TRANSIENT);
+
+    if( SQLITE_ROW==sqlite3_step(stmt_select_id) )
+        sqlite3_result_int(context,
+            sqlite3_column_int(stmt_select_id, 0));
+    else
+        sqlite3_result_error(context,
+            "SeSQLite - The requested label is not registered.", -1);
+
+    sqlite3_reset(stmt_select_id);
+}
+
+/*
+ * Function invoked when using the SQL function getcon_label
+ */
+static void selinuxGetconLabelFunction(
+    sqlite3_context *context,
+    int argc,
+    sqlite3_value **argv
+){
+    sqlite3 *db = sqlite3_user_data(context);
+    int id = sqlite3_value_int(argv[0]);
+    sqlite3_bind_int(stmt_select_label, 1, id);
+
+    if( SQLITE_ROW==sqlite3_step(stmt_select_label) )
+        sqlite3_result_text(context,
+            sqlite3_column_text(stmt_select_label, 0), -1, SQLITE_TRANSIENT);
+    else
+        sqlite3_result_error(context,
+            "SeSQLite - The requested id is not registered.", -1);
+
+    sqlite3_reset(stmt_select_label);
+}
+
 int create_security_context_column(
     void *pArg, 
     void *parse, 
@@ -750,6 +794,20 @@ int initialize_authorizer(sqlite3 *db){
     /* create the SQL function selinux_check_access */
     rc = sqlite3_create_function(db, "selinux_check_access", 4,
 	SQLITE_UTF8 /* | SQLITE_DETERMINISTIC */, 0, selinuxCheckAccessFunction,
+	0, 0);
+    if (rc != SQLITE_OK)
+	return rc;
+
+    /* create the SQL function getcon_id */
+    rc = sqlite3_create_function(db, "getcon_id", 1,
+	SQLITE_UTF8 /* | SQLITE_DETERMINISTIC */, db, selinuxGetconIdFunction,
+	0, 0);
+    if (rc != SQLITE_OK)
+	return rc;
+
+    /* create the SQL function getcon_id */
+    rc = sqlite3_create_function(db, "getcon_label", 1,
+	SQLITE_UTF8 /* | SQLITE_DETERMINISTIC */, db, selinuxGetconLabelFunction,
 	0, 0);
     if (rc != SQLITE_OK)
 	return rc;
