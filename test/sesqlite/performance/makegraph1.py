@@ -31,6 +31,10 @@ def getdata(filename):
 def overhead(fr, to):
     return (to - fr) / float(fr)
 
+def mean(lst):
+    lst = list(lst)
+    return sum(lst) / float(len(lst))
+
 def printstat(ys, base_ys, file):
     print '%s & $%.2f\\si{\\second}$ & $+%.2f\\%%$ \\\\' % (
           basename(file), sum(ys), 100 * overhead(sum(base_ys), sum(ys)))
@@ -63,6 +67,8 @@ print '\n'.join('base:{:4.3f} se:{:4.3f} ({:+3.3%})'.format(b, s, o)
 print '\n=========== Total ==========='
 print 'base:{:4.3f} se:{:4.3f} ({:+3.3%})'.format(
     sum(ys_base), sum(ys_se), overhead(sum(ys_base), sum(ys_se)))
+print 'mean overhead: {:+3.3%}'.format(
+    mean(overhead(b, s) for b, s in zip(ys_base, ys_se)))
 
 # we cannot improve!
 ys_se = np.maximum(ys_se, ys_base)
