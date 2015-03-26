@@ -266,10 +266,10 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 		if (!checkAccess(pdb, dbname, arg1, NULL, SELINUX_DB_TABLE,
 		SELINUX_DELETE)) {
 			rc = SQLITE_DENY;
+		}else if(checkAllColumns(pdb, dbname, arg1, SELINUX_DB_COLUMN,
+		    SELINUX_DROP)){
+			rc = SQLITE_DENY;
 		}
-
-		rc = checkAllColumns(pdb, dbname, arg1, SELINUX_DB_COLUMN,
-		SELINUX_DROP);
 
 		break;
 
@@ -282,12 +282,12 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 
 	case SQLITE_DROP_TABLE: /* Table Name    | NULL            */
 		if (!checkAccess(pdb, dbname, arg1, NULL, SELINUX_DB_TABLE,
-		SELINUX_DROP)) {
+		    SELINUX_DROP)) {
+			rc = SQLITE_DENY;
+		}else if(checkAllColumns(pdb, dbname, arg1, SELINUX_DB_COLUMN,
+		    SELINUX_DROP)){
 			rc = SQLITE_DENY;
 		}
-
-		rc = checkAllColumns(pdb, dbname, arg1, SELINUX_DB_COLUMN,
-		SELINUX_DROP);
 
 		break;
 
@@ -298,10 +298,10 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 		if (!checkAccess(pdb, dbname, arg1, NULL, SELINUX_DB_TABLE,
 		SELINUX_DROP)) {
 			rc = SQLITE_DENY;
+		}else if(checkAllColumns(pdb, dbname, arg1, SELINUX_DB_COLUMN,
+		    SELINUX_DROP)){
+			rc = SQLITE_DENY;
 		}
-
-		rc = checkAllColumns(pdb, dbname, arg1, SELINUX_DB_COLUMN,
-		SELINUX_DROP);
 
 		break;
 
@@ -326,10 +326,10 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 		if (!checkAccess(pdb, dbname, arg1, NULL, SELINUX_DB_TABLE,
 		SELINUX_DROP)) {
 			rc = SQLITE_DENY;
+		}else if(checkAllColumns(pdb, dbname, arg1, SELINUX_DB_COLUMN,
+		    SELINUX_DROP)){
+			rc = SQLITE_DENY;
 		}
-
-		rc = checkAllColumns(pdb, dbname, arg1, SELINUX_DB_COLUMN,
-		SELINUX_DROP);
 
 		break;
 
@@ -337,10 +337,10 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 		if (!checkAccess(pdb, dbname, arg1, NULL, SELINUX_DB_TABLE,
 		SELINUX_INSERT)) {
 			rc = SQLITE_DENY;
+		}else if(checkAllColumns(pdb, dbname, arg1, SELINUX_DB_COLUMN,
+		    SELINUX_INSERT)){
+			rc = SQLITE_DENY;
 		}
-
-		rc = checkAllColumns(pdb, dbname, arg1, SELINUX_DB_COLUMN,
-		SELINUX_INSERT);
 
 		break;
 
@@ -357,10 +357,8 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 		if (!checkAccess(pdb, dbname, arg1, NULL, SELINUX_DB_TABLE,
 		SELINUX_SELECT)) {
 			rc = SQLITE_DENY;
-		}
-
-		if (!checkAccess(pdb, dbname, arg1, arg2, SELINUX_DB_COLUMN,
-		SELINUX_SELECT)) {
+		}else if (!checkAccess(pdb, dbname, arg1, arg2, SELINUX_DB_COLUMN,
+		    SELINUX_SELECT)) {
 			rc = SQLITE_DENY;
 		}
 
@@ -422,10 +420,10 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 		if (!checkAccess(pdb, dbname, arg1, NULL, SELINUX_DB_TABLE,
 		SELINUX_DROP)) {
 			rc = SQLITE_DENY;
+		}else if(checkAllColumns(pdb, dbname, arg1, SELINUX_DB_COLUMN,
+		    SELINUX_DROP)){
+			rc = SQLITE_DENY;
 		}
-
-		rc = checkAllColumns(pdb, dbname, arg1, SELINUX_DB_COLUMN,
-		SELINUX_DROP);
 
 		break;
 

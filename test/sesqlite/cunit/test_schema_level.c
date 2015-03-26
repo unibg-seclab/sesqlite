@@ -91,7 +91,7 @@ void test_delete_table(void) {
 
     SQLITE_INIT
     CU_ASSERT(SQLITE_EXEC(db, "DELETE FROM t1 WHERE a=110") == SQLITE_OK);
-    CU_ASSERT(SQLITE_EXEC(db, "DELETE FROM t5 WHERE y=510") == SQLITE_OK);
+    CU_ASSERT(SQLITE_EXEC(db, "DELETE FROM t5 WHERE y=510") == SQLITE_AUTH);
 }
 
 void test_select_table(void) {
@@ -99,7 +99,7 @@ void test_select_table(void) {
 
     SQLITE_INIT
     CU_ASSERT(SQLITE_EXEC(db, "SELECT * FROM t3;") == SQLITE_AUTH);
-    CU_ASSERT(SQLITE_EXEC(db, "SELECT e FROM t6;") == SQLITE_AUTH);
+    CU_ASSERT(SQLITE_EXEC(db, "SELECT z FROM t6;") == SQLITE_AUTH);
     CU_ASSERT(SQLITE_EXEC(db, "SELECT * FROM t1;") == SQLITE_OK);
     CU_ASSERT(SQLITE_EXEC(db, "SELECT * FROM t2;") == SQLITE_OK);
 }
