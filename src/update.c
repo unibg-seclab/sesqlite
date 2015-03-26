@@ -162,7 +162,7 @@ if(0!=sqlite3StrNICmp(pTab->zName, "sqlite_", 7) && 0!=sqlite3StrNICmp(pTab->zNa
   char *f_name = sqlite3MPrintf(db, "%s", "selinux_check_access");
   char *f_column = sqlite3MPrintf(db, "%s", "security_context");
   char *f_class = sqlite3MPrintf(db, "%s", "db_tuple");
-  char *f_action = sqlite3MPrintf(db, "%s", "select");
+  char *f_action = sqlite3MPrintf(db, "%s", "update");
 
 
   for(i = 0; i < pTabList->nAlloc; i++){
