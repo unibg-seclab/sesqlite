@@ -513,6 +513,7 @@ static void selinuxCheckAccessFunction(
 #endif
 
 #ifdef SQLITE_DEBUG
+    ttcon = seSQLiteBiHashFind(hash_id, &id, sizeof(int));
     fprintf(stdout, "table: %s, context: %s, action: %s => %s\n", 
 	    argv[3]->z, 
 	    ttcon, 

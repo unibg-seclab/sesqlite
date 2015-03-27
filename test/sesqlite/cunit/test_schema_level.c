@@ -62,7 +62,7 @@ void test_create_table(void) {
 void test_insert_table(void) {
 
     SQLITE_INIT
-    CU_ASSERT(SQLITE_EXEC(db, "INSERT INTO t1(a, b) values(100, 101);") == SQLITE_OK);
+    CU_ASSERT(SQLITE_EXEC(db, "INSERT INTO t1(a, b) values(100, 101), (102, 103), (104, 105);") == SQLITE_OK);
     CU_ASSERT(SQLITE_EXEC(db, "INSERT INTO t2(d, e) values(200, 201);") == SQLITE_OK);
     CU_ASSERT(SQLITE_EXEC(db, "INSERT INTO t3(f, g) values(300, 301);") == SQLITE_OK);
     CU_ASSERT(SQLITE_EXEC(db, "INSERT INTO t5(y) values(500);") == SQLITE_OK);

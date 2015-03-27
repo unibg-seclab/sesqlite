@@ -523,6 +523,7 @@ void sqlite3Insert(
 #if defined(SQLITE_ENABLE_SELINUX)
 if(0!=sqlite3StrNICmp(zTab, "sqlite_", 7) && 0!=sqlite3StrNICmp(zTab, "selinux_", 8)) {
 
+    /* if the insert statement is in the following form 'insert into TABLE (IDLIST) ...' */
     if(pColumn){
 	int idx;
 	pColumn->a = sqlite3ArrayAllocate(
@@ -536,18 +537,37 @@ if(0!=sqlite3StrNICmp(zTab, "sqlite_", 7) && 0!=sqlite3StrNICmp(zTab, "selinux_"
 
     }
 
-    Expr *pSecurityValue = sqlite3DbMallocZero(db, sizeof(Expr));
-    pSecurityValue->op = (u8)132; 
-    pSecurityValue->iAgg = -1;
-    pSecurityValue->flags |= EP_IntValue;
-    //pSecurityValue->u.zToken = (char*)&pSecurityValue[1];
-    //memcpy(pSecurityValue->u.zToken, val, strlen(val));
-    pSecurityValue->u.iValue = lookup_security_context(hash_id, (char *) zDb, zTab); /* to assign a valid value  */
-    pSecurityValue->nHeight = 1;
-    if(pSelect)
-	pSelect->pEList = sqlite3ExprListAppend(pParse, pSelect->pEList, pSecurityValue);
-    else
-	pList = sqlite3ExprListAppend(pParse, pList, pSecurityValue);
+    /* create expression to inject */
+    Expr *pSValue = sqlite3DbMallocZero(db, sizeof(Expr));
+    pSValue->op = (u8)132; 
+    pSValue->iAgg = -1;
+    pSValue->flags |= EP_IntValue;
+    pSValue->u.iValue = lookup_security_context(hash_id, (char *) zDb, zTab);
+    pSValue->nHeight = 1;
+
+    if(pSelect){
+	/* if the insert statement is in the following form 'insert into TABLE SELECT ...' */
+	sqlite3ExprListAppend(pParse, pSelect->pEList, pSValue);
+
+	/* if the insert statement is in the following form 'insert into TABLE VALUES (EXPRLIST)' */
+	if(pSelect->pPrior){
+	    Select *pPrior;
+	    pPrior = pSelect->pPrior;
+	    while(pPrior != NULL){
+		Expr *pPSValue = sqlite3DbMallocZero(db, sizeof(Expr));
+		pPSValue->op = (u8)132; 
+		pPSValue->iAgg = -1;
+		pPSValue->flags |= EP_IntValue;
+		pPSValue->u.iValue = lookup_security_context(hash_id, (char *) zDb, zTab);
+		pPSValue->nHeight = 1;
+		sqlite3ExprListAppend(pParse, pPrior->pEList, pPSValue);
+		pPrior = pPrior->pPrior; 
+	    }
+	}
+    }else{
+	/* if the insert statement is in the following form 'insert into TABLE VALUES (EXPR)' */
+	pList = sqlite3ExprListAppend(pParse, pList, pSValue);
+    }
 
 }
 #endif
