@@ -13,6 +13,8 @@ static int *avc_deny;
 static int *avc_allow;
 #endif
 
+static int vacuum;
+
 int insert_id(sqlite3 *db, char *db_name, char *sec_label){
 
     int rc = SQLITE_OK;
@@ -447,6 +449,14 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 	return rc;
 }
 
+int set_vacuum(int type){
+    vacuum = type;
+    return SQLITE_OK;
+}
+
+int is_vacuum(void){
+    return vacuum;
+}
 
 /*
  * Function invoked when using the SQL function selinux_check_access

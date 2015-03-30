@@ -1913,56 +1913,57 @@ void sqlite3EndTable(
     int rc = -1;
     char *zColumn = 0;
     Table *pNew;
-    if( pSelect ){
-	code = 0;
-    }else{
-	code = 1;
-    }
 
-    /*
-    ** create a copy of the just created table
-    */
-    pNew = (Table*)sqlite3DbMallocZero(db, sizeof(Table));
-    if( !pNew ) 
-	return;
-    pNew->nRef = 1;
-    pNew->nCol = p->nCol + 1; /* add security context */
-    assert( pNew->nCol>0 );
-    nAlloc = (((pNew->nCol-1)/8)*8)+8;
-    assert( nAlloc>=pNew->nCol && nAlloc%8==0 && nAlloc-pNew->nCol<8 );
-    pNew->aCol = (Column*)sqlite3DbMallocZero(db, sizeof(Column)*nAlloc);
-    pNew->zName = sqlite3MPrintf(db, "%s", p->zName);
-    if( !pNew->aCol || !pNew->zName ){
-	db->mallocFailed = 1;
-	return;
-    }
-    memcpy(&pNew->aCol[1], p->aCol, sizeof(Column) * p->nCol);
-    for(i=1; i<pNew->nCol; i++){
-	Column *pCol = &pNew->aCol[i];
-	pCol->zName = sqlite3DbStrDup(db, pCol->zName);
-	pCol->zColl = 0;
-	pCol->zType = 0;
-	pCol->pDflt = 0;
-	pCol->zDflt = 0;
-    }
-    pNew->pSchema = db->aDb[iDb].pSchema;
-    pNew->addColOffset = p->addColOffset;
-    pNew->nRef = 1;
+    if( db->xAddExtraColumn && !is_vacuum() ){
+	if( pSelect ){
+	    code = 0;
+	}else{
+	    code = 1;
+	}
 
-    Column *pCol = NULL;
-    pCol = &pNew->aCol[0];
-    memset(pCol, 0, sizeof(p->aCol[0]));
+	/*
+	** create a copy of the just created table
+	*/
+	pNew = (Table*)sqlite3DbMallocZero(db, sizeof(Table));
+	if( !pNew ) 
+	    return;
+	pNew->nRef = 1;
+	pNew->nCol = p->nCol + 1; /* add security context */
+	assert( pNew->nCol>0 );
+	nAlloc = (((pNew->nCol-1)/8)*8)+8;
+	assert( nAlloc>=pNew->nCol && nAlloc%8==0 && nAlloc-pNew->nCol<8 );
+	pNew->aCol = (Column*)sqlite3DbMallocZero(db, sizeof(Column)*nAlloc);
+	pNew->zName = sqlite3MPrintf(db, "%s", p->zName);
+	if( !pNew->aCol || !pNew->zName ){
+	    db->mallocFailed = 1;
+	    return;
+	}
+	memcpy(&pNew->aCol[1], p->aCol, sizeof(Column) * p->nCol);
+	for(i=1; i<pNew->nCol; i++){
+	    Column *pCol = &pNew->aCol[i];
+	    pCol->zName = sqlite3DbStrDup(db, pCol->zName);
+	    pCol->zColl = 0;
+	    pCol->zType = 0;
+	    pCol->pDflt = 0;
+	    pCol->zDflt = 0;
+	}
+	pNew->pSchema = db->aDb[iDb].pSchema;
+	pNew->addColOffset = p->addColOffset;
+	pNew->nRef = 1;
 
-    if( db->xAddExtraColumn ){
+	Column *pCol = NULL;
+	pCol = &pNew->aCol[0];
+	memset(pCol, 0, sizeof(p->aCol[0]));
+
 	rc = db->xAddExtraColumn(db->pAddColumnArg, NULL, code, pNew, &zColumn);
 	if(rc == -1){
 	    /*TODO call abort*/
 	    return;	
 	}
+	p = pNew;
     }
 
     /*copy back the modified table */ 
-    p = pNew;
 
 //    for(i=0; i<p->nCol; i++){
 //	Column *pCol = &p->aCol[i];
@@ -1981,7 +1982,9 @@ void sqlite3EndTable(
       if( pEnd2->z[0]!=';' ) n += pEnd2->n;
 
 #if defined(SQLITE_ENABLE_SELINUX)
-      if(0!=sqlite3StrNICmp(p->zName, "sqlite_", 7) && 0!=sqlite3StrNICmp(p->zName, "selinux_", 8)) {
+      if(!is_vacuum() &&
+	      0!=sqlite3StrNICmp(p->zName, "sqlite_", 7) && 
+	      0!=sqlite3StrNICmp(p->zName, "selinux_", 8)) {
         int pStmt = 0;
         char *zNewStmt = 0;
         if( pCons->z==0 ){

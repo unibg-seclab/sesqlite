@@ -27,6 +27,9 @@ extern sqlite3_stmt *stmt_insert;
 extern sqlite3_stmt *stmt_update;
 extern sqlite3_stmt *stmt_con_insert;
 
+extern int set_vacuum(int type); 
+extern int is_vacuum(); 
+
 #define SECURITY_CONTEXT_COLUMN_NAME "security_context"
 #define SECURITY_CONTEXT_COLUMN_TYPE "hidden INT"
 #define SECURITY_CONTEXT_COLUMN_DEFINITION SECURITY_CONTEXT_COLUMN_NAME " " SECURITY_CONTEXT_COLUMN_TYPE

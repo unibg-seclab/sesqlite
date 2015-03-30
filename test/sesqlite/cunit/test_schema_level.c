@@ -105,6 +105,11 @@ void test_select_table(void) {
 }
 
 
+void test_vacuum_table(void) {
+
+    SQLITE_INIT
+    CU_ASSERT(SQLITE_EXEC(db, "vacuum;") == SQLITE_OK);
+}
 
 int main(int argc, char **argv) {
 
@@ -127,7 +132,8 @@ int main(int argc, char **argv) {
 		    || (NULL == CU_ADD_TEST(pSuite, test_insert_table))
 		    || (NULL == CU_ADD_TEST(pSuite, test_select_table))
 		    || (NULL == CU_ADD_TEST(pSuite, test_update_table))
-		    || (NULL == CU_ADD_TEST(pSuite, test_delete_table))) {
+		    || (NULL == CU_ADD_TEST(pSuite, test_delete_table))
+		    || (NULL == CU_ADD_TEST(pSuite, test_vacuum))){
 	    CU_cleanup_registry();
 	    return CU_get_error();
     }
