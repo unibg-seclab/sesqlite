@@ -72,11 +72,11 @@ int lookup_security_label(sqlite3 *db,
     char *context = NULL;
 
     if(type){
-	compute_sql_context(0, db_name, tbl_name, col_name, 
+	compute_sql_context(type, db_name, tbl_name, col_name, 
 	    sesqlite_contexts->column_context, &context);
 
     }else{
-	compute_sql_context(0, db_name, tbl_name, NULL, 
+	compute_sql_context(type, db_name, tbl_name, NULL, 
 	    sesqlite_contexts->table_context, &context);
     }
 
