@@ -1918,51 +1918,14 @@ void sqlite3EndTable(
 	code = 1;
     }
 
-    /*
-    ** create a copy of the just created table
-    */
-    pNew = (Table*)sqlite3DbMallocZero(db, sizeof(Table));
-    if( !pNew ) 
-	return;
-    pNew->nRef = 1;
-    pNew->nCol = p->nCol; /* add security context */
-    assert( pNew->nCol>0 );
-    nAlloc = (((pNew->nCol-1)/8)*8)+8;
-    assert( nAlloc>=pNew->nCol && nAlloc%8==0 && nAlloc-pNew->nCol<8 );
-    pNew->aCol = (Column*)sqlite3DbMallocZero(db, sizeof(Column)*nAlloc);
-    pNew->zName = sqlite3MPrintf(db, "%s", p->zName);
-    if( !pNew->aCol || !pNew->zName ){
-	db->mallocFailed = 1;
-	return;
-    }
-    memcpy(pNew->aCol, p->aCol, sizeof(Column) * p->nCol);
-    for(i=0; i<pNew->nCol; i++){
-	Column *pCol = &pNew->aCol[i];
-	pCol->zName = sqlite3MPrintf(db, "%s", pCol->zName);
-	pCol->zColl = 0;
-	pCol->zType = 0;
-	pCol->pDflt = 0;
-	pCol->zDflt = 0;
-    }
-    pNew->pSchema = db->aDb[iDb].pSchema;
-    pNew->addColOffset = p->addColOffset;
-
     if( db->xAddExtraColumn ){
-	rc = db->xAddExtraColumn(db->pAddColumnArg, NULL, code, pNew, &zColumn);
+	rc = db->xAddExtraColumn(db->pAddColumnArg, NULL, code, p, &zColumn);
 	if(rc == -1){
 	    /*TODO call abort*/
 	    return;	
 	}
     }
 
-    /*copy back the modified table */ 
-    p = pNew;
-
-//    for(i=0; i<p->nCol; i++){
-//	Column *pCol = &p->aCol[i];
-//	fprintf(stdout, "\n\n pCol->zName: %s\n", pCol->zName);
-//	fprintf(stdout, "\n\n pCol->zType: %s\n", pCol->zType);
-//    }
 #endif
 
 
@@ -1991,7 +1954,7 @@ void sqlite3EndTable(
 	strncpy(zNewStmt, pParse->sNameToken.z, pStmt);
 	strncat(zNewStmt, ", ", 2); /* add separator */
 	strncat(zNewStmt, zColumn, strlen(zColumn)); 
-	strncat(zNewStmt, pCons->z, pCons->n); 
+	strncat(zNewStmt, pCons->z, strlen(pCons->z)); 
 
 	zStmt = sqlite3MPrintf(db, "CREATE %s %.*s", zType2, n, zNewStmt);
 	sqlite3_free(zNewStmt);
