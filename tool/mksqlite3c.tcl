@@ -123,6 +123,7 @@ foreach hdr {
    sesqlite_init.h
    sesqlite_authorizer.h
    sesqlite_contexts.h
+   sesqlite_utils.h
 } {
   set available_hdr($hdr) 1
 }
@@ -340,6 +341,7 @@ foreach file {
    sesqlite_init.c
    sesqlite_authorizer.c
    sesqlite_contexts.c
+   sesqlite_utils.c
 } {
   copy_file tsrc/$file
 }

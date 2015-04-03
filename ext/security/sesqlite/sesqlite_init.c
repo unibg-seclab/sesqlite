@@ -9,6 +9,7 @@ SQLITE_EXTENSION_INIT1
 #endif
 
 #include "sesqlite_init.h"
+#include "sesqlite_utils.h"
 #include "sesqlite_contexts.h"
 
 security_context_t scon = NULL;
@@ -28,25 +29,6 @@ sqlite3_stmt *stmt_con_insert = NULL;
 struct sesqlite_context *contexts = NULL;
 
 /*
- * Print messages for SeSQLite.
- */
-void printmsg(
-	const char *before,
-	const char *dbName,
-	const char *tblName,
-	const char *colName,
-	const char *after
-){
-	fprintf(stdout, "SeSQLite: ");
-
-	if( before )  fprintf(stdout, "%s ", before);
-	if( dbName )  fprintf(stdout, "db=%s ", dbName);
-	if( tblName ) fprintf(stdout, "table=%s ", tblName);
-	if( colName ) fprintf(stdout, "column=%s ", colName);
-	if( after )   fprintf(stdout, "%s\n", after);
-}
-
-/*
  * In order to check if the database was already opened with SeSQLite we
  * check if the table selinux_id is already in the database.
  */
@@ -54,10 +36,9 @@ int isReopen(
 	sqlite3 *db
 ){
 	sqlite3_stmt *check_stmt = NULL;
-	int rc = SQLITE_OK;
 	int count = 0;
 
-	rc = sqlite3_prepare_v2(db,
+	int rc = sqlite3_prepare_v2(db,
 		"SELECT count(*) FROM sqlite_master WHERE type='table' and name = 'selinux_id';", -1,
 	    &check_stmt, 0);
 

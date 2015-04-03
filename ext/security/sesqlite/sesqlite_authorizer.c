@@ -3,6 +3,7 @@
 #if !defined(SQLITE_CORE) || defined(SQLITE_ENABLE_SELINUX)
 
 #include "sesqlite_authorizer.h"
+#include "sesqlite_utils.h"
 
 /* Comment the following line to disable the userspace AVC */
 #define USE_AVC
@@ -83,8 +84,9 @@ int getContext(
     if (res != NULL) {
 
 #ifdef SQLITE_DEBUG
-        fprintf(stdout, "Hash hint: db=%s, table=%s, column=%s -> %d\n",
-            dbname, table, (column ? column : "NULL"), *res);
+		char *after = sqlite3_mprintf("-> %d", *res);
+		printmsg("Hash hint for", dbname, table, column, after);
+		free(after);
 #endif
 
         sqlite3_free(key);
