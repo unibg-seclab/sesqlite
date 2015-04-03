@@ -148,7 +148,7 @@ int insert_key(
 
 #ifdef SQLITE_DEBUG
 	char *after = sqlite3_mprintf("context: %d.", id);
-	printmsg(NULL, dbName, tblName, colName, after);
+	sesqlite_print(NULL, dbName, tblName, colName, after);
 	free(after);
 #endif
 
@@ -308,7 +308,7 @@ void selinux_restorecon_pragma(
 	CHECK_WRONG_USAGE( dbName==NULL || MORE_TOKENS,
 		"USAGE: pragma chcon(\"db.[table.[column]]\")\n" );
 
-	printmsg("Restoring labels for", dbName, tblName, colName, ".");
+	sesqlite_print("Restoring labels for", dbName, tblName, colName, ".");
 
 	free_sesqlite_context(contexts);
 	contexts = read_sesqlite_context(db, SESQLITE_CONTEXTS_PATH);
@@ -333,10 +333,10 @@ void selinux_chcon_pragma(
 		"USAGE: pragma chcon(\"label db.[table.[column]]\")\n" );
 
 	if( get_key(db, dbName, tblName, colName)==-1 ){
-		printmsg("ERROR - No known context for", dbName, tblName, colName, ".");
+		sesqlite_print("ERROR - No known context for", dbName, tblName, colName, ".");
 	}else{
 		insert_key(db, dbName, tblName, colName, insert_id(db, dbName, label));
-		printmsg("Label for", dbName, tblName, colName, "successfully changed.");
+		sesqlite_print("Label for", dbName, tblName, colName, "successfully changed.");
 	}
 }
 
@@ -363,7 +363,7 @@ void selinux_getcon_pragma(
 	sqlite3_bind_int(stmt_select_label, 1, id);
 	sqlite3_step(stmt_select_label);
 
-	printmsg("Getting context for", dbName, tblName, colName, ":");
+	sesqlite_print("Getting context for", dbName, tblName, colName, ":");
 	fprintf(stdout, "id: %d, label: %s\n", id,
 		sqlite3_column_text(stmt_select_label, 0), -1, SQLITE_TRANSIENT);
 
@@ -388,10 +388,10 @@ void selinux_getdefaultcon_pragma(
 		&defaultcon);
 
 	if( defaultcon==NULL ){
-		printmsg("ERROR - Default context not found for", dbName, tblName, colName, ".");
+		sesqlite_print("ERROR - Default context not found for", dbName, tblName, colName, ".");
 	}else{
 		int id = insert_id(db, "main", defaultcon);
-		printmsg("Getting default context for", dbName, tblName, colName, ":");
+		sesqlite_print("Getting default context for", dbName, tblName, colName, ":");
 		fprintf(stdout, "id: %d, label: %s\n", id, defaultcon);
 	}
 }

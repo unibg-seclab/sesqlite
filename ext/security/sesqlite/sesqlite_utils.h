@@ -3,7 +3,7 @@
 /*
  * Print messages for SeSQLite.
  */
-void printmsg(
+void sesqlite_print(
 	const char *before,
 	const char *dbName,
 	const char *tblName,

@@ -85,7 +85,7 @@ int getContext(
 
 #ifdef SQLITE_DEBUG
 		char *after = sqlite3_mprintf("-> %d", *res);
-		printmsg("Hash hint for", dbname, table, column, after);
+		sesqlite_print("Hash hint for", dbname, table, column, after);
 		free(after);
 #endif
 
