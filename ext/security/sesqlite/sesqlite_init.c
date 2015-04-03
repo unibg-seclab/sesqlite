@@ -28,6 +28,25 @@ sqlite3_stmt *stmt_con_insert = NULL;
 struct sesqlite_context *contexts = NULL;
 
 /*
+ * Print messages for SeSQLite.
+ */
+void printmsg(
+	const char *before,
+	const char *dbName,
+	const char *tblName,
+	const char *colName,
+	const char *after
+){
+	fprintf(stdout, "SeSQLite: ");
+
+	if( before )  fprintf(stdout, "%s ", before);
+	if( dbName )  fprintf(stdout, "db=%s ", dbName);
+	if( tblName ) fprintf(stdout, "table=%s ", tblName);
+	if( colName ) fprintf(stdout, "column=%s ", colName);
+	if( after )   fprintf(stdout, "%s\n", after);
+}
+
+/*
  * In order to check if the database was already opened with SeSQLite we
  * check if the table selinux_id is already in the database.
  */
@@ -93,32 +112,72 @@ int insert_context(sqlite3 *db, int isColumn, char *dbName, char *tblName,
     return *(int*)value;
 }
 
+/*
+ * Makes the key based on the database, the table and the column.
+ * The user must invoke free on the returned pointer to free the memory.
+ * It returns db:tbl:col if the column is not NULL, otherwise db:tbl.
+ */
+char *make_key(
+	const char *dbName,
+	const char *tblName,
+	const char *colName
+){
+	char *key;
 
-void insert_key(
+	if( colName==NULL )
+		key = sqlite3_mprintf("%s:%s", dbName, tblName);
+	else
+		key = sqlite3_mprintf("%s:%s:%s", dbName, tblName, colName);
+
+	return key;
+}
+
+/*
+ * Returns the context id associated to the column or the table (if
+ * colName is NULL) or -1 if there is no context associated.
+ */
+int get_key(
+	sqlite3 *db,
+	const char *dbName,
+	const char *tblName,
+	const char *colName
+){
+	char *key = make_key(dbName, tblName, colName);
+	int *id = seSQLiteHashFind(hash, key, strlen(key));
+	free(key);
+	return id ? *id : -1;
+}
+
+/*
+ * Insert the context id specified for the column or the table (if
+ * colName is NULL). Returns the id previously associated or -1 if
+ * no id was associated before the call.
+ */
+int insert_key(
 	sqlite3 *db,
 	const char *dbName,
 	const char *tblName,
 	const char *colName,
 	int id
 ){
-    char *key = NULL;
-    int *value = NULL;
-
-    if( colName==NULL )
-        key = sqlite3_mprintf("%s:%s", dbName, tblName);
-    else
-        key = sqlite3_mprintf("%s:%s:%s", dbName, tblName, colName);
-
-    value = sqlite3_malloc(sizeof(int));
-    *value = id;
-    seSQLiteHashInsert(hash, key, strlen(key), value, sizeof(int), 0);
+	char *key = make_key(dbName, tblName, colName);
+	int *value = sqlite3_malloc(sizeof(int));
+	*value = id;
+	int *old_id = seSQLiteHashInsert(hash, key, strlen(key), value, sizeof(int), 0);
 
 #ifdef SQLITE_DEBUG
-    fprintf(stdout, "Database: %s Table: %s Column: %s Context found: %d\n",
-        dbName, tblName, colName ? colName : "", id);
+	char *after = sqlite3_mprintf("context: %d.", id);
+	printmsg(NULL, dbName, tblName, colName, after);
+	free(after);
 #endif
-}
 
+	if( old_id ){
+		free(key);
+		return *old_id;
+	}
+
+	return -1;
+}
 
 int create_internal_table(
 	sqlite3 *db
@@ -210,7 +269,6 @@ int initialize_mapping(
 	return SQLITE_OK;
 }
 
-
 /*
  * This function loads the selinux_id and selinux_context tables into the
  * respective hashmaps. This is used when the database is reopened and
@@ -257,7 +315,6 @@ int load_contexts_from_table(
 	return SQLITE_OK;
 }
 
-
 void selinux_restorecon_pragma(
 	void* pArg,
 	sqlite3 *db,
@@ -270,12 +327,15 @@ void selinux_restorecon_pragma(
 	CHECK_WRONG_USAGE( dbName==NULL || MORE_TOKENS,
 		"USAGE: pragma chcon(\"db.[table.[column]]\")\n" );
 
+	printmsg("Restoring labels for", dbName, tblName, colName, ".");
+
 	free_sesqlite_context(contexts);
 	contexts = read_sesqlite_context(db, SESQLITE_CONTEXTS_PATH);
-	reload_sesqlite_contexts(db, stmt_con_insert, contexts,
-		dbName, tblName, colName);
 
-	fprintf(stdout, "Contexts restored\n");
+	int count = reload_sesqlite_contexts(db, stmt_con_insert,
+		contexts, dbName, tblName, colName);
+
+	fprintf(stdout, "%d contexts updated.\n", count);
 }
 
 void selinux_chcon_pragma(
@@ -291,7 +351,12 @@ void selinux_chcon_pragma(
 	CHECK_WRONG_USAGE( label==NULL || dbName==NULL || MORE_TOKENS,
 		"USAGE: pragma chcon(\"label db.[table.[column]]\")\n" );
 
-	insert_key(db, dbName, tblName, colName, insert_id(db, dbName, label));
+	if( get_key(db, dbName, tblName, colName)==-1 ){
+		printmsg("ERROR - No known context for", dbName, tblName, colName, ".");
+	}else{
+		insert_key(db, dbName, tblName, colName, insert_id(db, dbName, label));
+		printmsg("Label for", dbName, tblName, colName, "successfully changed.");
+	}
 }
 
 void selinux_getcon_pragma(
@@ -317,6 +382,7 @@ void selinux_getcon_pragma(
 	sqlite3_bind_int(stmt_select_label, 1, id);
 	sqlite3_step(stmt_select_label);
 
+	printmsg("Getting context for", dbName, tblName, colName, ":");
 	fprintf(stdout, "id: %d, label: %s\n", id,
 		sqlite3_column_text(stmt_select_label, 0), -1, SQLITE_TRANSIENT);
 
@@ -341,9 +407,10 @@ void selinux_getdefaultcon_pragma(
 		&defaultcon);
 
 	if( defaultcon==NULL ){
-		fprintf(stderr, "Default context not found.\n");
+		printmsg("ERROR - Default context not found for", dbName, tblName, colName, ".");
 	}else{
 		int id = insert_id(db, "main", defaultcon);
+		printmsg("Getting default context for", dbName, tblName, colName, ":");
 		fprintf(stdout, "id: %d, label: %s\n", id, defaultcon);
 	}
 }

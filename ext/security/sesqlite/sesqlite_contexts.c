@@ -195,12 +195,24 @@ struct sesqlite_context *read_sesqlite_context(
 	return sc;
 }
 
+/*
+ * Returns 1 if the name is accepted by the filter, otherwise 0.
+ * The name is accepted if the filter and the name are the same
+ * (case insensitive) up to the first '*' or till the end of the string.
+ * A NULL filter can be used to always returns 0.
+ */
 int filter_accepts(
 	const char *filter,
 	const char *name
 ){
-	return ( filter==NULL ||
-		sqlite3StrNICmp(filter, name, strcspn(filter, "*"))==0);
+	if( filter==NULL )
+		return 0;
+	
+	int wildcard = strcspn(filter, "*");
+	if( wildcard==strlen(filter) )
+		return ( sqlite3StrICmp(filter, name)==0 );
+
+	return ( sqlite3StrNICmp(filter, name, wildcard)==0 );
 }
 
 int reload_sesqlite_contexts(
@@ -223,6 +235,7 @@ int reload_sesqlite_contexts(
 	char *colName = NULL;
 	char *result = NULL;
 	int rc = SQLITE_OK;
+	int count = 0;
 
 	/* Scan the databases */
 	for( i = (db->nDb - 1), pDb = &db->aDb[i]; i>=0; i--, pDb-- ){
@@ -267,6 +280,7 @@ int reload_sesqlite_contexts(
 
 			rc = sqlite3_reset(stmt);
 			assert( rc==SQLITE_OK );
+			++count;
 
 			/* Scan the columns */
 			Column *pCol;
@@ -296,6 +310,7 @@ int reload_sesqlite_contexts(
 
 				rc = sqlite3_reset(stmt);
 				assert( rc==SQLITE_OK );
+				++count;
 			}
 
 			/* assign security context to rowid if exists */
@@ -319,20 +334,20 @@ int reload_sesqlite_contexts(
 
 				rc = sqlite3_reset(stmt);
 				assert( rc==SQLITE_OK );
+				++count;
 			}
 		}
 	}
 
-	return SQLITE_OK;
+	return count;
 }
 
-/* Just a convenience function to load the sesqlite_contexts unfiltered */
 int load_sesqlite_contexts(
 	sqlite3 *db,                   /* the database connection */
 	sqlite3_stmt *stmt,            /* the INSERT OR REPLACE statement */
 	struct sesqlite_context *sc    /* the sesqlite_context */
 ){
-	return reload_sesqlite_contexts(db, stmt, sc, NULL, NULL, NULL);
+	return reload_sesqlite_contexts(db, stmt, sc, "*", "*", "*");
 }
 
 #endif

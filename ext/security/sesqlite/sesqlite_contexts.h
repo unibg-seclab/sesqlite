@@ -16,6 +16,7 @@ struct sesqlite_context *read_sesqlite_context(
  * The *filter parameters can be NULL to indicate a wildcard or a string
  * to indicate that only the (db/table/column) that match the filter must
  * have its value reloaded.
+ * It returns the number of tuples updated in the sesqlite_context table.
  */
 int reload_sesqlite_contexts(
 	sqlite3 *db,                  /* the database connection */
@@ -26,7 +27,10 @@ int reload_sesqlite_contexts(
 	char *colFilter               /* the column filter or NULL as wildcard */
 );
 
-/* Just a convenience function to load the sesqlite_contexts unfiltered */
+/*
+ * Just a convenience function to load the sesqlite_contexts unfiltered.
+ * It returns the number of tuples inserted in the sesqlite_context table.
+ */
 int load_sesqlite_contexts(
 	sqlite3 *db,                  /* the database connection */
 	sqlite3_stmt *stmt,           /* the INSERT OR REPLACE statement */

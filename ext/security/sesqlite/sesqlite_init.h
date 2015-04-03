@@ -27,7 +27,7 @@ int compute_sql_context(int isColumn, char *dbName, char *tblName,
 
 #define CHECK_WRONG_USAGE(CONDITION, USAGE) \
   if( CONDITION ){ \
-    fprintf(stderr, USAGE); \
+    fprintf(stdout, USAGE); \
     return; \
   }
 
