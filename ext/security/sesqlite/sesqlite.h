@@ -25,6 +25,8 @@ extern seSQLiteBiHash *hash_id;
 
 extern sqlite3_stmt *stmt_insert;
 extern sqlite3_stmt *stmt_update;
+extern sqlite3_stmt *stmt_select_id;
+extern sqlite3_stmt *stmt_select_label;
 extern sqlite3_stmt *stmt_con_insert;
 
 #define SECURITY_CONTEXT_COLUMN_NAME "security_context"
@@ -76,24 +78,39 @@ const char *authtype[] = { "SQLITE_COPY", "SQLITE_CREATE_INDEX",
 #define SELINUX_NELEM_PERM		10
 
 
+extern struct sesqlite_context *contexts;
 
-extern struct sesqlite_context *sesqlite_contexts;
+int lookup_security_context(
+	seSQLiteBiHash *hash,
+	char *db_name,
+	char *tbl_name
+);
 
-int lookup_security_context(seSQLiteBiHash *hash, 
-	char *db_name, 
-	char *tbl_name);
-
-int lookup_security_label(sqlite3 *db, 
-	sqlite3_stmt *stmt, 
-	seSQLiteBiHash *hash, 
-	int type, 
-	char *db_name, 
-	char *tbl_name, 
-	char *col_name);
-
+int lookup_security_label(
+	sqlite3 *db,
+	sqlite3_stmt *stmt,
+	seSQLiteBiHash *hash,
+	int type,
+	char *db_name,
+	char *tbl_name,
+	char *col_name
+);
 
 /* */
-int sqlite3SelinuxInit(sqlite3 *db);
+int sqlite3SelinuxInit(
+	sqlite3 *db
+);
+/**
+ * Used to store
+ */
+struct sesqlite_context_element {
+	char *origin;
+	char *fparam;
+	char *sparam;
+	char *tparam;
+	char *security_context;
+	struct sesqlite_context_element *next;
+};
 
 struct sesqlite_context {
 
@@ -108,17 +125,6 @@ struct sesqlite_context {
 	struct sesqlite_context_element *tuple_context;
 };
 
-/**
- * Used to store
- */
-struct sesqlite_context_element {
-	char *origin;
-	char *fparam;
-	char *sparam;
-	char *tparam;
-	char *security_context;
-	struct sesqlite_context_element *next;
-};
 
 /* struct for the management of selinux classes and the relative permissions*/
 static struct {
@@ -152,7 +158,4 @@ SELINUX_RELABEL_TO }, { "select", SELINUX_SELECT },
 				SELINUX_RELABEL_TO }, { "select", SELINUX_SELECT }, { "update",
 		SELINUX_UPDATE }, { "insert", SELINUX_INSERT }, { "delete",
 		SELINUX_DELETE }, } }, };
-
-
-
 

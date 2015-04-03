@@ -2323,10 +2323,10 @@ pragma_out:
 }
 
 #ifndef SQLITE_OMIT_EXTENDED_PRAGMA
-int sqlite3_pragma_add(
+int sqlite3_create_pragma(
   sqlite3 *db,
   const char *pCommand,
-  void (*xCallback)(void*,sqlite3*,const char*),
+  void (*xCallback)(void*,sqlite3*,char*),
   void *pData
 ){
   sqlite3_mutex_enter(db->mutex);

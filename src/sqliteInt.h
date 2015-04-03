@@ -2775,7 +2775,7 @@ struct Walker {
 #ifndef SQLITE_OMIT_EXTENDED_PRAGMA
 struct ExtPragma {
   char *pCommand;            /* Command used to invoke the pragma callback */
-  void (*xCallback)(void*,sqlite3*,const char*); /* Callback function */
+  void (*xCallback)(void*,sqlite3*,char*); /* Callback function */
   void *pCallbackArg;        /* user data passed to the callback */
   ExtPragma *pNext;          /* Next node in the linked list */
 };

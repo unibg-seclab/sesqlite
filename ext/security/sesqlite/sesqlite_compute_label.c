@@ -4,11 +4,17 @@
 #include "sesqlite.h"
 
 /**
- *
+ * Compute the default context to give to a table or a column
+ * based on the sesqlite_context_element structure.
  */
-int compute_sql_context(int isColumn, char *dbName, char *tblName,
-	char *colName, struct sesqlite_context_element * con, char **res) {
-
+int compute_sql_context(
+    int isColumn,
+    char *dbName,
+    char *tblName,
+    char *colName,
+    struct sesqlite_context_element *con,
+    char **res
+){
     int rc = SQLITE_OK;
     int found = 0;
     struct sesqlite_context_element *p = 0;
@@ -49,7 +55,7 @@ int lookup_security_context(seSQLiteBiHash *hash, char *db_name, char *tbl_name)
     char *sec_context = NULL;
 
     compute_sql_context(0, db_name, tbl_name, NULL, 
-	    sesqlite_contexts->tuple_context, &sec_context);
+	    contexts->tuple_context, &sec_context);
 
     id = seSQLiteBiHashFindKey(hash, sec_context, strlen(sec_context));
     assert(id != NULL); /* check if SELinux can compute a security context */
@@ -71,14 +77,8 @@ int lookup_security_label(sqlite3 *db,
     int *id = NULL;
     char *context = NULL;
 
-    if(type){
-	compute_sql_context(type, db_name, tbl_name, col_name, 
-	    sesqlite_contexts->column_context, &context);
-
-    }else{
-	compute_sql_context(type, db_name, tbl_name, NULL, 
-	    sesqlite_contexts->table_context, &context);
-    }
+	compute_sql_context(type, db_name, tbl_name, col_name,
+	    type ? contexts->column_context : contexts->table_context, &context);
 
     assert(context != NULL);
     id = seSQLiteBiHashFindKey(hash, context, strlen(context));

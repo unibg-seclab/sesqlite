@@ -122,6 +122,7 @@ foreach hdr {
    sesqlite_vtab.h
    sesqlite_init.h
    sesqlite_authorizer.h
+   sesqlite_contexts.h
 } {
   set available_hdr($hdr) 1
 }
@@ -338,6 +339,7 @@ foreach file {
    sesqlite_vtab.c
    sesqlite_init.c
    sesqlite_authorizer.c
+   sesqlite_contexts.c
 } {
   copy_file tsrc/$file
 }

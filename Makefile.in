@@ -370,11 +370,13 @@ SRC += \
   $(TOP)/ext/security/sesqlite/sesqlite_vtab.h \
   $(TOP)/ext/security/sesqlite/sesqlite_init.h \
   $(TOP)/ext/security/sesqlite/sesqlite_authorizer.h \
+  $(TOP)/ext/security/sesqlite/sesqlite_contexts.h \
   $(TOP)/ext/security/sesqlite/sesqlite_hash.c \
   $(TOP)/ext/security/sesqlite/sesqlite_compute_label.c \
   $(TOP)/ext/security/sesqlite/sesqlite_vtab.c \
   $(TOP)/ext/security/sesqlite/sesqlite_init.c \
-  $(TOP)/ext/security/sesqlite/sesqlite_authorizer.c
+  $(TOP)/ext/security/sesqlite/sesqlite_authorizer.c \
+  $(TOP)/ext/security/sesqlite/sesqlite_contexts.c
 
 
 # Generated source code files
@@ -542,7 +544,8 @@ EXTHDR += \
   $(TOP)/ext/security/sesqlite/sesqlite_hash.h \
   $(TOP)/ext/security/sesqlite/sesqlite_vtab.h \
   $(TOP)/ext/security/sesqlite/sesqlite_init.h \
-  $(TOP)/ext/security/sesqlite/sesqlite_authorizer.h
+  $(TOP)/ext/security/sesqlite/sesqlite_authorizer.h \
+  $(TOP)/ext/security/sesqlite/sesqlite_contexts.h
 
 # This is the default Makefile target.  The objects listed here
 # are what get build when you type just "make" with no arguments.
@@ -957,6 +960,8 @@ sesqlite_init.lo:	$(TOP)/ext/security/sesqlite/sesqlite_init.c $(HDR) $(EXTHDR)
 sesqlite_authorizer.lo:	$(TOP)/ext/security/sesqlite/sesqlite_authorizer.c $(HDR) $(EXTHDR)
 	$(LTCOMPILE) -DSQLITE_CORE -c $(TOP)/ext/security/sesqlite/sesqlite_authorizer.c
 
+sesqlite_contexts.lo:	$(TOP)/ext/security/sesqlite/sesqlite_contexts.c $(HDR) $(EXTHDR)
+	$(LTCOMPILE) -DSQLITE_CORE -c $(TOP)/ext/security/sesqlite/sesqlite_contexts.c
 
 
 # Rules to build the 'testfixture' application.

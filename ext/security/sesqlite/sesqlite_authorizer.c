@@ -39,78 +39,94 @@ int insert_id(sqlite3 *db, char *db_name, char *sec_label){
 
 /*
  * Return the security context of the given (table), (table, column) element.
- */
-/*
- * Function: getContext 
+ *
+ * Function: getContext
  * Purpose: Given the table name or table and column name, returns the security
  * context associated.
  * Parameters:
- * 		dbname: database name;
- * 		tclass: 1 = table, 2 = column;
- * 		table: table name;
- * 		column: column name, it is NULL if tclass == 1.
+ *     dbname: database name;
+ *     table: table name;
+ *     column: column name, it is NULL if tclass == 1.
+ *     tclass: 1 = table, 2 = column;
  * Return value: Return the security context associated to the table/column
- * given. 
+ * given.
  */
-int getContext(sqlite3 *db, const char *dbname, int tclass, const char *table,
-	const char *column) {
+int getContext(
+    sqlite3 *db,
+    const char *dbname,
+    const char *table,
+    const char *column,
+    int tclass
+){
+    char *key = NULL;
+    int *res = 0;
 
-	char *key = NULL;
-	int *res = 0;
+    switch (tclass) {
 
-	switch (tclass) {
-	case 0: /* database */
-		break;
-	case 1: /* table */
-		key = sqlite3_mprintf("%s:%s", dbname, table);
-		break;
-	case 2:
-		key = sqlite3_mprintf("%s:%s:%s", dbname, table, column);
-		break;
-	}
+    case SELINUX_DB_DATABASE:
+        key = sqlite3_mprintf("%s", dbname);
+        break;
 
-	assert(key != NULL);
-	res = seSQLiteHashFind(hash, key, strlen(key));
+    case SELINUX_DB_TABLE:
+        key = sqlite3_mprintf("%s:%s", dbname, table);
+        break;
 
-	if (res != NULL) {
+    case SELINUX_DB_COLUMN:
+        key = sqlite3_mprintf("%s:%s:%s", dbname, table, column);
+        break;
+
+    }
+
+    assert(key != NULL);
+    res = seSQLiteHashFind(hash, key, strlen(key));
+
+    if (res != NULL) {
+
 #ifdef SQLITE_DEBUG
-fprintf(stdout, "Hash hint: db=%s, table=%s, column=%s -> %d\n", dbname, table,
-    (column ? column : "NULL"), *res);
+        fprintf(stdout, "Hash hint: db=%s, table=%s, column=%s -> %d\n",
+            dbname, table, (column ? column : "NULL"), *res);
 #endif
-	    sqlite3_free(key);
-	    return *res;
-	}else {
-	    security_context_t security_context_new = 0;
-	    int id = 0;
-	    int *value = 0;
-	    switch (tclass) {
-	    case 1: /* table */
-		compute_sql_context(0, 
-		    (char *) dbname, 
-		    (char *) table, 
-		    NULL, 
-		    sesqlite_contexts->table_context, 
-		    &security_context_new); 
-		break;
-	    case 2:
-		compute_sql_context(1, 
-		    (char *) dbname, 
-		    (char *) table, 
-		    (char *) column, 
-		    sesqlite_contexts->column_context, 
-		    &security_context_new); 
-		break;
-	    }
-	    id = insert_id(db, (char *) dbname, security_context_new);
-	    value = sqlite3_malloc(sizeof(int));
-	    *value = id;
-	    seSQLiteHashInsert(hash, key, strlen(key), value, sizeof(int), 0);
+
+        sqlite3_free(key);
+        return *res;
+    }else{
+        security_context_t security_context_new = 0;
+        int id = 0;
+        int *value = 0;
+        switch (tclass) {
+
+        case SELINUX_DB_TABLE:
+            compute_sql_context(0,
+                (char *) dbname,
+                (char *) table,
+                NULL,
+                contexts->table_context,
+                &security_context_new);
+            break;
+
+        case SELINUX_DB_COLUMN:
+            compute_sql_context(1,
+                (char *) dbname,
+                (char *) table,
+                (char *) column,
+                contexts->column_context,
+                &security_context_new);
+            break;
+
+        }
+        id = insert_id(db, (char *) dbname, security_context_new);
+        value = sqlite3_malloc(sizeof(int));
+        *value = id;
+        seSQLiteHashInsert(hash, key, strlen(key), value, sizeof(int), 0);
+
 #ifdef SQLITE_DEBUG
-fprintf(stdout, "Compute New Context: db=%s, table=%s, column=%s -> %d\n", dbname, table,
-    (column ? column : "NULL"), id);
+        fprintf(stdout, "Compute New Context: db=%s, table=%s, column=%s -> %d\n",
+            dbname, table, (column ? column : "NULL"), id);
 #endif
-	    return id; /* something wrong, a table/column was not labeled correctly */	
-	}
+
+    return id; /* something wrong, a table/column was not labeled correctly */
+
+    }
 }
 
 /*
@@ -129,7 +145,7 @@ int checkAccess(
     assert(tclass <= NELEMS(access_vector));
 
     int res = 0;
-    int id = getContext(db, dbname, tclass, table, column);
+    int id = getContext(db, dbname, table, column, tclass);
     assert(id != 0);
 
     unsigned int key = compress(
@@ -443,7 +459,7 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 	}
 
 #ifdef SQLITE_DEBUG
-	printf("\n");
+//	printf("\n");
 #endif
 
 	return rc;

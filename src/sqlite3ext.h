@@ -251,7 +251,7 @@ struct sqlite3_api_routines {
   char *(*vsnprintf)(int,char*,const char*,va_list);
   int (*wal_checkpoint_v2)(sqlite3*,const char*,int,int*,int*);
   /* Added by XXX */
-  int (*pragma_add)(sqlite3*,const char*,void(*)(void*,sqlite3*,const char*),void*);
+  int (*create_pragma)(sqlite3*,const char*,void(*)(void*,sqlite3*,char*),void*);
   int (*set_add_extra_column)(sqlite3*,int(*)(void*,void*,int,void*,char**),void*);
   int (*schemachange_hook)(sqlite3*,int(*)(void*,int,const char*,
                            const char*,void*,void*),void*);
@@ -472,7 +472,7 @@ struct sqlite3_api_routines {
 #define sqlite3_uri_parameter          sqlite3_api->uri_parameter
 #define sqlite3_uri_vsnprintf          sqlite3_api->vsnprintf
 #define sqlite3_wal_checkpoint_v2      sqlite3_api->wal_checkpoint_v2
-#define sqlite3_pragma_add             sqlite3_api->pragma_add
+#define sqlite3_create_pragma          sqlite3_api->create_pragma
 #define sqlite3_set_add_extra_column   sqlite3_api->set_add_extra_column
 #define sqlite3_schemachange_hook      sqlite3_api->schemachange_hook
 #endif /* SQLITE_CORE */

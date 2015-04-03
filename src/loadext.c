@@ -396,7 +396,7 @@ static const sqlite3_api_routines sqlite3Apis = {
   ** Added for XXX
   */
 #if !defined(SQLITE_OMIT_EXTENDED_PRAGMA) && !defined(SQLITE_OMIT_PRAGMA)
-  sqlite3_pragma_add,
+  sqlite3_create_pragma,
 #else
   0,
 #endif

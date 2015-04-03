@@ -7424,10 +7424,10 @@ SQLITE_EXPERIMENTAL int sqlite3_preupdate_new(sqlite3 *, int, sqlite3_value **);
 ** The second one is a pointer to the database structure. The third argument is
 ** the string following the pragma command.
 */
-int sqlite3_pragma_add(
+int sqlite3_create_pragma(
   sqlite3 *db,
   const char *command,
-  void (*xCallback)(void*,sqlite3*,const char*),
+  void (*xCallback)(void*,sqlite3*,char*),
   void *pData
 );
 
