@@ -392,16 +392,18 @@ static const sqlite3_api_routines sqlite3Apis = {
   sqlite3_vsnprintf,
   sqlite3_wal_checkpoint_v2,
 
-  /**
-  ** Added for XXX
-  */
 #if !defined(SQLITE_OMIT_EXTENDED_PRAGMA) && !defined(SQLITE_OMIT_PRAGMA)
   sqlite3_create_pragma,
 #else
   0,
 #endif
+
+#ifdef SQLITE_ENABLE_SELINUX
   sqlite3_set_add_extra_column,
   sqlite3_schemachange_hook,
+  sqlite3_set_xattr,
+  sqlite3_get_xattr,
+#endif
 };
 
 /*

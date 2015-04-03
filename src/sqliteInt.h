@@ -819,6 +819,9 @@ typedef struct ExtPragma ExtPragma;
 #include "os.h"
 #include "mutex.h"
 
+#ifdef SQLITE_ENABLE_SELINUX
+#include "sesqlite.h"
+#endif
 
 /*
 ** Each database file to be accessed by the system is an instance
@@ -1062,6 +1065,8 @@ struct sqlite3 {
   ExtPragma *pPragmaList;       /* head of the extended pragmas linked list */
 #endif
 
+#ifdef SQLITE_ENABLE_SELINUX
+
   /* Callback used to add a column programmatically to a new table */
   int (*xAddExtraColumn)(void*,void*,int,void*,char**);                             /* Add extra column callback */
   void *pAddColumnArg;         /* 1st argument to the add extra column function */
@@ -1069,6 +1074,14 @@ struct sqlite3 {
   /* Callback used for schema notification changes */
   int (*xSchemaChangeCallback)(void*,int,const char*,const char*,void*,void*);
   void *pSchemaChangeArg;
+
+  /*
+  ** This field is used to store (key,value) pairs associated with a database connection.
+  ** The main purpose is the same as the 'extended attributes' (xattrs) used for file system.
+  */
+  Hash *pXattrs;
+
+#endif
 };
 
 /*

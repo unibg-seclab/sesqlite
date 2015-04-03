@@ -419,8 +419,8 @@ int sqlite3SelinuxInit(sqlite3 *db) {
 	if( SQLITE_OK!=rc ) return rc;
 
 #ifdef SELINUX_STATIC_CONTEXT
-	scon = sqlite3_mprintf("%s", "unconfined_u:unconfined_r:unconfined_t:s0");
 	tcon = sqlite3_mprintf("%s", "unconfined_u:object_r:unconfined_t:s0");
+	sqlite3_set_xattr(db, "security.selinux", "unconfined_u:unconfined_r:unconfined_t:s0");
 #else
 	rc = getcon(&scon);
 	if(security_compute_create_raw(scon, scon, 4, &tcon) < 0){
@@ -429,11 +429,11 @@ int sqlite3SelinuxInit(sqlite3 *db) {
 	}
 #endif
 
+	scon = sqlite3_get_xattr(db, "security.selinux");
 	scon_id = insert_id(db, "main", scon);
-	assert( scon_id!=0 );
-
+	assert( scon_id != 0);
 	tcon_id = insert_id(db, "main", tcon);
-	assert( tcon_id!=0 );
+	assert( tcon_id != 0);
 
 	return rc;
 }

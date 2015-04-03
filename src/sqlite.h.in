@@ -7411,6 +7411,7 @@ SQLITE_EXPERIMENTAL int sqlite3_preupdate_count(sqlite3 *);
 SQLITE_EXPERIMENTAL int sqlite3_preupdate_depth(sqlite3 *);
 SQLITE_EXPERIMENTAL int sqlite3_preupdate_new(sqlite3 *, int, sqlite3_value **);
 
+#ifndef SQLITE_OMIT_EXTENDED_PRAGMA
 /*
 ** CAPI3REF: Custom pragmas
 **
@@ -7430,6 +7431,9 @@ int sqlite3_create_pragma(
   void (*xCallback)(void*,sqlite3*,char*),
   void *pData
 );
+#endif
+
+#ifdef SQLITE_ENABLE_SELINUX
 
 /*
 ** CAPI3REF: Schema change notifications.
@@ -7441,6 +7445,16 @@ int sqlite3_schemachange_hook(
   int (*xSchemaChangeCallback)(void*,int,const char*,const char*,void*,void*),
   void *pArg
 );
+
+int sqlite3_set_xattr(
+	sqlite3 *db,
+	char *key, 
+	char *value);
+
+char *sqlite3_get_xattr(
+	sqlite3 *db,
+	char *key);
+#endif
 
 /*
 ** CAPI3REF: Schema Change Notification Codes

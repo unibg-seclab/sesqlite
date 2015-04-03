@@ -999,6 +999,10 @@ void sqlite3LeaveMutexAndCloseZombie(sqlite3 *db){
   }
 #endif
 
+#ifdef SQLITE_ENABLE_SELINUX
+    sqlite3HashClear(db->pXattrs);
+#endif
+
   db->magic = SQLITE_MAGIC_ERROR;
 
   /* The temp-database schema is allocated differently from the other schema
@@ -2691,9 +2695,15 @@ static int openDatabase(
 #endif
 
 #ifdef SQLITE_ENABLE_SELINUX
-  if( !db->mallocFailed ){
-    rc = sqlite3SelinuxInit(db);
-  }
+	if( !db->mallocFailed ){
+		db->pXattrs = sqlite3_malloc(sizeof(Hash));
+		if( !db->pXattrs ){
+			rc = SQLITE_ERROR;
+		}else{
+			sqlite3HashInit(db->pXattrs);
+			rc = sqlite3SelinuxInit(db);
+		}
+	}
 #endif /* SQLITE_ENABLE_SELINUX */
 
   /* -DSQLITE_DEFAULT_LOCKING_MODE=1 makes EXCLUSIVE the default locking
@@ -3481,3 +3491,57 @@ int sqlite3_db_readonly(sqlite3 *db, const char *zDbName){
   Btree *pBt = sqlite3DbNameToBtree(db, zDbName);
   return pBt ? sqlite3PagerIsreadonly(sqlite3BtreePager(pBt)) : -1;
 }
+
+
+#ifdef SQLITE_ENABLE_SELINUX
+/*
+** Extended attributes are (key,value) pairs associated with a database connection.
+** Like SELinux stores file security labels in 'xattrs' SeSQLite uses 'pXattrs' for the same goal.
+** SeSQLite uses the 'security.selinux' attribute to store the caller (the one who wants to 
+** perform an action on the db connection) security label.
+**
+*/
+int sqlite3_set_xattr(sqlite3 *db, 
+		char *key, 
+		char *value){
+
+	int rc = SQLITE_OK;
+	char *copy_value = NULL;
+	char *copy_key = NULL;
+	void *res =  NULL;
+
+	if(value){
+		copy_key = sqlite3MPrintf(db, "%s", key);
+		copy_value = sqlite3MPrintf(db, "%s", value);
+		/* do not care if the hash contains an element with the same key,
+		** update anyway.
+		*/
+		sqlite3HashInsert(db->pXattrs, 
+				copy_key, 
+				strlen(copy_key),
+				copy_value);
+	}else{
+		sqlite3HashInsert(db->pXattrs, 
+				key, 
+				strlen(key),
+				NULL);
+	}
+
+
+	return rc;
+}
+
+char *sqlite3_get_xattr(sqlite3 *db, 
+		char *key){
+
+	char *value = NULL;
+	value = sqlite3HashFind(db->pXattrs, key, strlen(key));
+
+	if(value)
+		return value;
+	else
+		return NULL;
+}
+
+#endif
+

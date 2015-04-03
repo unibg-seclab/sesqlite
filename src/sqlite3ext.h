@@ -250,11 +250,18 @@ struct sqlite3_api_routines {
   const char *(*uri_parameter)(const char*,const char*);
   char *(*vsnprintf)(int,char*,const char*,va_list);
   int (*wal_checkpoint_v2)(sqlite3*,const char*,int,int*,int*);
-  /* Added by XXX */
+
+#ifndef SQLITE_OMIT_EXTENDED_PRAGMA
   int (*create_pragma)(sqlite3*,const char*,void(*)(void*,sqlite3*,char*),void*);
+#endif
+
+#ifdef SQLITE_ENABLE_SELINUX
   int (*set_add_extra_column)(sqlite3*,int(*)(void*,void*,int,void*,char**),void*);
   int (*schemachange_hook)(sqlite3*,int(*)(void*,int,const char*,
                            const char*,void*,void*),void*);
+  int (*set_xattr)(sqlite3*, char*, char*);
+  char* (*get_xattr)(sqlite3*, char*);
+#endif
 };
 
 /*
@@ -472,9 +479,18 @@ struct sqlite3_api_routines {
 #define sqlite3_uri_parameter          sqlite3_api->uri_parameter
 #define sqlite3_uri_vsnprintf          sqlite3_api->vsnprintf
 #define sqlite3_wal_checkpoint_v2      sqlite3_api->wal_checkpoint_v2
+
+#ifndef SQLITE_OMIT_EXTENDED_PRAGMA
 #define sqlite3_create_pragma          sqlite3_api->create_pragma
+#endif /* SQLITE_OMIT_EXTENDED_PRAGMA */
+
+#ifdef SQLITE_ENABLE_SELINUX
 #define sqlite3_set_add_extra_column   sqlite3_api->set_add_extra_column
 #define sqlite3_schemachange_hook      sqlite3_api->schemachange_hook
+#define sqlite3_set_xattr	       sqlite3_api->set_xattr
+#define sqlite3_get_xattr	       sqlite3_api->get_xattr
+#endif /* SQLITE_ENABLE_SELINUX */
+
 #endif /* SQLITE_CORE */
 
 #ifndef SQLITE_CORE
