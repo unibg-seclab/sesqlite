@@ -419,21 +419,25 @@ int sqlite3SelinuxInit(sqlite3 *db) {
 	if( SQLITE_OK!=rc ) return rc;
 
 #ifdef SELINUX_STATIC_CONTEXT
-	tcon = sqlite3_mprintf("%s", "unconfined_u:object_r:unconfined_t:s0");
 	sqlite3_set_xattr(db, "security.selinux", "unconfined_u:unconfined_r:unconfined_t:s0");
 #else
 	rc = getcon(&scon);
-	if(security_compute_create_raw(scon, scon, 4, &tcon) < 0){
-		fprintf(stderr, "SELinux could not compute a default context\n");
-		return SQLITE_ERROR;
-	}
+	sqlite3_set_xattr(db, "security.selinux", scon);
+//	deprecated
+//	if(security_compute_create_raw(scon, scon, 4, &tcon) < 0){
+//		fprintf(stderr, "SELinux could not compute a default context\n");
+//		return SQLITE_ERROR;
+//	}
 #endif
 
 	scon = sqlite3_get_xattr(db, "security.selinux");
+	if( !scon ){
+		fprintf(stderr, "Error: SeSQLite was unable to retrieve the security context.\n");
+		return SQLITE_ERROR;
+	}
+
 	scon_id = insert_id(db, "main", scon);
 	assert( scon_id != 0);
-	tcon_id = insert_id(db, "main", tcon);
-	assert( tcon_id != 0);
 
 	return rc;
 }
