@@ -237,6 +237,9 @@ int reload_sesqlite_contexts(
 	int rc = SQLITE_OK;
 	int count = 0;
 
+	int sec_label_id = 0;
+	int sec_con_id = 0;
+
 	/* Scan the databases */
 	for( i = (db->nDb - 1), pDb = &db->aDb[i]; i>=0; i--, pDb-- ){
 
@@ -247,6 +250,26 @@ int reload_sesqlite_contexts(
 		dbName = pDb->zName;
 		if( !filter_accepts(dbFilter, dbName) )
 			continue;
+
+			sec_label_id = insert_context(db, 0, dbName, NULL, NULL,
+				sc->db_context, sc->tuple_context);
+
+			sec_con_id = insert_context(db, 0, dbName, SELINUX_CONTEXT, NULL,
+				sc->tuple_context, sc->tuple_context);
+
+			insert_key(db, dbName, NULL, NULL, sec_label_id);
+
+			sqlite3_bind_int( stmt, 1, sec_con_id);
+			sqlite3_bind_int( stmt, 2, sec_label_id);
+			sqlite3_bind_text(stmt, 3, dbName,  -1, SQLITE_TRANSIENT);
+			sqlite3_bind_text(stmt, 4, "",      -1, SQLITE_TRANSIENT);
+			sqlite3_bind_text(stmt, 5, "",      -1, SQLITE_TRANSIENT);
+
+			rc = sqlite3_step(stmt);
+			assert( rc==SQLITE_DONE );
+
+			rc = sqlite3_reset(stmt);
+			assert( rc==SQLITE_OK );
 
 		/* Scan the tables */
 		pTbls = &db->aDb[i].pSchema->tblHash;
@@ -261,10 +284,10 @@ int reload_sesqlite_contexts(
 			if( !filter_accepts(tblFilter, tblName) )
 				continue;
 
-			int sec_label_id = insert_context(db, 0, dbName, tblName, NULL,
+			sec_label_id = insert_context(db, 0, dbName, tblName, NULL,
 				sc->table_context, sc->tuple_context);
 
-			int sec_con_id = insert_context(db, 0, dbName, tblName, NULL,
+			sec_con_id = insert_context(db, 0, dbName, SELINUX_CONTEXT, NULL,
 				sc->tuple_context, sc->tuple_context);
 
 			insert_key(db, dbName, tblName, NULL, sec_label_id);
@@ -291,10 +314,10 @@ int reload_sesqlite_contexts(
 				if( !filter_accepts(colFilter, colName) )
 					continue;
 
-				int sec_label_id = insert_context(db, 1, dbName, tblName, colName,
+				sec_label_id = insert_context(db, 1, dbName, tblName, colName,
 					sc->column_context, sc->tuple_context);
 
-				int sec_con_id = insert_context(db, 0, dbName, tblName, NULL,
+				sec_con_id = insert_context(db, 0, dbName, SELINUX_CONTEXT, NULL,
 					sc->tuple_context, sc->tuple_context);
 
 				insert_key(db, dbName, tblName, colName, sec_label_id);
@@ -315,10 +338,10 @@ int reload_sesqlite_contexts(
 
 			/* assign security context to rowid if exists */
 			if( HasRowid(pTab) && filter_accepts(colFilter, "ROWID") ){
-				int sec_label_id = insert_context(db, 1, dbName, tblName, "ROWID",
+				sec_label_id = insert_context(db, 1, dbName, tblName, "ROWID",
 					sc->column_context, sc->tuple_context);
 
-				int sec_con_id = insert_context(db, 0, dbName, tblName, NULL,
+				sec_con_id = insert_context(db, 0, dbName, SELINUX_CONTEXT, NULL,
 					sc->tuple_context, sc->tuple_context);
 
 				insert_key(db, dbName, tblName, "ROWID", sec_label_id);

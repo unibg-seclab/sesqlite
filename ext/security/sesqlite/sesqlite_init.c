@@ -105,7 +105,9 @@ char *make_key(
 ){
 	char *key;
 
-	if( colName==NULL )
+	if( tblName==NULL )
+		key = sqlite3_mprintf("%s", dbName);
+	else if( colName==NULL )
 		key = sqlite3_mprintf("%s:%s", dbName, tblName);
 	else
 		key = sqlite3_mprintf("%s:%s:%s", dbName, tblName, colName);
@@ -288,8 +290,11 @@ int load_contexts_from_table(
 		const char *tblName = sqlite3_column_text(select_stmt, 2);
 		const char *colName = sqlite3_column_text(select_stmt, 3);
 
-		insert_key(db, dbName, tblName,
-			( colName==0 || strlen(colName)==0) ? NULL : colName, id);
+		insert_key(db, 
+			dbName, 
+			( tblName==0 || strlen(tblName)==0) ? NULL : tblName,
+			( colName==0 || strlen(colName)==0) ? NULL : colName, 
+			id);
 	}
 
 	sqlite3_finalize(select_stmt);
