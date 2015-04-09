@@ -4,6 +4,7 @@ require {
 	attribute domain;
 	type unconfined_t;
 	type initrc_t;
+	class db_database { access load_module superuser };
 	class db_column { select update insert drop };
 	class db_table { create select update insert delete setattr getattr drop };
 	class db_tuple { select update insert delete };
