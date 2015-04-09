@@ -17,8 +17,6 @@
 #ifndef _HASH_H_
 #define _HASH_H_
 
-#include "sesqlite.h"
-
 /* Forward declarations of structures. */
 typedef struct seSQLiteHash seSQLiteHash;
 typedef struct seSQLiteBiHash seSQLiteBiHash;

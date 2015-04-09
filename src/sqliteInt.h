@@ -819,9 +819,9 @@ typedef struct ExtPragma ExtPragma;
 #include "os.h"
 #include "mutex.h"
 
-#ifdef SQLITE_ENABLE_SELINUX
-#include "sesqlite.h"
-#endif
+//#ifdef SQLITE_ENABLE_SELINUX
+//#include "sesqlite.h"
+//#endif
 
 /*
 ** Each database file to be accessed by the system is an instance
