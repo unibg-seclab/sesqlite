@@ -552,10 +552,10 @@ static void selinuxGetconIdFunction(
     sqlite3_value **argv
 ){
     sqlite3 *db = sqlite3_user_data(context);
-    const char *label = sqlite3_value_text(argv[0]);
-    if(security_check_context((char *) label) == 0){
+	char *label =sqlite3MPrintf(db, "%s", (char *) sqlite3_value_text(argv[0]));
+    if(security_check_context(label) == 0){
 	//TODO get the db name
-	int id = insert_id(db, "main", (char *) label);
+	int id = insert_id(db, "main", label);
 	sqlite3_result_int(context, id);
 
 //	sqlite3_bind_text(stmt_select_id, 1, label, -1, SQLITE_TRANSIENT);
