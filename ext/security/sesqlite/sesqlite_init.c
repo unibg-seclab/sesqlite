@@ -384,14 +384,20 @@ void selinux_getdefaultcon_pragma(
 	char *tblName = strtok(NULL, ". ");
 	char *colName = strtok(NULL, ". ");
 
-	CHECK_WRONG_USAGE( dbName==NULL || tblName==NULL || MORE_TOKENS,
-		"USAGE: pragma getdefaultcon(\"db.table.[column]\")\n" );
+	CHECK_WRONG_USAGE( dbName==NULL || MORE_TOKENS,
+		"USAGE: pragma getdefaultcon(\"db.[table.[column]]\")\n" );
 
 	char *defaultcon = NULL;
-	compute_sql_context(colName!=NULL, dbName, tblName, colName,
-		colName==NULL ? contexts->table_context : contexts->column_context,
-		&defaultcon);
-
+	if( tblName ){
+		compute_sql_context(colName!=NULL, dbName, tblName, colName,
+			colName==NULL ? contexts->table_context : contexts->column_context,
+			&defaultcon);
+	}else{
+		compute_sql_context(colName!=NULL, dbName, tblName, colName,
+			contexts->db_context,
+			&defaultcon);
+	}
+	
 	if( defaultcon==NULL ){
 		sesqlite_print("ERROR - Default context not found for", dbName, tblName, colName, ".");
 	}else{
