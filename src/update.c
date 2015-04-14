@@ -678,23 +678,9 @@ sqlite3ExprSetHeight(pParse, pFName);
       VdbeCoverageNeverTaken(v);
     }
     sqlite3GenerateRowIndexDelete(pParse, pTab, iDataCur, iIdxCur, aRegIdx);
-
-    /* If changing the rowid value, or if there are foreign key constraints
-    ** to process, delete the old record. Otherwise, add a noop OP_Delete
-    ** to invoke the pre-update hook.
-    **
-    ** That (regNew==regnewRowid+1) is true is also important for the 
-    ** pre-update hook. If the caller invokes preupdate_new(), the returned
-    ** value is copied from memory cell (regNewRowid+1+iCol), where iCol
-    ** is the column index supplied by the user.
-    */
-    assert( regNew==regNewRowid+1 );
-    sqlite3VdbeAddOp3(v, OP_Delete, iDataCur,
-        OPFLAG_ISUPDATE | ((hasFK || chngKey || pPk!=0) ? 0 : OPFLAG_ISNOOP),
-        regNewRowid
-    );
-    if( !pParse->nested ){
-      sqlite3VdbeChangeP4(v, -1, (char*)pTab, P4_TABLE);
+    /* If changing the record number, delete the old record.  */
+    if( hasFK || chngKey || pPk!=0 ){
+      sqlite3VdbeAddOp2(v, OP_Delete, iDataCur, 0);
     }
     if( bReplace || chngKey ){
       sqlite3VdbeJumpHere(v, j1);

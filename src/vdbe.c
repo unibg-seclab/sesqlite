@@ -87,16 +87,6 @@ static void updateMaxBlobsize(Mem *p){
 #endif
 
 /*
-** This macro evaluates to true if either the update hook or the preupdate
-** hook are enabled for database connect DB.
-*/
-#ifdef SQLITE_ENABLE_PREUPDATE_HOOK
-# define HAS_UPDATE_HOOK(DB)   ((DB)->xPreUpdateCallback||(DB)->xUpdateCallback)
-#else
-# define HAS_UPDATE_HOOK(DB)  ((DB)->xUpdateCallback)
-#endif
-
-/*
 ** The next global variable is incremented each time the OP_Found opcode
 ** is executed. This is used to test whether or not the foreign key
 ** operation implemented using OP_FkIsZero is working. This variable
@@ -4044,10 +4034,9 @@ case OP_InsertInt: {
   VdbeCursor *pC;   /* Cursor to table into which insert is written */
   int nZero;        /* Number of zero-bytes to append */
   int seekResult;   /* Result of prior seek or 0 if no USESEEKRESULT flag */
-  const char *zDb;  /* database name - used by the update and pre-update hooks */
-  Table *pTab;      /* Table structure - used by update and pre-update hooks */
-  int op = 0;       /* Opcode for update hook: SQLITE_UPDATE or SQLITE_INSERT */
-  int rcPre;        /* Result from the preupdate_hook if any */
+  const char *zDb;  /* database name - used by the update hook */
+  const char *zTbl; /* Table name - used by the opdate hook */
+  int op;           /* Opcode for update hook: SQLITE_UPDATE or SQLITE_INSERT */
 
   pData = &aMem[pOp->p2];
   assert( pOp->p1>=0 && pOp->p1<p->nCursor );
@@ -4057,7 +4046,6 @@ case OP_InsertInt: {
   assert( pC->pCursor!=0 );
   assert( pC->pseudoTableReg==0 );
   assert( pC->isTable );
-  assert( pOp->p4type==P4_TABLE || pOp->p4type>=P4_STATIC );
   REGISTER_TRACE(pOp->p2, pData);
 
   if( pOp->opcode==OP_Insert ){
@@ -4070,31 +4058,6 @@ case OP_InsertInt: {
     assert( pOp->opcode==OP_InsertInt );
     iKey = pOp->p3;
   }
-
-  if( pOp->p4type==P4_TABLE && HAS_UPDATE_HOOK(db) ){
-    assert( pC->isTable );
-    assert( pC->iDb>=0 );
-    zDb = db->aDb[pC->iDb].zName;
-    pTab = pOp->p4.pTab;
-    op = ((pOp->p5 & OPFLAG_ISUPDATE) ? SQLITE_UPDATE : SQLITE_INSERT);
-  }
-
-#ifdef SQLITE_ENABLE_PREUPDATE_HOOK
-  /* Invoke the pre-update hook, if any */
-  if( db->xPreUpdateCallback 
-   && pOp->p4type==P4_TABLE
-   && (!(pOp->p5 & OPFLAG_ISUPDATE) || pC->rowidIsValid==0)
-   && HasRowid(pTab)
-  ){
-    rcPre = sqlite3VdbePreUpdateHook(p, pC, SQLITE_INSERT, zDb, pTab, iKey, pOp->p2);
-    if( rcPre==SQLITE_DENY ){
-      rc = SQLITE_ABORT;
-      goto abort_due_to_error;
-    }else if( rcPre==SQLITE_IGNORE ){
-      break;
-    }
-  }
-#endif
 
   if( pOp->p5 & OPFLAG_NCHANGE ) p->nChange++;
   if( pOp->p5 & OPFLAG_LASTROWID ) db->lastRowid = lastRowid = iKey;
@@ -4119,8 +4082,13 @@ case OP_InsertInt: {
   pC->cacheStatus = CACHE_STALE;
 
   /* Invoke the update-hook if required. */
-  if( rc==SQLITE_OK && db->xUpdateCallback && op && HasRowid(pTab) ){
-    db->xUpdateCallback(db->pUpdateArg, op, zDb, pTab->zName, iKey);
+  if( rc==SQLITE_OK && db->xUpdateCallback && pOp->p4.z ){
+    zDb = db->aDb[pC->iDb].zName;
+    zTbl = pOp->p4.z;
+    op = ((pOp->p5 & OPFLAG_ISUPDATE) ? SQLITE_UPDATE : SQLITE_INSERT);
+    assert( pC->isTable );
+    db->xUpdateCallback(db->pUpdateArg, op, zDb, zTbl, iKey);
+    assert( pC->iDb>=0 );
   }
   break;
 }
@@ -4148,12 +4116,7 @@ case OP_InsertInt: {
 case OP_Delete: {
   i64 iKey;
   VdbeCursor *pC;
-  const char *zDb;
-  Table *pTab;
-  int opflags;
-  int rcPre;        /* Result from the preupdate_hook if any */
 
-  opflags = pOp->p2;
   assert( pOp->p1>=0 && pOp->p1<p->nCursor );
   pC = p->apCsr[pOp->p1];
   assert( pC!=0 );
@@ -4171,49 +4134,16 @@ case OP_Delete: {
   rc = sqlite3VdbeCursorMoveto(pC);
   if( NEVER(rc!=SQLITE_OK) ) goto abort_due_to_error;
 
-  /* If the update-hook or pre-update-hook will be invoked, set iKey to 
-  ** the rowid of the row being deleted. Set zDb and zTab as well.
-  */
-  if( pOp->p4.z && HAS_UPDATE_HOOK(db) ){
-    assert( pC->iDb>=0 );
-    assert( pC->rowidIsValid || !HasRowid(pOp->p4.pTab) );
-    iKey = pC->lastRowid;
-    zDb = db->aDb[pC->iDb].zName;
-    pTab = pOp->p4.pTab;
- }
-
-#ifdef SQLITE_ENABLE_PREUPDATE_HOOK
-  /* Invoke the pre-update-hook if required. */
-  if( db->xPreUpdateCallback && pOp->p4.z && HasRowid(pTab) ){
-    assert( !(opflags & OPFLAG_ISUPDATE) || (aMem[pOp->p3].flags & MEM_Int) );
-    rcPre = sqlite3VdbePreUpdateHook(p, pC,
-        (opflags & OPFLAG_ISUPDATE) ? SQLITE_UPDATE : SQLITE_DELETE,
-        zDb, pTab, iKey,
-        pOp->p3
-    );
-
-    if( rcPre==SQLITE_DENY ){
-      rc = SQLITE_ABORT;
-      goto abort_due_to_error;
-    }else if( rcPre==SQLITE_IGNORE ){
-      break;
-    }
-  }
-#endif
-
-  if( opflags & OPFLAG_ISNOOP ) break;
-
   rc = sqlite3BtreeDelete(pC->pCursor);
   pC->cacheStatus = CACHE_STALE;
 
-  /* Update the change-counter and invoke the update-hook if required. */
-  if( opflags & OPFLAG_NCHANGE ){
-    p->nChange++;
-    assert( pOp->p4.z );
-    if( rc==SQLITE_OK && db->xUpdateCallback && HasRowid(pTab) ){
-      db->xUpdateCallback(db->pUpdateArg, SQLITE_DELETE, zDb, pTab->zName,iKey);
-    }
+  /* Invoke the update-hook if required. */
+  if( rc==SQLITE_OK && db->xUpdateCallback && pOp->p4.z && pC->isTable ){
+    db->xUpdateCallback(db->pUpdateArg, SQLITE_DELETE,
+                        db->aDb[pC->iDb].zName, pOp->p4.z, iKey);
+    assert( pC->iDb>=0 );
   }
+  if( pOp->p2 & OPFLAG_NCHANGE ) p->nChange++;
   break;
 }
 /* Opcode: ResetCount * * * * *

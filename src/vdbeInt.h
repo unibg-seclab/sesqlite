@@ -376,25 +376,6 @@ struct Vdbe {
 #define VDBE_MAGIC_DEAD     0xb606c3c8    /* The VDBE has been deallocated */
 
 /*
-** Structure used to store the context required by the 
-** sqlite3_preupdate_*() API functions.
-*/
-struct PreUpdate {
-  Vdbe *v;
-  VdbeCursor *pCsr;               /* Cursor to read old values from */
-  int op;                         /* One of SQLITE_INSERT, UPDATE, DELETE */
-  u8 *aRecord;                    /* old.* database record */
-  KeyInfo keyinfo;
-  UnpackedRecord *pUnpacked;      /* Unpacked version of aRecord[] */
-  UnpackedRecord *pNewUnpacked;   /* Unpacked version of new.* record */
-  int iNewReg;                    /* Register for new.* values */
-  i64 iKey1;                      /* First key value passed to hook */
-  i64 iKey2;                      /* Second key value passed to hook */
-  int iPKey;                      /* If not negative index of IPK column */
-  Mem *aNew;                      /* Array of new.* values */
-};
-
-/*
 ** Function prototypes
 */
 void sqlite3VdbeFreeCursor(Vdbe *, VdbeCursor*);
@@ -453,8 +434,6 @@ int sqlite3VdbeMemGrow(Mem *pMem, int n, int preserve);
 int sqlite3VdbeCloseStatement(Vdbe *, int);
 void sqlite3VdbeFrameDelete(VdbeFrame*);
 int sqlite3VdbeFrameRestore(VdbeFrame *);
-int sqlite3VdbePreUpdateHook(
-    Vdbe *, VdbeCursor *, int, const char*, Table *, i64, int);
 int sqlite3VdbeTransferError(Vdbe *p);
 
 int sqlite3VdbeSorterInit(sqlite3 *, VdbeCursor *);

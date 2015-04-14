@@ -30,8 +30,6 @@ struct Incrblob {
   BtCursor *pCsr;         /* Cursor pointing at blob row */
   sqlite3_stmt *pStmt;    /* Statement holding cursor open */
   sqlite3 *db;            /* The associated database */
-  char *zDb;              /* Database name */
-  Table *pTab;            /* Table object */
 };
 
 
@@ -362,7 +360,7 @@ static int blobReadWrite(
   int iOffset, 
   int (*xCall)(BtCursor*, u32, u32, void*)
 ){
-  int rc = SQLITE_OK;
+  int rc;
   Incrblob *p = (Incrblob *)pBlob;
   Vdbe *v;
   sqlite3 *db;
@@ -387,41 +385,8 @@ static int blobReadWrite(
     */
     assert( db == v->db );
     sqlite3BtreeEnterCursor(p->pCsr);
-
-#ifdef SQLITE_ENABLE_PREUPDATE_HOOK
-    if( xCall==sqlite3BtreePutData && db->xPreUpdateCallback ){
-      /* If a pre-update hook is registered and this is a write cursor, 
-      ** invoke it here. 
-      ** 
-      ** TODO: The preupdate-hook is passed SQLITE_DELETE, even though this
-      ** operation should really be an SQLITE_UPDATE. This is probably
-      ** incorrect, but is convenient because at this point the new.* values 
-      ** are not easily obtainable. And for the sessions module, an 
-      ** SQLITE_UPDATE where the PK columns do not change is handled in the 
-      ** same way as an SQLITE_DELETE (the SQLITE_DELETE code is actually
-      ** slightly more efficient). Since you cannot write to a PK column
-      ** using the incremental-blob API, this works. For the sessions module
-      ** anyhow.
-      */
-      sqlite3_int64 iKey;
-      sqlite3BtreeKeySize(p->pCsr, &iKey);
-      rc = sqlite3VdbePreUpdateHook(
-          v, v->apCsr[0], SQLITE_DELETE, p->zDb, p->pTab, iKey, -1
-      );
-    }
-
-    if( rc==SQLITE_OK ){
-#endif
-
-      rc = xCall(p->pCsr, iOffset+p->iOffset, n, z);
-      sqlite3BtreeLeaveCursor(p->pCsr);
-
-#ifdef SQLITE_ENABLE_PREUPDATE_HOOK
-    }else if( rc!=SQLITE_ABORT ){
-      rc = SQLITE_OK;
-    }
-#endif
-
+    rc = xCall(p->pCsr, iOffset+p->iOffset, n, z);
+    sqlite3BtreeLeaveCursor(p->pCsr);
     if( rc==SQLITE_ABORT ){
       sqlite3VdbeFinalize(v);
       p->pStmt = 0;
