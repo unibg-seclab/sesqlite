@@ -50,11 +50,7 @@ typedef struct ResultSet {
 #define SQLITE_EXEC_CALLBACK( DB, SQL, CALLBACK, ARG ) \
   ({ \
     test_rc = sqlite3_exec(DB, SQL, CALLBACK, ARG, &zErrMsg); \
-    if( test_rc ){ \
-      fprintf(stderr, "Error callback: %s\n", zErrMsg); \
-      EXIT(1); \
-    } \
-  test_rc; \
+    test_rc; \
   })
 
 #define SQLITE_EXEC( DB, SQL ) SQLITE_EXEC_CALLBACK(DB, SQL, 0, 0)

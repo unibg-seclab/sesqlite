@@ -1918,14 +1918,13 @@ void sqlite3EndTable(
 	code = 1;
     }
 
-    if( db->xAddExtraColumn ){
+    if( db->xAddExtraColumn && !is_vacuum() ){
 	rc = db->xAddExtraColumn(db->pAddColumnArg, NULL, code, p, &zColumn);
 	if(rc == -1){
 	    /*TODO call abort*/
 	    return;	
 	}
     }
-
 #endif
 
 
@@ -1938,7 +1937,9 @@ void sqlite3EndTable(
       if( pEnd2->z[0]!=';' ) n += pEnd2->n;
 
 #if defined(SQLITE_ENABLE_SELINUX)
-      if(0!=sqlite3StrNICmp(p->zName, "sqlite_", 7) && 0!=sqlite3StrNICmp(p->zName, "selinux_", 8)) {
+      if(!is_vacuum() &&
+	      0!=sqlite3StrNICmp(p->zName, "sqlite_", 7) && 
+	      0!=sqlite3StrNICmp(p->zName, "selinux_", 8)) {
         int pStmt = 0;
         char *zNewStmt = 0;
         if( pCons->z==0 ){

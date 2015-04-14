@@ -102,6 +102,8 @@ static int execExecSql(sqlite3 *db, char **pzErrMsg, const char *zSql){
 ** following reboot.
 */
 void sqlite3Vacuum(Parse *pParse){
+
+
   Vdbe *v = sqlite3GetVdbe(pParse);
   if( v ){
     sqlite3VdbeAddOp2(v, OP_Vacuum, 0, 0);
@@ -228,6 +230,10 @@ int sqlite3RunVacuum(char **pzErrMsg, sqlite3 *db){
                                            sqlite3BtreeGetAutoVacuum(pMain));
 #endif
 
+#ifdef SQLITE_ENABLE_SELINUX
+    set_vacuum(1);
+#endif
+
   /* Query the schema of the main database. Create a mirror schema
   ** in the temporary database.
   */
@@ -335,6 +341,10 @@ int sqlite3RunVacuum(char **pzErrMsg, sqlite3 *db){
 
   assert( rc==SQLITE_OK );
   rc = sqlite3BtreeSetPageSize(pMain, sqlite3BtreeGetPageSize(pTemp), nRes,1);
+
+#ifdef SQLITE_ENABLE_SELINUX
+    set_vacuum(0);
+#endif
 
 end_of_vacuum:
   /* Restore the original value of db->flags */
