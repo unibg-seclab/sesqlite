@@ -94,8 +94,14 @@ if(test && selFlags != 128){
   char *f_action = sqlite3MPrintf(db, "%s", "select");
 
   for(i = 0; i < pSrc->nAlloc; i++){
+	  char *zName = NULL;
+	  if( pSrc->a[i].zAlias )
+		zName = pSrc->a[i].zAlias;
+	  else
+		zName = pSrc->a[i].zName;
+
       Expr *pFName = sqlite3DbMallocZero(db, sizeof(Expr) + strlen(f_name) + 1);
-      Expr *pFTable = sqlite3DbMallocZero(db, sizeof(Expr) + strlen(pSrc->a[i].zName) + 1);
+      Expr *pFTable = sqlite3DbMallocZero(db, sizeof(Expr) + strlen(zName) + 1);
       Expr *pFColumn = sqlite3DbMallocZero(db, sizeof(Expr) + strlen(f_column) + 1);
       Expr *pFClass = sqlite3DbMallocZero(db, sizeof(Expr) + strlen(f_class) + 1);
       Expr *pFAction = sqlite3DbMallocZero(db, sizeof(Expr) + strlen(f_action) + 1);
@@ -132,14 +138,14 @@ if(test && selFlags != 128){
         pFDebug->u.zToken = (char*)&pFDebug[1];
 
     memcpy(pFName->u.zToken, f_name, strlen(f_name));
-    memcpy(pFTable->u.zToken, pSrc->a[i].zName, strlen(pSrc->a[i].zName));
+    memcpy(pFTable->u.zToken, zName, strlen(zName));
     memcpy(pFColumn->u.zToken, f_column, strlen(f_column));
     memcpy(pFClass->u.zToken, f_class, strlen(f_class));
     memcpy(pFAction->u.zToken, f_action, strlen(f_action));
-    memcpy(pFDebug->u.zToken, pSrc->a[i].zName, strlen(pSrc->a[i].zName));
+    memcpy(pFDebug->u.zToken, zName, strlen(pSrc->a[i].zName));
 
     pFName->u.zToken[strlen(f_name)] = 0;
-    pFTable->u.zToken[strlen(pSrc->a[i].zName)] = 0;
+    pFTable->u.zToken[strlen(zName)] = 0;
     pFColumn->u.zToken[strlen(f_column)] = 0;
     pFClass->u.zToken[strlen(f_class)] = 0;
     pFAction->u.zToken[strlen(f_action)] = 0;
