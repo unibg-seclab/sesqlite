@@ -489,6 +489,11 @@ static void selinuxCheckAccessFunction(
     char *ttcon = NULL;
     assert(id != 0);
 
+
+	char *zClass = sqlite3_mprintf("%s", argv[1]->z);
+	char *zPerm = sqlite3_mprintf("%s", argv[2]->z);
+	char *zTable = sqlite3_mprintf("%s", argv[3]->z);
+
 #ifdef USE_AVC
     int tclass = 0;
     int tperm = 0;
@@ -560,7 +565,8 @@ static void selinuxGetconIdFunction(
     sqlite3_value **argv
 ){
     sqlite3 *db = sqlite3_user_data(context);
-	char *label =sqlite3MPrintf(db, "%s", (char *) sqlite3_value_text(argv[0]));
+	char *label = sqlite3MPrintf(db, "%s", argv[0]->z);
+	sqlite3Dequote(label);
     if(security_check_context(label) == 0){
 	//TODO get the db name
 	int id = insert_id(db, "main", label);
@@ -574,7 +580,7 @@ static void selinuxGetconIdFunction(
 //	else
 //	    sqlite3_result_error(context,
 //		"SeSQLite - The requested label is not registered.", -1);
-    }else{
+//    }else{
 	sqlite3_result_error(context,
 	    "SeSQLite - The requested label is not a valid selinux context.", -1);
     }
