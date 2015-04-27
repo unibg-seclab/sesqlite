@@ -36,11 +36,11 @@ void free_sesqlite_context_list(
 ){
 	struct sesqlite_context_element *temp;
 	while( head!=NULL ){
-		free(head->origin);
-		free(head->fparam);
-		free(head->sparam);
-		free(head->tparam);
-		free(head->security_context);
+		sqlite3_free(head->origin);
+		sqlite3_free(head->fparam);
+		sqlite3_free(head->sparam);
+		sqlite3_free(head->tparam);
+		sqlite3_free(head->security_context);
 		temp = head;
 		head = head->next;
 		free(temp);
@@ -113,13 +113,13 @@ struct sesqlite_context *read_sesqlite_context(
 			new = sqlite3_malloc(sizeof(struct sesqlite_context_element));
 			new->next = NULL;
 
-			token = strtok(NULL, " \t");
-			new->origin = strdup(token);
-			char *con = strtok(NULL, " \t");
-			new->security_context = strdup(con);
-			new->fparam = strdup(token);
-			new->sparam = strdup(token);
-			new->tparam = strdup(token);
+			token = strtok(NULL, "\t");
+			new->origin = sqlite3MPrintf(db, "%s", token);
+			char *con = strtok(NULL, "\t");
+			new->security_context = sqlite3MPrintf(db, "%s", con);
+			new->fparam = sqlite3MPrintf(db, "%s", token);
+			new->sparam = sqlite3MPrintf(db, "%s", token);
+			new->tparam = sqlite3MPrintf(db, "%s", token);
 
 			sorted_insert(&sc->db_context, new);
 			ndb_line++;
@@ -130,14 +130,14 @@ struct sesqlite_context *read_sesqlite_context(
 			new = sqlite3_malloc(sizeof(struct sesqlite_context_element));
 			new->next = NULL;
 
-			token = strtok(NULL, " \t");
-			new->origin = strdup(token);
-			char *con = strtok(NULL, " \t");
-			new->security_context = strdup(con);
+			token = strtok(NULL, "\t");
+			new->origin = sqlite3MPrintf(db, "%s", token);
+			char *con = strtok(NULL, "\t");
+			new->security_context = sqlite3MPrintf(db, "%s", con);
 			stoken = strtok(token, ".");
-			new->fparam = strdup(stoken);
+			new->fparam = sqlite3MPrintf(db, "%s", stoken);
 			stoken = strtok(NULL, ".");
-			new->sparam = strdup(stoken);
+			new->sparam = sqlite3MPrintf(db, "%s", stoken);
 			new->tparam = NULL;
 
 			sorted_insert(&sc->table_context, new);
@@ -149,16 +149,16 @@ struct sesqlite_context *read_sesqlite_context(
 			new = sqlite3_malloc(sizeof(struct sesqlite_context_element));
 			new->next = NULL;
 
-			token = strtok(NULL, " \t");
-			new->origin = strdup(token);
-			char *con = strtok(NULL, " \t");
-			new->security_context = strdup(con);
+			token = strtok(NULL, "\t");
+			new->origin = sqlite3MPrintf(db, "%s", token);
+			char *con = strtok(NULL, "\t");
+			new->security_context = sqlite3MPrintf(db, "%s", con);
 			stoken = strtok(token, ".");
-			new->fparam = strdup(stoken);
+			new->fparam = sqlite3MPrintf(db, "%s", stoken);
 			stoken = strtok(NULL, ".");
-			new->sparam = strdup(stoken);
+			new->sparam = sqlite3MPrintf(db, "%s", stoken);
 			stoken = strtok(NULL, ".");
-			new->tparam = strdup(stoken);
+			new->tparam = sqlite3MPrintf(db, "%s", stoken);
 
 			sorted_insert(&sc->column_context, new);
 			ncolumn_line++;
@@ -169,14 +169,14 @@ struct sesqlite_context *read_sesqlite_context(
 			new = sqlite3_malloc(sizeof(struct sesqlite_context_element));
 			new->next = NULL;
 
-			token = strtok(NULL, " \t");
-			new->origin = strdup(token);
-			char *con = strtok(NULL, " \t");
-			new->security_context = strdup(con);
+			token = strtok(NULL, "\t");
+			new->origin = sqlite3MPrintf(db, "%s", token);
+			char *con = strtok(NULL, "\t");
+			new->security_context = sqlite3MPrintf(db, "%s", con);
 			stoken = strtok(token, ".");
-			new->fparam = strdup(stoken);
+			new->fparam = sqlite3MPrintf(db, "%s", stoken);
 			stoken = strtok(NULL, ".");
-			new->sparam = strdup(stoken);
+			new->sparam = sqlite3MPrintf(db, "%s", stoken);
 			new->tparam = NULL;
 
 			sorted_insert(&sc->tuple_context, new);
