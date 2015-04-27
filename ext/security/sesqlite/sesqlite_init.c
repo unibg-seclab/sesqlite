@@ -209,6 +209,7 @@ int initialize_mapping(
 ){
 	int rc = SQLITE_OK;
 	char *result = NULL;
+	char *context = NULL;
 	int *id = NULL;
 	int *value = NULL;
 
@@ -233,7 +234,8 @@ int initialize_mapping(
 			rc = sqlite3_reset(stmt_insert);
 			assert( rc==SQLITE_OK);
 
-			char *context = strdup(pp->security_context);
+			context = NULL;
+			context = sqlite3MPrintf(db, "%s", pp->security_context);
 			seSQLiteBiHashInsert(hash_id, id, sizeof(int), context, strlen(context));
 		}
 		pp = pp->next;
