@@ -546,8 +546,8 @@ static void selinuxCheckAccessFunction(
 #ifdef SQLITE_DEBUG
     ttcon = seSQLiteBiHashFind(hash_id, &id, sizeof(int));
     fprintf(stdout, "table: %s, context: %s, action: %s => %s\n", 
-	    argv[3]->z, 
-	    ttcon, 
+	    argv[3]->z,
+	    ttcon,
 	    argv[2]->z,
 	    (res ? "ALLOW": "DENY")
     );
@@ -580,7 +580,7 @@ static void selinuxGetconIdFunction(
 //	else
 //	    sqlite3_result_error(context,
 //		"SeSQLite - The requested label is not registered.", -1);
-//    }else{
+    }else{
 	sqlite3_result_error(context,
 	    "SeSQLite - The requested label is not a valid selinux context.", -1);
     }
