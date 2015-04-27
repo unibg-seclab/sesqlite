@@ -119,11 +119,13 @@ struct sesqlite_context {
 
 	int ndb_context;
 	int ntable_context;
+	int nview_context;
 	int ncolumn_context;
 	int ntuple_context;
 
 	struct sesqlite_context_element *db_context;
 	struct sesqlite_context_element *table_context;
+	struct sesqlite_context_element *view_context;
 	struct sesqlite_context_element *column_context;
 	struct sesqlite_context_element *tuple_context;
 };

@@ -63,11 +63,13 @@ struct sesqlite_context *read_sesqlite_context(
 	char *path
 ){
 	int rc = SQLITE_OK;
-	int n_line, ndb_line, ntable_line, ncolumn_line, ntuple_line;
+	int n_line, ndb_line, ntable_line, nview_line, ncolumn_line, ntuple_line;
 	char line[255];
 	char *p      = NULL;
 	char *token  = NULL;
 	char *stoken = NULL;
+	char *rest   = NULL; /* to point to the rest of the string */
+	char *srest   = NULL; /* to point to the rest of the string */
 	FILE *fp     = NULL;
 
 	struct sesqlite_context *sc = sqlite3_malloc(
@@ -75,26 +77,28 @@ struct sesqlite_context *read_sesqlite_context(
 
 	// TODO modify the liselinux in order to retrieve the context from the targeted folder
 	fp = fopen(path, "rb");
-	if( fp==NULL ){
+	if( fp == NULL ){
 		fprintf(stderr, "Error. Unable to open '%s' configuration file.\n", path);
-		return sc;
+		return NULL;
 	}
 
 	sc->db_context     = NULL;
 	sc->table_context  = NULL;
+	sc->view_context   = NULL;
 	sc->column_context = NULL;
 	sc->tuple_context  = NULL;
 
 	n_line = 0;
 	ndb_line = 0;
 	ntable_line = 0;
+	nview_line = 0;
 	ncolumn_line = 0;
 	ntuple_line = 0;
 
 	/* Read the file */
 	while( fgets(line, sizeof line - 1, fp) ){
 
-		if( line[strlen(line) - 1]=='\n' )
+		if( line[strlen(line) - 1] == '\n' )
 			line[strlen(line) - 1] = 0;
 
 		p = line;
@@ -105,7 +109,12 @@ struct sesqlite_context *read_sesqlite_context(
 		if( *p=='#' || *p==0 )
 			continue;
 
-		token = strtok(p, " \t");
+		token = strtok_r(p, " \t", &rest);
+		if( !token ){
+			fprintf(stderr, "Error. Unable to parse the configuration file.\n");
+			fclose(fp);
+			return NULL;
+		}
 
 		if( !strcasecmp(token, "db_database") ){
 
@@ -113,10 +122,11 @@ struct sesqlite_context *read_sesqlite_context(
 			new = sqlite3_malloc(sizeof(struct sesqlite_context_element));
 			new->next = NULL;
 
-			token = strtok(NULL, "\t");
+			token = strtok_r(NULL, " \t", &rest);
 			new->origin = sqlite3MPrintf(db, "%s", token);
-			char *con = strtok(NULL, "\t");
+			char *con = strtok_r(NULL, " \t", &rest);
 			new->security_context = sqlite3MPrintf(db, "%s", con);
+
 			new->fparam = sqlite3MPrintf(db, "%s", token);
 			new->sparam = sqlite3MPrintf(db, "%s", token);
 			new->tparam = sqlite3MPrintf(db, "%s", token);
@@ -130,18 +140,40 @@ struct sesqlite_context *read_sesqlite_context(
 			new = sqlite3_malloc(sizeof(struct sesqlite_context_element));
 			new->next = NULL;
 
-			token = strtok(NULL, "\t");
+			token = strtok_r(NULL, " \t", &rest);
 			new->origin = sqlite3MPrintf(db, "%s", token);
-			char *con = strtok(NULL, "\t");
+			char *con = strtok_r(NULL, " \t", &rest);
 			new->security_context = sqlite3MPrintf(db, "%s", con);
-			stoken = strtok(token, ".");
+
+			stoken = strtok_r(token, ".", &srest);
 			new->fparam = sqlite3MPrintf(db, "%s", stoken);
-			stoken = strtok(NULL, ".");
+			stoken = strtok_r(NULL, ".", &srest);
 			new->sparam = sqlite3MPrintf(db, "%s", stoken);
 			new->tparam = NULL;
 
 			sorted_insert(&sc->table_context, new);
 			ntable_line++;
+
+		}else if( !strcasecmp(token, "db_view") ){
+
+			struct sesqlite_context_element *new;
+			new = sqlite3_malloc(sizeof(struct sesqlite_context_element));
+			new->next = NULL;
+
+			token = strtok_r(NULL, " \t", &rest);
+			new->origin = sqlite3MPrintf(db, "%s", token);
+			char *con = strtok_r(NULL, " \t", &rest);
+			new->security_context = sqlite3MPrintf(db, "%s", con);
+			fprintf(stdout, "TOKEN-CON: %s, LENGTH-CON: %d\n", new->security_context, strlen(new->security_context));
+
+			stoken = strtok_r(token, ".", &srest);
+			new->fparam = sqlite3MPrintf(db, "%s", stoken);
+			stoken = strtok_r(NULL, ".", &srest);
+			new->sparam = sqlite3MPrintf(db, "%s", stoken);
+			new->tparam = NULL;
+
+			sorted_insert(&sc->view_context, new);
+			nview_line++;
 
 		}else if( !strcasecmp(token, "db_column") ){
 
@@ -149,15 +181,16 @@ struct sesqlite_context *read_sesqlite_context(
 			new = sqlite3_malloc(sizeof(struct sesqlite_context_element));
 			new->next = NULL;
 
-			token = strtok(NULL, "\t");
+			token = strtok_r(NULL, " \t", &rest);
 			new->origin = sqlite3MPrintf(db, "%s", token);
-			char *con = strtok(NULL, "\t");
+			char *con = strtok_r(NULL, " \t", &rest);
 			new->security_context = sqlite3MPrintf(db, "%s", con);
-			stoken = strtok(token, ".");
+
+			stoken = strtok_r(token, ".", &srest);
 			new->fparam = sqlite3MPrintf(db, "%s", stoken);
-			stoken = strtok(NULL, ".");
+			stoken = strtok_r(NULL, ".", &srest);
 			new->sparam = sqlite3MPrintf(db, "%s", stoken);
-			stoken = strtok(NULL, ".");
+			stoken = strtok_r(NULL, ".", &srest);
 			new->tparam = sqlite3MPrintf(db, "%s", stoken);
 
 			sorted_insert(&sc->column_context, new);
@@ -169,13 +202,14 @@ struct sesqlite_context *read_sesqlite_context(
 			new = sqlite3_malloc(sizeof(struct sesqlite_context_element));
 			new->next = NULL;
 
-			token = strtok(NULL, "\t");
+			token = strtok_r(NULL, " \t", &rest);
 			new->origin = sqlite3MPrintf(db, "%s", token);
-			char *con = strtok(NULL, "\t");
+			char *con = strtok_r(NULL, " \t", &rest);
 			new->security_context = sqlite3MPrintf(db, "%s", con);
-			stoken = strtok(token, ".");
+			
+			stoken = strtok_r(token, ".", &srest);
 			new->fparam = sqlite3MPrintf(db, "%s", stoken);
-			stoken = strtok(NULL, ".");
+			stoken = strtok_r(NULL, ".", &srest);
 			new->sparam = sqlite3MPrintf(db, "%s", stoken);
 			new->tparam = NULL;
 
@@ -183,11 +217,9 @@ struct sesqlite_context *read_sesqlite_context(
 			ntuple_line++;
 
 		}else{
-
 			fprintf(stderr,
 				"Error, unable to recognize '%s' in sesqlite_context file.\n",
 				token);
-
 		}
 	}
 

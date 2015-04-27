@@ -466,6 +466,7 @@ int sqlite3SelinuxInit(sqlite3 *db) {
 		if( SQLITE_OK!=rc ) return rc;
 	}else{
 		contexts = read_sesqlite_context(db, SESQLITE_CONTEXTS_PATH);
+		if( !contexts ) return SQLITE_ERROR;
 
 		rc = initialize_mapping(db);
 		if( SQLITE_OK!=rc ) return rc;
