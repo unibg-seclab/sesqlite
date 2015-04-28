@@ -164,7 +164,6 @@ struct sesqlite_context *read_sesqlite_context(
 			new->origin = sqlite3MPrintf(db, "%s", token);
 			char *con = strtok_r(NULL, " \t", &rest);
 			new->security_context = sqlite3MPrintf(db, "%s", con);
-			fprintf(stdout, "TOKEN-CON: %s, LENGTH-CON: %d\n", new->security_context, strlen(new->security_context));
 
 			stoken = strtok_r(token, ".", &srest);
 			new->fparam = sqlite3MPrintf(db, "%s", stoken);

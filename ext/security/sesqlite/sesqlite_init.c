@@ -33,26 +33,39 @@ struct sesqlite_context *contexts = NULL;
  * check if the table selinux_id is already in the database.
  */
 int isReopen(
-	sqlite3 *db
+	sqlite3 *db,
+	int *reopen
 ){
 	sqlite3_stmt *check_stmt = NULL;
 	int count = 0;
+	int rc = SQLITE_OK;
 
-	int rc = sqlite3_prepare_v2(db,
-		"SELECT count(*) FROM sqlite_master WHERE type='table' and name = 'selinux_id';", -1,
-	    &check_stmt, 0);
+	rc = sqlite3_prepare_v2(db,
+		"SELECT count(*) FROM sqlite_master WHERE type='table' AND tbl_name LIKE 'selinux%';", -1,
+		&check_stmt, 0);
 
 	if( SQLITE_OK!=rc ){
 		fprintf(stderr, "Error: SQL error in function isReopen\n");
-		exit(1); /* Don't worry, this will never be the case */
+		return SQLITE_ERROR;
 	}
 
 	while( sqlite3_step(check_stmt)==SQLITE_ROW ){
 		count = sqlite3_column_int(check_stmt, 0);
 	}
 
+	sqlite3_reset(check_stmt);
 	sqlite3_finalize(check_stmt);
-	return count != 0;
+
+	if( count == 0 ){ /* first open */
+		*reopen = 0;
+		rc = SQLITE_OK;
+	}else if( count == 2 ){ /* this is a reopen */
+		*reopen = 1;
+		rc = SQLITE_OK;
+	}else
+		rc = SQLITE_ERROR; /* something wrong happened. */
+
+	return rc;
 }
 
 int insert_context(sqlite3 *db, int isColumn, char *dbName, char *tblName,
@@ -254,6 +267,7 @@ int initialize_mapping(
 	return SQLITE_OK;
 }
 
+
 /*
  * This function loads the selinux_id and selinux_context tables into the
  * respective hashmaps. This is used when the database is reopened and
@@ -437,6 +451,7 @@ int register_pragmas(sqlite3 *db){
 int sqlite3SelinuxInit(sqlite3 *db) {
 
 	int rc = SQLITE_OK;
+	int reopen = 0;
 
 #ifdef SQLITE_DEBUG
 	fprintf(stdout, "\n == SeSqlite Initialization == \n");
@@ -453,7 +468,8 @@ int sqlite3SelinuxInit(sqlite3 *db) {
 		seSQLiteBiHashInit(hash_id, SESQLITE_HASH_BINARY, SESQLITE_HASH_STRING, 0); /* init mapping */
 	}
 
-	int reopen = isReopen(db);
+	rc = isReopen(db, &reopen);
+	if( SQLITE_OK!=rc ) return rc;
 
 	rc = create_internal_table(db);
 	if( SQLITE_OK!=rc ) return rc;
