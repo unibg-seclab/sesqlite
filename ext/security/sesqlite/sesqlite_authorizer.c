@@ -133,6 +133,29 @@ int getContext(
     }
 }
 
+
+/*
+ * Checks whether the table has the security_context attribute.
+ */
+int is_table_sesqlite_enabled(sqlite3 *db,char *zDatabase, char *zName){
+
+	int rc = SQLITE_OK;
+
+	Table *pTab = sqlite3FindTable(db, zName, zDatabase);
+	
+	/* security_context is ALWAYS the last column */
+	if(!strcasecmp(pTab->aCol[pTab->nCol-1].zName, SECURITY_CONTEXT_COLUMN_NAME))
+		rc = SQLITE_OK;
+	else{
+		fprintf(stderr,
+			"Error: table %s does not support the security_context attribute.\n", 
+			zName);
+		rc = SQLITE_ERROR;
+	}
+
+	return rc;
+}
+
 /*
  * Checks whether the source context has been granted the specified permission
  * for the classes 'db_table' and 'db_column' and the target context associated with the table/column.
@@ -146,9 +169,14 @@ int checkAccess(
 	int tclass,
 	int perm
 ){
+    int res = 0;
     assert(tclass <= NELEMS(access_vector));
 
-    int res = 0;
+	/* Check whether the table supports the security_context attribute.
+	 * Do not grant access to the table if the table does not have the security_context. */
+//	res = is_table_sesqlite_enabled(db, (char *) dbname, (char *) table);
+//	if( SQLITE_OK!=res ) return SQLITE_ERROR;
+
     int id = getContext(db, dbname, table, column, tclass);
     assert(id != 0);
 
@@ -286,9 +314,11 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 		if (!checkAccess(pdb, dbname, arg1, NULL, SELINUX_DB_TABLE,
 		SELINUX_DELETE)) {
 			rc = SQLITE_DENY;
-		}else if(checkAllColumns(pdb, dbname, arg1, SELINUX_DB_COLUMN,
-		    SELINUX_DROP)){
-			rc = SQLITE_DENY;
+		// TODO NON NECESSARIO DA ELMINIARE ABBIAMO LA STESSA POTENZA FACENDO NO
+		// DELETE TABELLA:
+//		}else if(checkAllColumns(pdb, dbname, arg1, SELINUX_DB_COLUMN,
+//		    SELINUX_DROP)){
+//			rc = SQLITE_DENY;
 		}
 
 		break;
