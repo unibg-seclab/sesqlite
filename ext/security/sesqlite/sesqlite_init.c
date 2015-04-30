@@ -327,7 +327,7 @@ void selinux_restorecon_pragma(
 	char *colName = strtok(NULL, ". ");
 
 	CHECK_WRONG_USAGE( dbName==NULL || MORE_TOKENS,
-		"USAGE: pragma chcon(\"db.[table.[column]]\")\n" );
+		"USAGE: pragma restorecon(\"db.[table.[column]]\")\n" );
 
 	sesqlite_print("Restoring labels for", dbName, tblName, colName, ".");
 
@@ -353,6 +353,7 @@ void selinux_chcon_pragma(
 	CHECK_WRONG_USAGE( label==NULL || dbName==NULL || MORE_TOKENS,
 		"USAGE: pragma chcon(\"label db.[table.[column]]\")\n" );
 
+	sesqlite_print("Changing label for", dbName, tblName, colName, ".");
 	if( get_key(db, dbName, tblName, colName)==-1 ){
 		sesqlite_print("ERROR - No known context for", dbName, tblName, colName, ".");
 	}else{
