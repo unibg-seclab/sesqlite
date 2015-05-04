@@ -76,9 +76,10 @@ const char *authtype[] = { "SQLITE_COPY", "SQLITE_CREATE_INDEX",
 
 /* other */
 #define SELINUX_LOAD_MODULE 		10
+#define SELINUX_ACCESS				11
 
 #define SELINUX_NELEM_CLASS		3
-#define SELINUX_NELEM_PERM		10
+#define SELINUX_NELEM_PERM		11
 
 
 extern struct sesqlite_context *contexts;
@@ -140,27 +141,45 @@ static struct {
 		uint16_t p_code;
 	} perm[32];
 
-} access_vector[] = { { "db_database", SELINUX_DB_DATABASE, { { "create",
-SELINUX_CREATE }, { "drop", SELINUX_DROP }, { "getattr", SELINUX_GETATTR }, {
-		"setattr", SELINUX_SETATTR }, { "relabelfrom",
-SELINUX_RELABEL_FROM }, { "relabelto",
-SELINUX_RELABEL_TO }, } }, { "db_table",
-SELINUX_DB_TABLE, { { "create", SELINUX_CREATE }, { "drop",
-SELINUX_DROP }, { "getattr", SELINUX_GETATTR }, { "setattr", SELINUX_SETATTR },
-		{ "relabelfrom",
-		SELINUX_RELABEL_FROM }, { "relabelto",
-		SELINUX_RELABEL_TO }, { "select", SELINUX_SELECT }, { "update",
-		SELINUX_UPDATE }, { "insert", SELINUX_INSERT }, { "delete",
-		SELINUX_DELETE }, } }, { "db_column",
-SELINUX_DB_COLUMN, { { "create", SELINUX_CREATE }, { "drop", SELINUX_DROP }, {
-		"getattr", SELINUX_GETATTR }, { "setattr",
-SELINUX_SETATTR }, { "relabelfrom", SELINUX_RELABEL_FROM }, { "relabelto",
-SELINUX_RELABEL_TO }, { "select", SELINUX_SELECT },
-		{ "update", SELINUX_UPDATE }, { "insert", SELINUX_INSERT }, } }, {
-		"db_tuple",
-		SELINUX_DB_TUPLE, { { "relabelfrom", SELINUX_RELABEL_FROM }, {
-				"relabelto",
-				SELINUX_RELABEL_TO }, { "select", SELINUX_SELECT }, { "update",
-		SELINUX_UPDATE }, { "insert", SELINUX_INSERT }, { "delete",
-		SELINUX_DELETE }, } }, };
-
+} access_vector[] = { 
+	{ "db_database", SELINUX_DB_DATABASE, { 
+		{ "create", SELINUX_CREATE }, 
+		{ "access", SELINUX_ACCESS }, 
+		{ "drop", SELINUX_DROP }, 
+		{ "getattr", SELINUX_GETATTR }, 
+		{ "setattr", SELINUX_SETATTR }, 
+		{ "relabelfrom", SELINUX_RELABEL_FROM }, 
+		{ "relabelto", SELINUX_RELABEL_TO }, } 
+	}, 
+	{ "db_table", SELINUX_DB_TABLE, { 
+		{ "create", SELINUX_CREATE }, 
+		{ "drop", SELINUX_DROP }, 
+		{ "getattr", SELINUX_GETATTR }, 
+		{ "setattr", SELINUX_SETATTR },
+		{ "relabelfrom", SELINUX_RELABEL_FROM }, 
+		{ "relabelto", SELINUX_RELABEL_TO }, 
+		{ "select", SELINUX_SELECT }, 
+		{ "update", SELINUX_UPDATE }, 
+		{ "insert", SELINUX_INSERT }, 
+		{ "delete", SELINUX_DELETE }, } 
+	}, 
+	{ "db_column", SELINUX_DB_COLUMN, { 
+		{ "create", SELINUX_CREATE }, 
+		{ "drop", SELINUX_DROP }, 
+		{ "getattr", SELINUX_GETATTR }, 
+		{ "setattr", SELINUX_SETATTR }, 
+		{ "relabelfrom", SELINUX_RELABEL_FROM }, 
+		{ "relabelto", SELINUX_RELABEL_TO }, 
+		{ "select", SELINUX_SELECT },
+		{ "update", SELINUX_UPDATE }, 
+		{ "insert", SELINUX_INSERT }, } 
+	},
+	{ "db_tuple", SELINUX_DB_TUPLE, { 
+		{ "relabelfrom", SELINUX_RELABEL_FROM }, 
+		{ "relabelto", SELINUX_RELABEL_TO },
+		{ "select", SELINUX_SELECT }, 
+		{ "update", SELINUX_UPDATE }, 
+		{ "insert", SELINUX_INSERT }, 
+		{ "delete", SELINUX_DELETE }, } 
+	}, 
+}; 
