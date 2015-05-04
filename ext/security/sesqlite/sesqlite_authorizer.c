@@ -248,13 +248,16 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 
 	sqlite3 *pdb = (sqlite3*) pUserData;
 
-//	if (!auth_enabled)
-//		return rc;
-
 #ifdef SQLITE_DEBUG
 	//fprintf(stdout, "authorizer: type=%s arg1=%s arg2=%s\n", authtype[type],
 	//		(arg1 ? arg1 : "NULL"), (arg2 ? arg2 : "NULL"));
 #endif
+
+	/* check whether the caller can access the db */
+	if (dbname && !checkAccess(pdb, dbname, NULL, NULL, SELINUX_DB_DATABASE,
+	SELINUX_ACCESS)) {
+		rc = SQLITE_DENY;
+	}
 
 	switch (type) /* arg1          | arg2            */
 	{
@@ -314,11 +317,7 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 		if (!checkAccess(pdb, dbname, arg1, NULL, SELINUX_DB_TABLE,
 		SELINUX_DELETE)) {
 			rc = SQLITE_DENY;
-		// TODO NON NECESSARIO DA ELMINIARE ABBIAMO LA STESSA POTENZA FACENDO NO
-		// DELETE TABELLA:
-//		}else if(checkAllColumns(pdb, dbname, arg1, SELINUX_DB_COLUMN,
-//		    SELINUX_DROP)){
-//			rc = SQLITE_DENY;
+		/* no need to check drop on columns  */
 		}
 
 		break;
