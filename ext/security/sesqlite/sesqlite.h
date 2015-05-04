@@ -61,25 +61,25 @@ const char *authtype[] = { "SQLITE_COPY", "SQLITE_CREATE_INDEX",
 
 /* SELinux permissions */
 /* common database */
-#define SELINUX_ACCESS 			0
-#define SELINUX_CREATE 			1
-#define SELINUX_DROP 			2
-#define SELINUX_GETATTR 		3
-#define SELINUX_SETATTR 		4
-#define SELINUX_RELABEL_FROM 	5
-#define SELINUX_RELABEL_TO 		6
+#define SELINUX_CREATE 			0
+#define SELINUX_DROP 			1
+#define SELINUX_GETATTR 		2
+#define SELINUX_SETATTR 		3
+#define SELINUX_RELABEL_FROM 	4
+#define SELINUX_RELABEL_TO 		5
 
 /* db_xxx */
-#define SELINUX_SELECT 			7
-#define SELINUX_UPDATE 			8
-#define SELINUX_INSERT 			9
-#define SELINUX_DELETE 			10
+#define SELINUX_SELECT 			6
+#define SELINUX_UPDATE 			7
+#define SELINUX_INSERT 			8
+#define SELINUX_DELETE 			9
 
 /* other */
-#define SELINUX_LOAD_MODULE 		11
+#define SELINUX_ACCESS 		(SELINUX_SELECT)
+//#define SELINUX_LOAD_MODULE 		11 /* compile time check */
 
 #define SELINUX_NELEM_CLASS		3
-#define SELINUX_NELEM_PERM		11
+#define SELINUX_NELEM_PERM		10
 
 
 extern struct sesqlite_context *contexts;
@@ -143,13 +143,13 @@ static struct {
 
 } access_vector[] = { 
 	{ "db_database", SELINUX_DB_DATABASE, { 
-		{ "access", SELINUX_ACCESS }, 
 		{ "create", SELINUX_CREATE }, 
 		{ "drop", SELINUX_DROP }, 
 		{ "getattr", SELINUX_GETATTR }, 
 		{ "setattr", SELINUX_SETATTR }, 
 		{ "relabelfrom", SELINUX_RELABEL_FROM }, 
-		{ "relabelto", SELINUX_RELABEL_TO }, } 
+		{ "relabelto", SELINUX_RELABEL_TO }, 
+		{ "access", SELINUX_ACCESS }, } 
 	}, 
 	{ "db_table", SELINUX_DB_TABLE, { 
 		{ "create", SELINUX_CREATE }, 
