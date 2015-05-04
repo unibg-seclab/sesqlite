@@ -61,22 +61,22 @@ const char *authtype[] = { "SQLITE_COPY", "SQLITE_CREATE_INDEX",
 
 /* SELinux permissions */
 /* common database */
-#define SELINUX_CREATE 			0
-#define SELINUX_DROP 			1
-#define SELINUX_GETATTR 		2
-#define SELINUX_SETATTR 		3
-#define SELINUX_RELABEL_FROM 		4
-#define SELINUX_RELABEL_TO 		5
+#define SELINUX_ACCESS 			0
+#define SELINUX_CREATE 			1
+#define SELINUX_DROP 			2
+#define SELINUX_GETATTR 		3
+#define SELINUX_SETATTR 		4
+#define SELINUX_RELABEL_FROM 	5
+#define SELINUX_RELABEL_TO 		6
 
 /* db_xxx */
-#define SELINUX_SELECT 			6
-#define SELINUX_UPDATE 			7
-#define SELINUX_INSERT 			8
-#define SELINUX_DELETE 			9
+#define SELINUX_SELECT 			7
+#define SELINUX_UPDATE 			8
+#define SELINUX_INSERT 			9
+#define SELINUX_DELETE 			10
 
 /* other */
-#define SELINUX_LOAD_MODULE 		10
-#define SELINUX_ACCESS				11
+#define SELINUX_LOAD_MODULE 		11
 
 #define SELINUX_NELEM_CLASS		3
 #define SELINUX_NELEM_PERM		11
@@ -143,8 +143,8 @@ static struct {
 
 } access_vector[] = { 
 	{ "db_database", SELINUX_DB_DATABASE, { 
-		{ "create", SELINUX_CREATE }, 
 		{ "access", SELINUX_ACCESS }, 
+		{ "create", SELINUX_CREATE }, 
 		{ "drop", SELINUX_DROP }, 
 		{ "getattr", SELINUX_GETATTR }, 
 		{ "setattr", SELINUX_SETATTR }, 
