@@ -6,7 +6,7 @@
 #db.table
 
 # <databases>
-db_database	*	unconfined_u:object_r:sesqlite_db_public:s0
+db_database	*	unconfined_u:object_r:sqlite_db_t:s0
 
 # <tables>
 db_table	*.sqlite_master	unconfined_u:object_r:sqlite_master_t:s0
