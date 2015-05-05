@@ -37,13 +37,16 @@ void *sesqlite_malloc_and_zero(int n) {
  ** false if it should just use the supplied pointer.  CopyKey only makes
  ** sense for HASH_STRING and HASH_BINARY and is ignored
  ** for other key classes.
+ ** "copyValue" is true if the hash table should make its own private copy
+ ** of values and false if it should just use the supplied pointer.
  */
-void seSQLiteHashInit(seSQLiteHash *pNew, int keyClass, int copyKey) {
+void seSQLiteHashInit(seSQLiteHash *pNew, int keyClass, int copyKey, int copyValue) {
 	assert(pNew != 0);
 	assert(keyClass>= SESQLITE_HASH_INT && keyClass<= SESQLITE_HASH_BINARY);
 	pNew->keyClass = keyClass;
 	if( keyClass== SESQLITE_HASH_INT ) copyKey = 0;
 	pNew->copyKey = copyKey;
+	pNew->copyValue = copyValue;
 	pNew->first = 0;
 	pNew->count = 0;
 	pNew->htsize = 0;
@@ -70,6 +73,9 @@ void seSQLiteHashClear(seSQLiteHash *pH) {
 		seSQLiteHashElem *next_elem = elem->next;
 		if (pH->copyKey && elem->pKey) {
 			pH->xFree(elem->pKey);
+		}
+		if (pH->copyValue && elem->pData) {
+			pH->xFree(elem->pData);
 		}
 		pH->xFree(elem);
 		elem = next_elem;
@@ -274,6 +280,9 @@ static void seSQLiteRemoveElementGivenHash(
   if( pH->copyKey && elem->pKey ){
     pH->xFree(elem->pKey);
   }
+  if( pH->copyValue && elem->pData ){
+    pH->xFree(elem->pData);
+  }
   pH->xFree( elem );
   pH->count--;
   if( pH->count<=0 ){
@@ -284,21 +293,26 @@ static void seSQLiteRemoveElementGivenHash(
 }
 
 /* Attempt to locate an element of the hash table pH with a key
-** that matches pKey,nKey.  Return the data for this element if it is
-** found, or NULL if there is no match.
+** that matches pKey,nKey.  *pRes is set to be the data for this element if it is
+** found, or NULL if there is no match, *nRes will be the n for the element.
 */
-void *seSQLiteHashFind(const seSQLiteHash *pH, const void *pKey, int nKey){
+void seSQLiteHashFind(const seSQLiteHash *pH, const void *pKey, int nKey, void **pRes, int *nRes){
   int h;             /* A hash on key */
   seSQLiteHashElem *elem;    /* The element that matches key */
   int (*xHash)(const void*,int);  /* The hash function */
 
-  if( pH==0 || pH->sesqlite_ht==0 ) return 0;
-  xHash = seSQLiteHashFunction(pH->keyClass);
-  assert( xHash!=0 );
-  h = (*xHash)(pKey,nKey);
-  assert( (pH->htsize & (pH->htsize-1))==0 );
-  elem = seSQLiteFindElementGivenHash(pH,pKey,nKey, h & (pH->htsize-1));
-  return elem ? elem->pData : 0;
+  if( pH==0 || pH->sesqlite_ht==0 ){
+    if( pRes ){ *pRes = elem ? elem->pData : 0; }
+    if( nRes ){ *nRes = elem ? elem->nData : 0; }
+  }else{
+    xHash = seSQLiteHashFunction(pH->keyClass);
+    assert( xHash!=0 );
+    h = (*xHash)(pKey,nKey);
+    assert( (pH->htsize & (pH->htsize-1))==0 );
+    elem = seSQLiteFindElementGivenHash(pH,pKey,nKey, h & (pH->htsize-1));
+    if( pRes ){ *pRes = elem ? elem->pData : 0; }
+    if( nRes ){ *nRes = elem ? elem->nData : 0; }
+  }
 }
 
 /* Insert an element into the hash table pH.  The key is pKey,nKey
@@ -306,17 +320,16 @@ void *seSQLiteHashFind(const seSQLiteHash *pH, const void *pKey, int nKey){
 **
 ** If no element exists with a matching key, then a new
 ** element is created.  A copy of the key is made if the copyKey
-** flag is set.  NULL is returned.
+** flag is set. A copy of the value is made if the copyValue
+** flag is set. NULL is returned.
 **
 ** If another element already exists with the same key, then the
-** new data replaces the old data and the old data is returned.
-** The key is not copied in this instance.  If a malloc fails, then
-** the new data is returned and the hash table is unchanged.
+** new data replaces the old data.
 **
 ** If the "data" parameter to this function is NULL, then the
 ** element corresponding to "key" is removed from the hash table.
 */
-void *seSQLiteHashInsert(seSQLiteHash *pH, const void *pKey, int nKey, void *data, int nData, int *nDataOld){
+void seSQLiteHashInsert(seSQLiteHash *pH, const void *pKey, int nKey, void *pData, int nData){
   int hraw;             /* Raw hash value of the key */
   int h;                /* the hash of the key modulo hash table size */
   seSQLiteHashElem *elem;       /* Used to loop thru the element list */
@@ -331,26 +344,24 @@ void *seSQLiteHashInsert(seSQLiteHash *pH, const void *pKey, int nKey, void *dat
   h = hraw & (pH->htsize-1);
   elem = seSQLiteFindElementGivenHash(pH,pKey,nKey,h);
   if( elem ){
-    void *old_data = elem->pData;
-    if ( nDataOld != 0 )
-      *nDataOld = elem->nData;
-    if( data==0 ){
+    if( pData==0 ){
       seSQLiteRemoveElementGivenHash(pH,elem,h);
     }else{
-      elem->pData = data;
+      if( pH->copyValue && elem->pData ){
+        pH->xFree(elem->pData);
+      }
+      elem->pData = pData;
     }
-    return old_data;
+    return;
   }
-  if ( nDataOld != 0 )
-    *nDataOld = 0;
-  if( data==0 ) return 0;
+  if( pData==0 ) return;
   new_elem = (seSQLiteHashElem*)pH->xMalloc( sizeof(seSQLiteHashElem) );
-  if( new_elem==0 ) return data;
+  if( new_elem==0 ) return;
   if( pH->copyKey && pKey!=0 ){
     new_elem->pKey = pH->xMalloc( nKey );
     if( new_elem->pKey==0 ){
       pH->xFree(new_elem);
-      return data;
+      return;
     }
     memcpy((void*)new_elem->pKey, pKey, nKey);
   }else{
@@ -364,7 +375,7 @@ void *seSQLiteHashInsert(seSQLiteHash *pH, const void *pKey, int nKey, void *dat
     if( pH->htsize==0 ){
       pH->count = 0;
       pH->xFree(new_elem);
-      return data;
+      return;
     }
   }
   if( pH->count > pH->htsize ){
@@ -374,48 +385,54 @@ void *seSQLiteHashInsert(seSQLiteHash *pH, const void *pKey, int nKey, void *dat
   assert( (pH->htsize & (pH->htsize-1))==0 );
   h = hraw & (pH->htsize-1);
   seSQLiteInsertElement(pH, &pH->sesqlite_ht[h], new_elem);
-  new_elem->pData = data;
-  return 0;
+  new_elem->pData = pData;
+  return;
 }
 
-void seSQLiteBiHashInit(seSQLiteBiHash* bihash, int keytype, int valtype, int copy) {
+void seSQLiteBiHashInit(seSQLiteBiHash* bihash, int keytype, int valtype, int copyKey, int copyValue) {
   bihash->key2val = sesqlite_malloc_and_zero(sizeof(seSQLiteHash));
   bihash->val2key = sesqlite_malloc_and_zero(sizeof(seSQLiteHash));
-  seSQLiteHashInit(bihash->key2val, keytype, copy);
-  seSQLiteHashInit(bihash->val2key, valtype, copy);
+  seSQLiteHashInit(bihash->key2val, keytype, copyKey, copyValue);
+  seSQLiteHashInit(bihash->val2key, valtype, copyKey, copyValue);
 }
 
-void seSQLiteBiHashInsert(seSQLiteBiHash* bihash, const void *pKey, int nKey, const void *pVal, int nVal) {
+void seSQLiteBiHashInsert(seSQLiteBiHash* bihash, const void *pKey, int nKey, const void *pVal, int nVal){
+  int nOld;
+  void *pOld;
 
   // insert new key -> value association
-  int nValOld = 0;
-  void *pValOld = seSQLiteHashInsert(bihash->key2val, pKey, nKey, (void*) pVal, nVal, &nValOld);
+  seSQLiteHashFind(bihash->key2val, pKey, nKey, &pOld, &nOld);
+  seSQLiteHashInsert(bihash->key2val, pKey, nKey, (void*)pVal, nVal);
 
   // remove old value -> key association if exists
-  if (pValOld != 0) {
-    if (nValOld != 0)
-      seSQLiteHashInsert(bihash->val2key, pValOld, nValOld, 0, 0, 0);
-    else
+  if( pOld!=0 ){
+    if( nOld!=0 ){
+      seSQLiteHashInsert(bihash->val2key, pOld, nOld, 0, 0);
+    }else{
       fprintf(stderr, "ERROR: cannot remove old value -> key association in BiHash (no nVal set).\n");
+    }
   }
 
   // insert new value -> key association if provided
-  if (pVal != 0) {
-    pValOld = seSQLiteHashInsert(bihash->val2key, pVal, nVal, (void*) pKey, nKey, 0);
-    if (pValOld != 0)
+  if( pVal!=0 ){
+    seSQLiteHashFind(bihash->val2key, pVal, nVal, &pOld, &nOld);
+    if( pOld!=0 ){
       fprintf(stderr, "ERROR: value already associated to another key in BiHash (not injective).\n");
+    }else{
+      seSQLiteHashInsert(bihash->val2key, pVal, nVal, (void*)pKey, nKey);
+    }
   }
 }
 
-void *seSQLiteBiHashFind(const seSQLiteBiHash* bihash, const void *pKey, int nKey) {
-  return seSQLiteHashFind(bihash->key2val, pKey, nKey);
+void seSQLiteBiHashFind(const seSQLiteBiHash* bihash, const void *pKey, int nKey, void **pRes, int *nRes){
+  return seSQLiteHashFind(bihash->key2val, pKey, nKey, pRes, nRes);
 }
 
-void *seSQLiteBiHashFindKey(const seSQLiteBiHash* bihash, const void *pValue, int nValue) {
-  return seSQLiteHashFind(bihash->val2key, pValue, nValue);
+void seSQLiteBiHashFindKey(const seSQLiteBiHash* bihash, const void *pValue, int nValue, void **pRes, int *nRes){
+  return seSQLiteHashFind(bihash->val2key, pValue, nValue, pRes, nRes);
 }
 
-void seSQLiteBiHashClear(seSQLiteBiHash* bihash) {
+void seSQLiteBiHashClear(seSQLiteBiHash* bihash){
   seSQLiteHashClear(bihash->val2key);
   seSQLiteHashClear(bihash->key2val);
 }

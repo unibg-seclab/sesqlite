@@ -61,7 +61,7 @@ int lookup_security_context(seSQLiteBiHash *hash, char *db_name, char *tbl_name)
     compute_sql_context(0, db_name, tbl_name, NULL, 
 	    contexts->tuple_context, &sec_context);
 
-    id = seSQLiteBiHashFindKey(hash, sec_context, strlen(sec_context));
+    seSQLiteBiHashFindKey(hash, sec_context, strlen(sec_context), (void**) &id, 0);
     assert(id != NULL); /* check if SELinux can compute a security context */
 
     sqlite3_free(sec_context);
@@ -85,7 +85,7 @@ int lookup_security_label(sqlite3 *db,
 	    type ? contexts->column_context : contexts->table_context, &context);
 
     assert(context != NULL);
-    id = seSQLiteBiHashFindKey(hash, context, strlen(context));
+    seSQLiteBiHashFindKey(hash, context, strlen(context), (void**) &id, 0);
     if(id == NULL){
 	sqlite3_bind_int(stmt, 1, lookup_security_context(hash, db_name, SELINUX_ID));
 	sqlite3_bind_text(stmt, 2, context, strlen(context),

@@ -33,6 +33,7 @@ typedef struct seSQLiteHashElem seSQLiteHashElem;
 struct seSQLiteHash {
   char keyClass;          /* HASH_INT, _POINTER, _STRING, _BINARY */
   char copyKey;           /* True if copy of key made on insert */
+  char copyValue;         /* True if copy of values made on insert */
   int count;              /* Number of entries in this table */
   seSQLiteHashElem *first;        /* The first element of the array */
   void *(*xMalloc)(int);  /* malloc() function to use */
@@ -78,6 +79,8 @@ struct seSQLiteHashElem {
 **
 ** A copy of the key is made for HASH_STRING and HASH_BINARY
 ** if the copyKey parameter to HashInit is 1.  
+**
+** A copy of the value is made if copyValue parameter to HashInit is 1.
 */
 #define SESQLITE_HASH_INT       1
 /* #define SESQLITE_HASH_POINTER   2 NOT USED */
@@ -87,18 +90,18 @@ struct seSQLiteHashElem {
 /*
 ** Access routines.  To delete, insert a NULL pointer.
 */
-void seSQLiteHashInit(seSQLiteHash*, int keytype, int copyKey);
-void *seSQLiteHashInsert(seSQLiteHash*, const void *pKey, int nKey, void *pData, int nData, int *nDataOld);
-void *seSQLiteHashFind(const seSQLiteHash*, const void *pKey, int nKey);
+void seSQLiteHashInit(seSQLiteHash*, int keytype, int copyKey, int copyValue);
+void seSQLiteHashInsert(seSQLiteHash*, const void *pKey, int nKey, void *pData, int nData);
+void seSQLiteHashFind(const seSQLiteHash*, const void *pKey, int nKey, void **pRes, int *nRes);
 void seSQLiteHashClear(seSQLiteHash*);
 
 /*
 ** Access routines for bidirectional hash tables.
 */
-void seSQLiteBiHashInit(seSQLiteBiHash*, int keytype, int valtype, int copy);
+void seSQLiteBiHashInit(seSQLiteBiHash*, int keytype, int valtype, int copyKey, int copyValue);
 void seSQLiteBiHashInsert(seSQLiteBiHash*, const void *pKey, int nKey, const void *pVal, int nVal);
-void *seSQLiteBiHashFind(const seSQLiteBiHash*, const void *pKey, int nKey);
-void *seSQLiteBiHashFindKey(const seSQLiteBiHash*, const void *pVal, int nVal);
+void seSQLiteBiHashFind(const seSQLiteBiHash*, const void *pKey, int nKey, void **pRes, int *nRes);
+void seSQLiteBiHashFindKey(const seSQLiteBiHash*, const void *pVal, int nVal, void **pRes, int *nRes);
 void seSQLiteBiHashClear(seSQLiteBiHash*);
 void seSQLiteBiHashFree(seSQLiteBiHash*);
 
