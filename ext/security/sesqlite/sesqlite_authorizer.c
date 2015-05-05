@@ -133,6 +133,29 @@ int getContext(
     }
 }
 
+
+/*
+ * Checks whether the table has the security_context attribute.
+ */
+int is_table_sesqlite_enabled(sqlite3 *db,char *zDatabase, char *zName){
+
+	int rc = SQLITE_OK;
+
+	Table *pTab = sqlite3FindTable(db, zName, zDatabase);
+	
+	/* security_context is ALWAYS the last column */
+	if(!strcasecmp(pTab->aCol[pTab->nCol-1].zName, SECURITY_CONTEXT_COLUMN_NAME))
+		rc = SQLITE_OK;
+	else{
+		fprintf(stderr,
+			"Error: table %s does not support the security_context attribute.\n", 
+			zName);
+		rc = SQLITE_ERROR;
+	}
+
+	return rc;
+}
+
 /*
  * Checks whether the source context has been granted the specified permission
  * for the classes 'db_table' and 'db_column' and the target context associated with the table/column.
@@ -146,9 +169,14 @@ int checkAccess(
 	int tclass,
 	int perm
 ){
+    int res = 0;
     assert(tclass <= NELEMS(access_vector));
 
-    int res = 0;
+	/* Check whether the table supports the security_context attribute.
+	 * Do not grant access to the table if the table does not have the security_context. */
+//	res = is_table_sesqlite_enabled(db, (char *) dbname, (char *) table);
+//	if( SQLITE_OK!=res ) return SQLITE_ERROR;
+
     int id = getContext(db, dbname, table, column, tclass);
     assert(id != 0);
 
@@ -220,13 +248,16 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 
 	sqlite3 *pdb = (sqlite3*) pUserData;
 
-//	if (!auth_enabled)
-//		return rc;
-
 #ifdef SQLITE_DEBUG
 	//fprintf(stdout, "authorizer: type=%s arg1=%s arg2=%s\n", authtype[type],
 	//		(arg1 ? arg1 : "NULL"), (arg2 ? arg2 : "NULL"));
 #endif
+
+	/* check whether the caller can access the db */
+	if (dbname && !checkAccess(pdb, dbname, NULL, NULL, SELINUX_DB_DATABASE,
+	SELINUX_ACCESS)) {
+		rc = SQLITE_DENY;
+	}
 
 	switch (type) /* arg1          | arg2            */
 	{
@@ -286,9 +317,7 @@ int selinuxAuthorizer(void *pUserData, int type, const char *arg1,
 		if (!checkAccess(pdb, dbname, arg1, NULL, SELINUX_DB_TABLE,
 		SELINUX_DELETE)) {
 			rc = SQLITE_DENY;
-		}else if(checkAllColumns(pdb, dbname, arg1, SELINUX_DB_COLUMN,
-		    SELINUX_DROP)){
-			rc = SQLITE_DENY;
+		/* no need to check drop on columns  */
 		}
 
 		break;
@@ -617,120 +646,146 @@ int create_security_context_column(
     char **zColumn
 ) {
 
-    Column *pCol;
-    char *zName = 0;
-    char *zType = 0;
-    int iDb = 0;
-    int i = 0;
-    *zColumn = NULL;
+	Column *pCol;
+	char *zName = 0;
+	char *zType = 0;
+	int iDb = 0;
+	int i = 0;
+	int id = 0;
+	char *key = NULL;
+	*zColumn = NULL;
 
-    sqlite3* db = (sqlite3*) pArg;
-    Parse *pParse = ((Vdbe*) sqlite3_next_stmt(db, 0))->pParse;
-    Table *p = pNew;
+	sqlite3* db = (sqlite3*) pArg;
+	Parse *pParse = ((Vdbe*) sqlite3_next_stmt(db, 0))->pParse;
+	Table *p = pNew;
 
-    *zColumn = sqlite3MPrintf(db, SECURITY_CONTEXT_COLUMN_DEFINITION);
-    zName = sqlite3MPrintf(db, SECURITY_CONTEXT_COLUMN_NAME);
-    sqlite3Dequote(*zColumn);
-    sqlite3Dequote(zName);
+	*zColumn = sqlite3MPrintf(db, SECURITY_CONTEXT_COLUMN_DEFINITION);
+	zName = sqlite3MPrintf(db, SECURITY_CONTEXT_COLUMN_NAME);
+	sqlite3Dequote(*zColumn);
+	sqlite3Dequote(zName);
 
-    iDb = sqlite3SchemaToIndex(db, p->pSchema);
-    pCol = &p->aCol[0];
-    for(i=1; i<p->nCol; i++){
-	if( STRICMP(zName, p->aCol[i].zName) ){
-	    sqlite3ErrorMsg(pParse, "object name reserved for internal use: %s", zName);
-	    sqlite3DbFree(db, zName);
-	    sqlite3DbFree(db, *zColumn);
-	    return SQLITE_ERROR;
+	iDb = sqlite3SchemaToIndex(db, p->pSchema);
+	pCol = &p->aCol[0];
+	for(i=1; i<p->nCol; i++){
+		if( STRICMP(zName, p->aCol[i].zName) ){
+			sqlite3ErrorMsg(pParse, "object name reserved for internal use: %s", zName);
+			sqlite3DbFree(db, zName);
+			sqlite3DbFree(db, *zColumn);
+			return SQLITE_ERROR;
+		}
 	}
-    }
 
-    if( (p->nCol & 0x7)==0 ){
-	Column *aNew;
-	aNew = sqlite3DbRealloc(db,p->aCol,(p->nCol+8)*sizeof(p->aCol[0]));
-	if( aNew==0 ){
-	    sqlite3ErrorMsg(pParse, "memory error");
-	    sqlite3DbFree(db, zName);
-	    sqlite3DbFree(db, *zColumn);
-	    return SQLITE_ERROR;
+	if( (p->nCol & 0x7)==0 ){
+		Column *aNew;
+		aNew = sqlite3DbRealloc(db,p->aCol,(p->nCol+8)*sizeof(p->aCol[0]));
+		if( aNew==0 ){
+			sqlite3ErrorMsg(pParse, "memory error");
+			sqlite3DbFree(db, zName);
+			sqlite3DbFree(db, *zColumn);
+			return SQLITE_ERROR;
+		}
+		p->aCol = aNew;
 	}
-	p->aCol = aNew;
-    }
-    pCol = &p->aCol[p->nCol];
-    memset(pCol, 0, sizeof(p->aCol[0]));
-    pCol->zName = zName;
-    p->nCol++;
 
-    zType = sqlite3MPrintf(db, SECURITY_CONTEXT_COLUMN_TYPE);
-    pCol->zType = sqlite3MPrintf(db, zType);
-    pCol->affinity = SQLITE_AFF_INTEGER;
-    pCol->colFlags |= COLFLAG_HIDDEN;
+	pCol = &p->aCol[p->nCol];
+	memset(pCol, 0, sizeof(p->aCol[0]));
+	pCol->zName = zName;
+	p->nCol++;
 
-    sqlite3NestedParse(pParse,
-      "INSERT INTO %Q.%s (security_context, security_label, db, name) VALUES(\
-	%d, %d,\
-	'%s',\
-	'%s')",
-      pParse->db->aDb[iDb].zName, SELINUX_CONTEXT,
-      lookup_security_context(hash_id, 
-	  pParse->db->aDb[iDb].zName, 
-	  SELINUX_CONTEXT),
-      lookup_security_label(db, 
-	  stmt_insert, 
-	  hash_id, 
-	  0, 
-	  pParse->db->aDb[iDb].zName, 
-	  p->zName, 
-	  NULL),
-      pParse->db->aDb[iDb].zName, p->zName);
-    sqlite3ChangeCookie(pParse, iDb);
+	zType = sqlite3MPrintf(db, SECURITY_CONTEXT_COLUMN_TYPE);
+	pCol->zType = sqlite3MPrintf(db, zType);
+	pCol->affinity = SQLITE_AFF_INTEGER;
+	pCol->colFlags |= COLFLAG_HIDDEN;
 
-    //add security context to columns
-    int iCol;
-    for (iCol = 0; iCol < p->nCol; iCol++) {
-    	sqlite3NestedParse(pParse,
-    	  "INSERT INTO %Q.%s(security_context, security_label, db, name, column) VALUES(\
-	    %d, %d,\
-	    '%s',\
-	    '%s',\
-	    '%s')",
-    	  pParse->db->aDb[iDb].zName, SELINUX_CONTEXT,
-	  lookup_security_context(hash_id, 
-	      pParse->db->aDb[iDb].zName, 
-	      SELINUX_CONTEXT),
-	  lookup_security_label(db, 
-	      stmt_insert, 
-	      hash_id, 
-	      1, 
-	      pParse->db->aDb[iDb].zName, 
-	      p->zName, 
-	      p->aCol[iCol].zName),
-    	  pParse->db->aDb[iDb].zName, p->zName, p->aCol[iCol].zName);
-    }
-    sqlite3ChangeCookie(pParse, iDb);
+	id = lookup_security_label(db, 
+			stmt_insert, 
+			hash_id, 
+			0, 
+			pParse->db->aDb[iDb].zName, 
+			p->zName, 
+			NULL);
 
-    if(HasRowid(p)){
 	sqlite3NestedParse(pParse,
-	  "INSERT INTO %Q.%s(security_context, security_label, db, name, column) VALUES(\
-	    %d, %d,\
-	    '%s',\
-	    '%s',\
-	    '%s')",
-	  pParse->db->aDb[iDb].zName, SELINUX_CONTEXT,
-	  lookup_security_context(hash_id, 
-	      pParse->db->aDb[iDb].zName, 
-	      SELINUX_CONTEXT),
-	  lookup_security_label(db, 
-	      stmt_insert, 
-	      hash_id, 
-	      1, 
-	      pParse->db->aDb[iDb].zName, 
-	      p->zName, 
-	      "ROWID"),
-	  pParse->db->aDb[iDb].zName, p->zName, "ROWID");
+		"INSERT INTO %Q.%s (security_context, security_label, db, name) VALUES(\
+		%d, %d,\
+		'%s',\
+		'%s')",
+		pParse->db->aDb[iDb].zName, SELINUX_CONTEXT,
+		lookup_security_context(hash_id, 
+			pParse->db->aDb[iDb].zName, 
+			SELINUX_CONTEXT),
+		id,
+		pParse->db->aDb[iDb].zName, 
+		p->zName);
 	sqlite3ChangeCookie(pParse, iDb);
-    }
 
-    return SQLITE_OK;
+	/* Update HashMap */
+	key = make_key(pParse->db->aDb[iDb].zName, p->zName, NULL);
+	seSQLiteHashInsert(hash, key, strlen(key), &id, sizeof(int), 0);
+
+
+	//add security context to columns
+	int iCol;
+	for (iCol = 0; iCol < p->nCol; iCol++) {
+		id = lookup_security_label(db,
+				stmt_insert, 
+				hash_id, 
+				1, 
+				pParse->db->aDb[iDb].zName, 
+				p->zName, 
+				p->aCol[iCol].zName);
+
+		sqlite3NestedParse(pParse,
+			"INSERT INTO %Q.%s(security_context, security_label, db, name, column) VALUES(\
+			%d, %d,\
+			'%s',\
+			'%s',\
+			'%s')",
+			pParse->db->aDb[iDb].zName, SELINUX_CONTEXT,
+			lookup_security_context(hash_id, 
+				pParse->db->aDb[iDb].zName, 
+				SELINUX_CONTEXT),
+			id,
+			pParse->db->aDb[iDb].zName, 
+			p->zName, 
+			p->aCol[iCol].zName);
+
+		/* Update HashMap */
+		key = make_key(pParse->db->aDb[iDb].zName, p->zName, p->aCol[iCol].zName);
+		seSQLiteHashInsert(hash, key, strlen(key), &id, sizeof(int), 0);
+	}
+	sqlite3ChangeCookie(pParse, iDb);
+
+	if(HasRowid(p)){
+		id = lookup_security_label(db, 
+				stmt_insert, 
+				hash_id, 
+				1, 
+				pParse->db->aDb[iDb].zName, 
+				p->zName, 
+				"ROWID");
+
+		sqlite3NestedParse(pParse,
+			"INSERT INTO %Q.%s(security_context, security_label, db, name, column) VALUES(\
+			%d, %d,\
+			'%s',\
+			'%s',\
+			'%s')",
+			pParse->db->aDb[iDb].zName, SELINUX_CONTEXT,
+			lookup_security_context(hash_id, 
+				pParse->db->aDb[iDb].zName, 
+				SELINUX_CONTEXT),
+			id,
+			pParse->db->aDb[iDb].zName, p->zName, "ROWID");
+	
+		/* Update HashMap */
+		key = make_key(pParse->db->aDb[iDb].zName, p->zName, "ROWID");
+		seSQLiteHashInsert(hash, key, strlen(key), &id, sizeof(int), 0);
+
+		sqlite3ChangeCookie(pParse, iDb);
+	}
+
+	return SQLITE_OK;
 }
 
 static int selinux_schemachange_callback(

@@ -10,6 +10,8 @@ require {
 	class db_tuple { select update insert delete };
 }
 
+type sqlite_db_t, domain;
+
 type sqlite_master_t, domain;
 type selinux_context_t, domain;
 type sqlite_temp_master_t, domain;
@@ -19,6 +21,10 @@ type app_data_db_c, domain;
 
 type other_t, domain;
 type other_c, domain;
+
+type sqlite_tuple_t, domain;
+
+allow { unconfined_t initrc_t } sqlite_db_t:db_database { access };
 
 allow { unconfined_t  initrc_t } { sqlite_master_t sqlite_temp_master_t selinux_context_t other_t }:db_table { create select update insert delete setattr getattr drop };
 allow { unconfined_t initrc_t } { sqlite_master_t sqlite_temp_master_t selinux_context_t other_c }:db_column { select update insert drop };
