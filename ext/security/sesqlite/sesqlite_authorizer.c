@@ -652,6 +652,7 @@ int create_security_context_column(
 	int iDb = 0;
 	int i = 0;
 	int id = 0;
+	int *value = NULL;
 	char *key = NULL;
 	*zColumn = NULL;
 
@@ -697,7 +698,8 @@ int create_security_context_column(
 	pCol->affinity = SQLITE_AFF_INTEGER;
 	pCol->colFlags |= COLFLAG_HIDDEN;
 
-	id = lookup_security_label(db, 
+	value = sqlite3_malloc(sizeof(int));
+	*value = lookup_security_label(db, 
 			stmt_insert, 
 			hash_id, 
 			0, 
@@ -714,20 +716,21 @@ int create_security_context_column(
 		lookup_security_context(hash_id, 
 			pParse->db->aDb[iDb].zName, 
 			SELINUX_CONTEXT),
-		id,
+		*value,
 		pParse->db->aDb[iDb].zName, 
 		p->zName);
 	sqlite3ChangeCookie(pParse, iDb);
 
 	/* Update HashMap */
 	key = make_key(pParse->db->aDb[iDb].zName, p->zName, NULL);
-	seSQLiteHashInsert(hash, key, strlen(key), &id, sizeof(int), 0);
+	seSQLiteHashInsert(hash, key, strlen(key), value, sizeof(int), 0);
 
 
 	//add security context to columns
 	int iCol;
 	for (iCol = 0; iCol < p->nCol; iCol++) {
-		id = lookup_security_label(db,
+		value = sqlite3_malloc(sizeof(int));
+		*value = lookup_security_label(db, 
 				stmt_insert, 
 				hash_id, 
 				1, 
@@ -745,19 +748,20 @@ int create_security_context_column(
 			lookup_security_context(hash_id, 
 				pParse->db->aDb[iDb].zName, 
 				SELINUX_CONTEXT),
-			id,
+			*value,
 			pParse->db->aDb[iDb].zName, 
 			p->zName, 
 			p->aCol[iCol].zName);
 
 		/* Update HashMap */
 		key = make_key(pParse->db->aDb[iDb].zName, p->zName, p->aCol[iCol].zName);
-		seSQLiteHashInsert(hash, key, strlen(key), &id, sizeof(int), 0);
+		seSQLiteHashInsert(hash, key, strlen(key), value, sizeof(int), 0);
 	}
 	sqlite3ChangeCookie(pParse, iDb);
 
 	if(HasRowid(p)){
-		id = lookup_security_label(db, 
+		value = sqlite3_malloc(sizeof(int));
+		*value = lookup_security_label(db, 
 				stmt_insert, 
 				hash_id, 
 				1, 
@@ -775,12 +779,12 @@ int create_security_context_column(
 			lookup_security_context(hash_id, 
 				pParse->db->aDb[iDb].zName, 
 				SELINUX_CONTEXT),
-			id,
+			*value,
 			pParse->db->aDb[iDb].zName, p->zName, "ROWID");
 	
 		/* Update HashMap */
 		key = make_key(pParse->db->aDb[iDb].zName, p->zName, "ROWID");
-		seSQLiteHashInsert(hash, key, strlen(key), &id, sizeof(int), 0);
+		seSQLiteHashInsert(hash, key, strlen(key), value, sizeof(int), 0);
 
 		sqlite3ChangeCookie(pParse, iDb);
 	}
