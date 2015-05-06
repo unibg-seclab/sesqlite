@@ -96,7 +96,6 @@ void test_delete_table(void) {
 
 void test_select_table(void) {
 
-
     SQLITE_INIT
     CU_ASSERT(SQLITE_EXEC(db, "SELECT * FROM t3;") == SQLITE_AUTH);
 	CU_ASSERT(SQLITE_EXEC(db, "SELECT f FROM t3;") == SQLITE_OK);
@@ -104,6 +103,12 @@ void test_select_table(void) {
     CU_ASSERT(SQLITE_EXEC(db, "SELECT * FROM t2;") == SQLITE_OK);
 }
 
+void test_chcon_table(void) {
+
+    SQLITE_INIT
+    CU_ASSERT(SQLITE_EXEC(db, "PRAGMA chcon('unconfined_u:object_r:column_all:s0 main.t3.g');") == SQLITE_OK);
+    CU_ASSERT(SQLITE_EXEC(db, "SELECT g FROM t3;") == SQLITE_OK);
+}
 
 void test_vacuum_table(void) {
 
@@ -133,6 +138,7 @@ int main(int argc, char **argv) {
 		    || (NULL == CU_ADD_TEST(pSuite, test_select_table))
 		    || (NULL == CU_ADD_TEST(pSuite, test_update_table))
 		    || (NULL == CU_ADD_TEST(pSuite, test_delete_table))
+		    || (NULL == CU_ADD_TEST(pSuite, test_chcon_table))
 		    /* || (NULL == CU_ADD_TEST(pSuite, test_vacuum)) */ ){
 	    CU_cleanup_registry();
 	    return CU_get_error();
