@@ -58,7 +58,8 @@ int getContext(
     int tclass
 ){
     char *key = NULL;
-    int *id = 0;
+    int *res = NULL;
+	int id = 0;
 
 	// TODO use make_key
     switch (tclass) {
@@ -78,12 +79,12 @@ int getContext(
     }
 
     assert(key != NULL);
-    seSQLiteHashFind(hash, key, -1, (void**) &id, 0);
+    seSQLiteHashFind(hash, key, -1, (void**) &res, 0);
 
-    if (id != NULL) {
+    if (res != NULL) {
 
 #ifdef SQLITE_DEBUG
-		char *after = sqlite3_mprintf("-> %d", *id);
+		char *after = sqlite3_mprintf("-> %d", *res);
 		sesqlite_print("Hash hint for", dbname, table, column, after);
 		free(after);
 #endif
@@ -91,6 +92,15 @@ int getContext(
     }else{
         security_context_t security_context_new = 0;
         switch (tclass) {
+
+        case SELINUX_DB_DATABASE:
+            compute_sql_context(0,
+                (char *) dbname,
+                NULL,
+                NULL,
+                contexts->db_context,
+                &security_context_new);
+            break;
 
         case SELINUX_DB_TABLE:
             compute_sql_context(0,
@@ -111,17 +121,17 @@ int getContext(
             break;
 
         }
-        *id = insert_id(db, (char *) dbname, security_context_new);
-        seSQLiteHashInsert(hash, key, -1, id, sizeof(int));
+        id = insert_id(db, (char*) dbname, security_context_new);
+        seSQLiteHashInsert(hash, key, -1, &id, sizeof(int));
 
 #ifdef SQLITE_DEBUG
         fprintf(stdout, "Compute New Context: db=%s, table=%s, column=%s -> %d\n",
-            dbname, table, (column ? column : "NULL"), *id);
+            dbname, table, (column ? column : "NULL"), id);
 #endif
 
     }
 	sqlite3_free(key);
-	return *id;
+	return id;
 }
 
 
