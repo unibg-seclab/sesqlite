@@ -23,21 +23,17 @@ int insert_id(sqlite3 *db, char *db_name, char *sec_label){
     int rowid = 0;
 
     seSQLiteBiHashFindKey(hash_id, sec_label, -1, (void**) &value, 0);
-    if(value == NULL){
+	if( value!=NULL )
+		return *value;
 	sqlite3_bind_int(stmt_insert, 1, lookup_security_context(hash_id, db_name, SELINUX_ID));
-	sqlite3_bind_text(stmt_insert, 2, sec_label, strlen(sec_label),
-	    SQLITE_TRANSIENT);
+	sqlite3_bind_text(stmt_insert, 2, sec_label, strlen(sec_label), SQLITE_TRANSIENT);
 
 	rc = sqlite3_step(stmt_insert);
 	rc = sqlite3_reset(stmt_insert);
 
 	rowid = sqlite3_last_insert_rowid(db);
-	value = sqlite3_malloc(sizeof(int));
-	*value = rowid;
-	seSQLiteBiHashInsert(hash_id, value, sizeof(int), sec_label, -1);
-    }
-
-    return *(int *) value;
+	seSQLiteBiHashInsert(hash_id, &rowid, sizeof(int), sec_label, -1);
+    return rowid;
 }
 
 /*
@@ -62,8 +58,9 @@ int getContext(
     int tclass
 ){
     char *key = NULL;
-    int *res = 0;
+    int *id = 0;
 
+	// TODO use make_key
     switch (tclass) {
 
     case SELINUX_DB_DATABASE:
@@ -81,22 +78,18 @@ int getContext(
     }
 
     assert(key != NULL);
-    seSQLiteHashFind(hash, key, -1, (void**) &res, 0);
+    seSQLiteHashFind(hash, key, -1, (void**) &id, 0);
 
-    if (res != NULL) {
+    if (id != NULL) {
 
 #ifdef SQLITE_DEBUG
-		char *after = sqlite3_mprintf("-> %d", *res);
+		char *after = sqlite3_mprintf("-> %d", *id);
 		sesqlite_print("Hash hint for", dbname, table, column, after);
 		free(after);
 #endif
 
-        sqlite3_free(key);
-        return *res;
     }else{
         security_context_t security_context_new = 0;
-        int id = 0;
-        int *value = 0;
         switch (tclass) {
 
         case SELINUX_DB_TABLE:
@@ -118,19 +111,17 @@ int getContext(
             break;
 
         }
-        id = insert_id(db, (char *) dbname, security_context_new);
-        value = sqlite3_malloc(sizeof(int));
-        *value = id;
-        seSQLiteHashInsert(hash, key, -1, value, sizeof(int));
+        *id = insert_id(db, (char *) dbname, security_context_new);
+        seSQLiteHashInsert(hash, key, -1, id, sizeof(int));
 
 #ifdef SQLITE_DEBUG
         fprintf(stdout, "Compute New Context: db=%s, table=%s, column=%s -> %d\n",
-            dbname, table, (column ? column : "NULL"), id);
+            dbname, table, (column ? column : "NULL"), *id);
 #endif
 
-    return id; /* something wrong, a table/column was not labeled correctly */
-
     }
+	sqlite3_free(key);
+	return *id;
 }
 
 
@@ -597,21 +588,11 @@ static void selinuxGetconIdFunction(
     sqlite3_value **argv
 ){
     sqlite3 *db = sqlite3_user_data(context);
-	char *label = sqlite3MPrintf(db, "%s", argv[0]->z);
-	sqlite3Dequote(label);
-    if(security_check_context(label) == 0){
+    if(security_check_context(argv[0]->z) == 0){
 	//TODO get the db name
-	int id = insert_id(db, "main", label);
+	int id = insert_id(db, "main", argv[0]->z);
 	sqlite3_result_int(context, id);
 
-//	sqlite3_bind_text(stmt_select_id, 1, label, -1, SQLITE_TRANSIENT);
-//
-//	if( SQLITE_ROW==sqlite3_step(stmt_select_id) )
-//	    sqlite3_result_int(context,
-//		sqlite3_column_int(stmt_select_id, 0));
-//	else
-//	    sqlite3_result_error(context,
-//		"SeSQLite - The requested label is not registered.", -1);
     }else{
 	sqlite3_result_error(context,
 	    "SeSQLite - The requested label is not a valid selinux context.", -1);
@@ -655,7 +636,6 @@ int create_security_context_column(
 	int iDb = 0;
 	int i = 0;
 	int id = 0;
-	int *value = NULL;
 	char *key = NULL;
 	*zColumn = NULL;
 
@@ -701,8 +681,7 @@ int create_security_context_column(
 	pCol->affinity = SQLITE_AFF_INTEGER;
 	pCol->colFlags |= COLFLAG_HIDDEN;
 
-	value = sqlite3_malloc(sizeof(int));
-	*value = lookup_security_label(db, 
+	id = lookup_security_label(db, 
 			stmt_insert, 
 			hash_id, 
 			0, 
@@ -719,21 +698,21 @@ int create_security_context_column(
 		lookup_security_context(hash_id, 
 			pParse->db->aDb[iDb].zName, 
 			SELINUX_CONTEXT),
-		*value,
+		id,
 		pParse->db->aDb[iDb].zName, 
 		p->zName);
 	sqlite3ChangeCookie(pParse, iDb);
 
 	/* Update HashMap */
 	key = make_key(pParse->db->aDb[iDb].zName, p->zName, NULL);
-	seSQLiteHashInsert(hash, key, -1, value, sizeof(int));
+	seSQLiteHashInsert(hash, key, -1, &id, sizeof(int));
+	sqlite3_free(key);
 
 
 	//add security context to columns
 	int iCol;
 	for (iCol = 0; iCol < p->nCol; iCol++) {
-		value = sqlite3_malloc(sizeof(int));
-		*value = lookup_security_label(db, 
+		id = lookup_security_label(db, 
 				stmt_insert, 
 				hash_id, 
 				1, 
@@ -751,20 +730,20 @@ int create_security_context_column(
 			lookup_security_context(hash_id, 
 				pParse->db->aDb[iDb].zName, 
 				SELINUX_CONTEXT),
-			*value,
+			id,
 			pParse->db->aDb[iDb].zName, 
 			p->zName, 
 			p->aCol[iCol].zName);
 
 		/* Update HashMap */
 		key = make_key(pParse->db->aDb[iDb].zName, p->zName, p->aCol[iCol].zName);
-		seSQLiteHashInsert(hash, key, -1, value, sizeof(int));
+		seSQLiteHashInsert(hash, key, -1, &id, sizeof(int));
+		sqlite3_free(key);
 	}
 	sqlite3ChangeCookie(pParse, iDb);
 
 	if(HasRowid(p)){
-		value = sqlite3_malloc(sizeof(int));
-		*value = lookup_security_label(db, 
+		id = lookup_security_label(db, 
 				stmt_insert, 
 				hash_id, 
 				1, 
@@ -782,12 +761,13 @@ int create_security_context_column(
 			lookup_security_context(hash_id, 
 				pParse->db->aDb[iDb].zName, 
 				SELINUX_CONTEXT),
-			*value,
+			id,
 			pParse->db->aDb[iDb].zName, p->zName, "ROWID");
 	
 		/* Update HashMap */
 		key = make_key(pParse->db->aDb[iDb].zName, p->zName, "ROWID");
-		seSQLiteHashInsert(hash, key, -1, value, sizeof(int));
+		seSQLiteHashInsert(hash, key, -1, &id, sizeof(int));
+		sqlite3_free(key);
 
 		sqlite3ChangeCookie(pParse, iDb);
 	}

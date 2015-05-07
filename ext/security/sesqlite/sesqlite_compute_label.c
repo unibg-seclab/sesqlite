@@ -38,7 +38,7 @@ int compute_sql_context(
     }
     if(p != NULL)
 		//TODO check for type transition
-		*res = sqlite3_mprintf("%s", p->security_context);
+		*res = p->security_context;
     else{
 		/* the sesqlite_context file does not contain a context for the
 		 * table/column we want to store, then compute the default one. */
@@ -64,8 +64,7 @@ int lookup_security_context(seSQLiteBiHash *hash, char *db_name, char *tbl_name)
     seSQLiteBiHashFindKey(hash, sec_context, -1, (void**) &id, 0);
     assert(id != NULL); /* check if SELinux can compute a security context */
 
-    sqlite3_free(sec_context);
-    return *(int *) id;
+    return *id;
 }
 
 int lookup_security_label(sqlite3 *db, 
@@ -86,7 +85,9 @@ int lookup_security_label(sqlite3 *db,
 
     assert(context != NULL);
     seSQLiteBiHashFindKey(hash, context, -1, (void**) &id, 0);
-    if(id == NULL){
+    if( id!=NULL )
+      return *id;
+
 	sqlite3_bind_int(stmt, 1, lookup_security_context(hash, db_name, SELINUX_ID));
 	sqlite3_bind_text(stmt, 2, context, strlen(context),
 	    SQLITE_TRANSIENT);
@@ -95,12 +96,8 @@ int lookup_security_label(sqlite3 *db,
 	rc = sqlite3_reset(stmt);
 
 	rowid = sqlite3_last_insert_rowid(db);
-	id = sqlite3_malloc(sizeof(int));
-	*id = rowid;
-	seSQLiteBiHashInsert(hash, id, sizeof(int), context, -1);
-    }
-
-    return *(int *) id;
+	seSQLiteBiHashInsert(hash, &rowid, sizeof(int), context, -1);
+    return rowid;
 }
 
 #endif /* !defined(SQLITE_CORE) || defined(SQLITE_ENABLE_SELINUX) */
