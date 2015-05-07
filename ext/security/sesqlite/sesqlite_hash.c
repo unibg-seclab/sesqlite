@@ -359,13 +359,18 @@ void seSQLiteHashInsert(seSQLiteHash *pH, const void *pKey, int nKey, void *pDat
   h = hraw & (pH->htsize-1);
   elem = seSQLiteFindElementGivenHash(pH,pKey,nKey,h);
   if( elem ){
-    if( pData==0 ){
-      seSQLiteRemoveElementGivenHash(pH,elem,h);
-    }else{
-      if( pH->copyValue && elem->pData ){
-        pH->xFree(elem->pData);
-      }
-      elem->pData = pData;
+	if( pData==0 ){
+		seSQLiteRemoveElementGivenHash(pH,elem,h);
+	}else{
+		if( pH->copyValue && elem->pData ){
+			pH->xFree(elem->pData);
+			elem->pData = pH->xMalloc(nData);
+		}
+		if( elem->pData==0 ){
+			pH->xFree(elem);
+			return;
+		}
+		elem->pData = pData;
     }
     return;
   }
