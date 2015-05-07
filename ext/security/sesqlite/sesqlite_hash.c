@@ -295,6 +295,7 @@ static void seSQLiteRemoveElementGivenHash(
 /* Attempt to locate an element of the hash table pH with a key
 ** that matches pKey,nKey.  *pRes is set to be the data for this element if it is
 ** found, or NULL if there is no match, *nRes will be the n for the element.
+** If nKey<0, the key is assumed to be a string and nKey is computed accordingly.
 */
 void seSQLiteHashFind(const seSQLiteHash *pH, const void *pKey, int nKey, void **pRes, int *nRes){
   int h;             /* A hash on key */
@@ -302,11 +303,14 @@ void seSQLiteHashFind(const seSQLiteHash *pH, const void *pKey, int nKey, void *
   int (*xHash)(const void*,int);  /* The hash function */
 
   if( pH==0 || pH->sesqlite_ht==0 ){
-    if( pRes ){ *pRes = elem ? elem->pData : 0; }
-    if( nRes ){ *nRes = elem ? elem->nData : 0; }
+    if( pRes ){ *pRes = 0; }
+    if( nRes ){ *nRes = 0; }
   }else{
     xHash = seSQLiteHashFunction(pH->keyClass);
     assert( xHash!=0 );
+    if( nKey<0 && pKey!=0 ){
+      nKey = sizeof(char) * (1 + strlen(pKey));
+    }
     h = (*xHash)(pKey,nKey);
     assert( (pH->htsize & (pH->htsize-1))==0 );
     elem = seSQLiteFindElementGivenHash(pH,pKey,nKey, h & (pH->htsize-1));
@@ -328,6 +332,9 @@ void seSQLiteHashFind(const seSQLiteHash *pH, const void *pKey, int nKey, void *
 **
 ** If the "data" parameter to this function is NULL, then the
 ** element corresponding to "key" is removed from the hash table.
+**
+** if nKey is <0, the key is assumed to be a string and the correct
+** number of bytes is computed. The same holds for nData.
 */
 void seSQLiteHashInsert(seSQLiteHash *pH, const void *pKey, int nKey, void *pData, int nData){
   int hraw;             /* Raw hash value of the key */
@@ -339,6 +346,14 @@ void seSQLiteHashInsert(seSQLiteHash *pH, const void *pKey, int nKey, void *pDat
   assert( pH!=0 );
   xHash = seSQLiteHashFunction(pH->keyClass);
   assert( xHash!=0 );
+
+  if( nKey<0  && pKey!=0  ){
+    nKey  = sizeof(char) * (1 + strlen(pKey));
+  }
+  if( nData<0 && pData!=0 ){
+    nData = sizeof(char) * (1 + strlen(pData));
+  }
+
   hraw = (*xHash)(pKey, nKey);
   assert( (pH->htsize & (pH->htsize-1))==0 );
   h = hraw & (pH->htsize-1);
@@ -367,6 +382,16 @@ void seSQLiteHashInsert(seSQLiteHash *pH, const void *pKey, int nKey, void *pDat
   }else{
     new_elem->pKey = (void*)pKey;
   }
+  if( pH->copyValue && pData!=0 ){
+    new_elem->pData = pH->xMalloc( nData );
+    if( new_elem->pData==0 ){
+      pH->xFree(new_elem);
+      return;
+    }
+    memcpy((void*)new_elem->pData, pData, nData);
+  }else{
+    new_elem->pData = pData;
+  }
   new_elem->nKey = nKey;
   new_elem->nData = nData;
   pH->count++;
@@ -385,7 +410,6 @@ void seSQLiteHashInsert(seSQLiteHash *pH, const void *pKey, int nKey, void *pDat
   assert( (pH->htsize & (pH->htsize-1))==0 );
   h = hraw & (pH->htsize-1);
   seSQLiteInsertElement(pH, &pH->sesqlite_ht[h], new_elem);
-  new_elem->pData = pData;
   return;
 }
 

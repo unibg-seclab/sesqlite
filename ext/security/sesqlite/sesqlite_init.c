@@ -82,11 +82,11 @@ int insert_context(sqlite3 *db, int isColumn, char *dbName, char *tblName,
     rc = compute_sql_context(isColumn, dbName, tblName, colName, con, &sec_label); 
     assert( sec_label != NULL);
 
-    seSQLiteBiHashFindKey(hash_id, sec_label, strlen(sec_label), (void**) &value, 0);
+    seSQLiteBiHashFindKey(hash_id, sec_label, -1, (void**) &value, 0);
     if(value == NULL){
 	rc = compute_sql_context(0, dbName, tblName, NULL, tuple_context, &sec_context); 
 
-	seSQLiteBiHashFindKey(hash_id, sec_context, strlen(sec_context), (void**) &tid, 0);
+	seSQLiteBiHashFindKey(hash_id, sec_context, -1, (void**) &tid, 0);
 	assert(tid != NULL); /* check if SELinux can compute a security context */
 
 	sqlite3_bind_int(stmt_insert, 1, *(int *)tid);
@@ -99,7 +99,7 @@ int insert_context(sqlite3 *db, int isColumn, char *dbName, char *tblName,
 	rowid = sqlite3_last_insert_rowid(db);
 	value = sqlite3_malloc(sizeof(int));
 	*value = rowid;
-	seSQLiteBiHashInsert(hash_id, value, sizeof(int), sec_label, strlen(sec_label));
+	seSQLiteBiHashInsert(hash_id, value, sizeof(int), sec_label, -1);
 	sqlite3_free(sec_context);
 	
     }	
@@ -140,7 +140,7 @@ int get_key(
 ){
 	char *key = make_key(dbName, tblName, colName);
 	int *id;
-	seSQLiteHashFind(hash, key, strlen(key), (void**) &id, 0);
+	seSQLiteHashFind(hash, key, -1, (void**) &id, 0);
 	free(key);
 	return id ? *id : -1;
 }
@@ -159,7 +159,7 @@ void insert_key(
 	char *key = make_key(dbName, tblName, colName);
 	int *value = sqlite3_malloc(sizeof(int));
 	*value = id;
-	seSQLiteHashInsert(hash, key, strlen(key), value, sizeof(int));
+	seSQLiteHashInsert(hash, key, -1, value, sizeof(int));
 	free(key);
 
 #ifdef SQLITE_DEBUG
@@ -226,7 +226,7 @@ int initialize_mapping(
 	while( pp!=NULL ){
 		seSQLiteBiHashFindKey(hash_id,
 			pp->security_context,
-			strlen(pp->security_context), (void**) &value, 0);
+			-1, (void**) &value, 0);
 
 		if( value==NULL ){
 			sqlite3_bind_int( stmt_insert, 1, 0);
@@ -243,13 +243,13 @@ int initialize_mapping(
 
 			context = NULL;
 			context = sqlite3MPrintf(db, "%s", pp->security_context);
-			seSQLiteBiHashInsert(hash_id, id, sizeof(int), context, strlen(context));
+			seSQLiteBiHashInsert(hash_id, id, sizeof(int), context, -1);
 		}
 		pp = pp->next;
 	}
 
 	compute_sql_context(0, "main", SELINUX_ID, NULL, contexts->tuple_context, &result);
-	seSQLiteBiHashFindKey(hash_id, result, strlen(result), (void**) &value, 0);
+	seSQLiteBiHashFindKey(hash_id, result, -1, (void**) &value, 0);
 	assert(value != NULL);
 	sqlite3_bind_int(stmt_update, 1, *(int*)value);
 
@@ -283,7 +283,7 @@ int load_contexts_from_table(
 		int *rowid = sqlite3_malloc(sizeof(int));
 		*rowid = sqlite3_column_int(select_stmt, 0);
 		char *ttcon = sqlite3MPrintf(db, "%s", sqlite3_column_text(select_stmt, 2));
-		seSQLiteBiHashInsert(hash_id, rowid, sizeof(int), ttcon, strlen(ttcon));
+		seSQLiteBiHashInsert(hash_id, rowid, sizeof(int), ttcon, -1);
 	}
 
 	sqlite3_finalize(select_stmt);

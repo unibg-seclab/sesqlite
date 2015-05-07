@@ -22,7 +22,7 @@ int insert_id(sqlite3 *db, char *db_name, char *sec_label){
     int *value = NULL;
     int rowid = 0;
 
-    seSQLiteBiHashFindKey(hash_id, sec_label, strlen(sec_label), (void**) &value, 0);
+    seSQLiteBiHashFindKey(hash_id, sec_label, -1, (void**) &value, 0);
     if(value == NULL){
 	sqlite3_bind_int(stmt_insert, 1, lookup_security_context(hash_id, db_name, SELINUX_ID));
 	sqlite3_bind_text(stmt_insert, 2, sec_label, strlen(sec_label),
@@ -34,7 +34,7 @@ int insert_id(sqlite3 *db, char *db_name, char *sec_label){
 	rowid = sqlite3_last_insert_rowid(db);
 	value = sqlite3_malloc(sizeof(int));
 	*value = rowid;
-	seSQLiteBiHashInsert(hash_id, value, sizeof(int), sec_label, strlen(sec_label));
+	seSQLiteBiHashInsert(hash_id, value, sizeof(int), sec_label, -1);
     }
 
     return *(int *) value;
@@ -81,7 +81,7 @@ int getContext(
     }
 
     assert(key != NULL);
-    seSQLiteHashFind(hash, key, strlen(key), (void**) &res, 0);
+    seSQLiteHashFind(hash, key, -1, (void**) &res, 0);
 
     if (res != NULL) {
 
@@ -121,7 +121,7 @@ int getContext(
         id = insert_id(db, (char *) dbname, security_context_new);
         value = sqlite3_malloc(sizeof(int));
         *value = id;
-        seSQLiteHashInsert(hash, key, strlen(key), value, sizeof(int));
+        seSQLiteHashInsert(hash, key, -1, value, sizeof(int));
 
 #ifdef SQLITE_DEBUG
         fprintf(stdout, "Compute New Context: db=%s, table=%s, column=%s -> %d\n",
@@ -726,7 +726,7 @@ int create_security_context_column(
 
 	/* Update HashMap */
 	key = make_key(pParse->db->aDb[iDb].zName, p->zName, NULL);
-	seSQLiteHashInsert(hash, key, strlen(key), value, sizeof(int));
+	seSQLiteHashInsert(hash, key, -1, value, sizeof(int));
 
 
 	//add security context to columns
@@ -758,7 +758,7 @@ int create_security_context_column(
 
 		/* Update HashMap */
 		key = make_key(pParse->db->aDb[iDb].zName, p->zName, p->aCol[iCol].zName);
-		seSQLiteHashInsert(hash, key, strlen(key), value, sizeof(int));
+		seSQLiteHashInsert(hash, key, -1, value, sizeof(int));
 	}
 	sqlite3ChangeCookie(pParse, iDb);
 
@@ -787,7 +787,7 @@ int create_security_context_column(
 	
 		/* Update HashMap */
 		key = make_key(pParse->db->aDb[iDb].zName, p->zName, "ROWID");
-		seSQLiteHashInsert(hash, key, strlen(key), value, sizeof(int));
+		seSQLiteHashInsert(hash, key, -1, value, sizeof(int));
 
 		sqlite3ChangeCookie(pParse, iDb);
 	}
@@ -875,7 +875,9 @@ int initialize_authorizer(sqlite3 *db){
     if( !avc || !avc_allow || !avc_deny ){
 	return SQLITE_NOMEM;
     }else{
-	seSQLiteHashInit(avc, SESQLITE_HASH_INT, 1, 1); /* init avc with copy key and value */
+	/* copyKey=0 because it is ineffective for SESQLITE_HASH_INT,
+	 * copyValue=0 because we DO want to compare by pointers. */
+	seSQLiteHashInit(avc, SESQLITE_HASH_INT, 0, 0);
 	*avc_allow = 0;
 	*avc_deny = -1;
     }
