@@ -3,42 +3,54 @@
 .PHONY: all clean distclean fresh test
 
 TOP				 = ../../..
-NAME			:= test_schema_level
-OBJS			+= test_schema_level.o sqlite3.o
+TEST_SCHEMA			:= test_schema_level
+TEST_TUPLE			:= test_tuple_level
+OBJS			+= sqlite3.o
 LDFLAGS			+= -lselinux -lpthread -ldl -lcunit
 
 CUNIT_XML		:= cunit_testall-Results.xml		# do not change
 JUNIT_XML		:= junit_testall-Results.xml
 CUNIT_TO_JUNIT	:= cunit-to-junit.xsl
-CONTEXTS		:= sesqlite_contexts_test
-DB_ORIGIN		:= test.db.0
-DB_TEST		:= test.db
+CONTEXTS		:= sesqlite_contexts
 
-all: test
+all: $(TEST_SCHEMA) \
+	$(TEST_TUPLE) \
+	$(CONTEXTS)
+	@ ./$(TEST_SCHEMA) -auto
+	@ ./$(TEST_TUPLE) -auto
 
 sqlite3.o:
 	@ make all -C $(TOP)
 	cp $(TOP)/build/sqlite3.o .
-	cp ./$(DB_ORIGIN) ./$(DB_TEST)
-	cp $(TOP)/test/sesqlite/policy/$(CONTEXTS) ./sesqlite_contexts
+
+$(TEST_SCHEMA): $(OBJS) $(TEST_SCHEMA).o
+	gcc $(CFLAGS) $(OBJS) $(TEST_SCHEMA).o -o $(TEST_SCHEMA) $(LDFLAGS)
+
+$(TEST_TUPLE): $(OBJS) $(TEST_TUPLE).o
+	gcc $(CFLAGS) $(OBJS) $(TEST_TUPLE).o -o $(TEST_TUPLE) $(LDFLAGS)
 
 $(CONTEXTS):
-	cp ../policy/$@ ./sesqlite_contexts
-	
-$(NAME): $(OBJS)
-	gcc $(OBJS) -o $(NAME) $(LDFLAGS)
+	cp $(TOP)/test/sesqlite/policy/$(CONTEXTS) .
 
 $(CUNIT_XML): $(CONTEXTS)
-	@- ./$(NAME) -auto
+	@- ./$(TEST_SCHEMA) -auto
 
-$(JUNIT_XML) test: $(NAME) $(CUNIT_XML)
+$(JUNIT_XML) test: $(TEST_SCHEMA) $(CUNIT_XML)
 	@ xsltproc --novalid -o $(JUNIT_XML) $(CUNIT_TO_JUNIT) $(CUNIT_XML)
 
-run: $(NAME)
-	@ ./$(NAME) -auto
+run-schema: clean-test \
+	$(CONTEXTS)
+	@ ./$(TEST_SCHEMA) -auto
 
-clean:
-	@- $(RM) $(NAME) $(OBJS) $(CUNIT_XML) $(JUNIT_XML) $(DB_TEST) $(CONTEXTS)
+run-tuple: clean-test \
+	$(CONTEXTS)
+	@ ./$(TEST_TUPLE) -auto
+
+clean: clean-test
+	@- $(RM) $(OBJS)
+
+clean-test: 
+	@- $(RM) $(TEST_SCHEMA) $(TEST_SCHEMA).o $(TEST_TUPLE) $(TEST_TUPLE).o $(CUNIT_XML) $(JUNIT_XML) $(CONTEXTS)
 
 distclean: clean
 	@ make clean -C $(TOP)

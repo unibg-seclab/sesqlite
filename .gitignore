@@ -1,4 +1,5 @@
 *.pydevproject
+.directory
 .project
 .metadata
 .gradle

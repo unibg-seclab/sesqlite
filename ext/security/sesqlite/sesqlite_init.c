@@ -351,7 +351,9 @@ void selinux_chcon_pragma(
 	if( get_key(db, dbName, tblName, colName)==-1 ){
 		sesqlite_print("ERROR - No known context for", dbName, tblName, colName, ".");
 	}else{
-		insert_key(db, dbName, tblName, colName, insert_id(db, dbName, label));
+		/*TODO  Temporary FIX in order to use chcon with new labels */
+		char *t_label = sqlite3MPrintf(db, "%s", label);
+		insert_key(db, dbName, tblName, colName, insert_id(db, dbName, t_label));
 		sesqlite_print("Label for", dbName, tblName, colName, "successfully changed.");
 	}
 }

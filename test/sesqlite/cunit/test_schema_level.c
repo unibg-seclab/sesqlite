@@ -90,8 +90,8 @@ void test_update_table(void) {
 void test_delete_table(void) {
 
     SQLITE_INIT
-    CU_ASSERT(SQLITE_EXEC(db, "DELETE FROM t1 WHERE a=110") == SQLITE_OK);
-    CU_ASSERT(SQLITE_EXEC(db, "DELETE FROM t5 WHERE y=510") == SQLITE_AUTH);
+    CU_ASSERT(SQLITE_EXEC(db, "DELETE FROM t1 WHERE a=110;") == SQLITE_OK);
+    CU_ASSERT(SQLITE_EXEC(db, "DELETE FROM t5 WHERE y=510;") == SQLITE_AUTH);
 }
 
 void test_select_table(void) {
@@ -99,7 +99,7 @@ void test_select_table(void) {
 
     SQLITE_INIT
     CU_ASSERT(SQLITE_EXEC(db, "SELECT * FROM t3;") == SQLITE_AUTH);
-    CU_ASSERT(SQLITE_EXEC(db, "SELECT z FROM t6;") == SQLITE_AUTH);
+	CU_ASSERT(SQLITE_EXEC(db, "SELECT f FROM t3;") == SQLITE_OK);
     CU_ASSERT(SQLITE_EXEC(db, "SELECT * FROM t1;") == SQLITE_OK);
     CU_ASSERT(SQLITE_EXEC(db, "SELECT * FROM t2;") == SQLITE_OK);
 }
@@ -133,7 +133,7 @@ int main(int argc, char **argv) {
 		    || (NULL == CU_ADD_TEST(pSuite, test_select_table))
 		    || (NULL == CU_ADD_TEST(pSuite, test_update_table))
 		    || (NULL == CU_ADD_TEST(pSuite, test_delete_table))
-		    || (NULL == CU_ADD_TEST(pSuite, test_vacuum))){
+		    /* || (NULL == CU_ADD_TEST(pSuite, test_vacuum)) */ ){
 	    CU_cleanup_registry();
 	    return CU_get_error();
     }
