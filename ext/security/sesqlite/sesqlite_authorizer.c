@@ -89,6 +89,8 @@ int getContext(
 		free(after);
 #endif
 
+		id = *res;
+
     }else{
         security_context_t security_context_new = 0;
         switch (tclass) {
