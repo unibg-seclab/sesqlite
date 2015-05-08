@@ -648,6 +648,7 @@ int create_security_context_column(
 	int iDb = 0;
 	int i = 0;
 	int id = 0;
+	int *res = NULL;
 	char *key = NULL;
 	*zColumn = NULL;
 
@@ -693,13 +694,23 @@ int create_security_context_column(
 	pCol->affinity = SQLITE_AFF_INTEGER;
 	pCol->colFlags |= COLFLAG_HIDDEN;
 
-	id = lookup_security_label(db, 
-			stmt_insert, 
-			hash_id, 
-			0, 
-			pParse->db->aDb[iDb].zName, 
-			p->zName, 
-			NULL);
+	/* Get id */
+	key = make_key(pParse->db->aDb[iDb].zName, p->zName, NULL);
+	seSQLiteHashFind(hash, key, -1, (void**) &res, 0);
+	if( res!= NULL ){
+		id = *res;
+	}else{
+		id = lookup_security_label(db,
+			stmt_insert,
+			hash_id,
+			0,
+			pParse->db->aDb[iDb].zName,
+			p->zName,
+			NULL
+		);
+		seSQLiteHashInsert(hash, key, -1, &id, sizeof(int));
+	}
+	sqlite3_free(key);
 
 	sqlite3NestedParse(pParse,
 		"INSERT INTO %Q.%s (security_context, security_label, db, name) VALUES(\
@@ -715,22 +726,28 @@ int create_security_context_column(
 		p->zName);
 	sqlite3ChangeCookie(pParse, iDb);
 
-	/* Update HashMap */
-	key = make_key(pParse->db->aDb[iDb].zName, p->zName, NULL);
-	seSQLiteHashInsert(hash, key, -1, &id, sizeof(int));
-	sqlite3_free(key);
-
 
 	//add security context to columns
 	int iCol;
 	for (iCol = 0; iCol < p->nCol; iCol++) {
-		id = lookup_security_label(db, 
-				stmt_insert, 
-				hash_id, 
-				1, 
-				pParse->db->aDb[iDb].zName, 
-				p->zName, 
-				p->aCol[iCol].zName);
+
+		/* Get id */
+		key = make_key(pParse->db->aDb[iDb].zName, p->zName, p->aCol[iCol].zName);
+		seSQLiteHashFind(hash, key, -1, (void**) &res, 0);
+		if( res!= NULL ){
+			id = *res;
+		}else{
+			id = lookup_security_label(db,
+				stmt_insert,
+				hash_id,
+				1,
+				pParse->db->aDb[iDb].zName,
+				p->zName,
+				p->aCol[iCol].zName
+			);
+			seSQLiteHashInsert(hash, key, -1, &id, sizeof(int));
+		}
+		sqlite3_free(key);
 
 		sqlite3NestedParse(pParse,
 			"INSERT INTO %Q.%s(security_context, security_label, db, name, column) VALUES(\
@@ -747,21 +764,27 @@ int create_security_context_column(
 			p->zName, 
 			p->aCol[iCol].zName);
 
-		/* Update HashMap */
-		key = make_key(pParse->db->aDb[iDb].zName, p->zName, p->aCol[iCol].zName);
-		seSQLiteHashInsert(hash, key, -1, &id, sizeof(int));
-		sqlite3_free(key);
 	}
 	sqlite3ChangeCookie(pParse, iDb);
 
 	if(HasRowid(p)){
-		id = lookup_security_label(db, 
-				stmt_insert, 
-				hash_id, 
-				1, 
-				pParse->db->aDb[iDb].zName, 
-				p->zName, 
-				"ROWID");
+		/* Get id */
+		key = make_key(pParse->db->aDb[iDb].zName, p->zName, "ROWID");
+		seSQLiteHashFind(hash, key, -1, (void**) &res, 0);
+		if( res!= NULL ){
+			id = *res;
+		}else{
+			id = lookup_security_label(db,
+				stmt_insert,
+				hash_id,
+				1,
+				pParse->db->aDb[iDb].zName,
+				p->zName,
+				"ROWID"
+			);
+			seSQLiteHashInsert(hash, key, -1, &id, sizeof(int));
+		}
+		sqlite3_free(key);
 
 		sqlite3NestedParse(pParse,
 			"INSERT INTO %Q.%s(security_context, security_label, db, name, column) VALUES(\
@@ -775,11 +798,6 @@ int create_security_context_column(
 				SELINUX_CONTEXT),
 			id,
 			pParse->db->aDb[iDb].zName, p->zName, "ROWID");
-	
-		/* Update HashMap */
-		key = make_key(pParse->db->aDb[iDb].zName, p->zName, "ROWID");
-		seSQLiteHashInsert(hash, key, -1, &id, sizeof(int));
-		sqlite3_free(key);
 
 		sqlite3ChangeCookie(pParse, iDb);
 	}
