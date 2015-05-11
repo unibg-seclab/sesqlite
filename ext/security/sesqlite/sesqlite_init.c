@@ -426,6 +426,15 @@ void selinux_getdefaultcon_pragma(
 	}
 }
 
+void selinux_clearavc_pragma(
+	void* pArg,
+	sqlite3 *db,
+	char *args
+){
+	sesqlite_clearavc();
+	fprintf(stdout, "AVC cleared\n");
+}
+
 int register_pragmas(sqlite3 *db){
 	int rc;
 
@@ -439,7 +448,10 @@ int register_pragmas(sqlite3 *db){
 	if( SQLITE_OK!=rc ) return rc;
 
     rc = sqlite3_create_pragma(db, "getdefaultcon", selinux_getdefaultcon_pragma, 0);
-    return rc;
+	if( SQLITE_OK!=rc ) return rc;
+
+	rc = sqlite3_create_pragma(db, "clearavc", selinux_clearavc_pragma, 0);
+	return rc;
 }
 
 /*

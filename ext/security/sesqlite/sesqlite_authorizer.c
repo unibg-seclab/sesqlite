@@ -845,19 +845,29 @@ static int selinux_schemachange_callback(
     return SQLITE_OK;
 }
 
+void sesqlite_clearavc(){
+#ifdef USE_AVC
+    seSQLiteHashClear(avc);
+#endif
+}
+
 int selinux_commit_callback(void *pArg){
+#ifdef USE_AVC
 #ifdef SQLITE_DEBUG
     fprintf(stdout, "Cleaning AVC after commit\n");
 #endif
-    seSQLiteHashClear(avc);
+    sesqlite_clearavc();
+#endif
     return 0;
 }
 
 void selinux_rollback_callback(void *pArg){
+#ifdef USE_AVC
 #ifdef SQLITE_DEBUG
     fprintf(stdout, "Cleaning AVC after rollback\n");
 #endif
-    seSQLiteHashClear(avc);
+    sesqlite_clearavc();
+#endif
 }
 
 int initialize_authorizer(sqlite3 *db){

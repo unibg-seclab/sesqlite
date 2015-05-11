@@ -11,3 +11,5 @@ void sesqlite_print(
 	const char *after
 );
 
+void sesqlite_clearavc();
+
