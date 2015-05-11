@@ -1,4 +1,4 @@
-#include "hash/sesqlite_hash.h"
+#include "hash/sesqlite_hash_wrapper.h"
 
 /* Bidirection hash table (it just uses two hash tables */
 typedef struct SESQLITE_BIHASH SESQLITE_BIHASH;

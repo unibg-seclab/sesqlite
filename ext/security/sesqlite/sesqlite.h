@@ -13,8 +13,7 @@
 #include <time.h>
 #include <selinux/selinux.h>
 
-#include "hash/sesqlite_hash.h"
-#include "hash/sesqlite_bihash.h"
+#include "sesqlite_hash.h"
 
 extern security_context_t scon;
 extern security_context_t tcon;

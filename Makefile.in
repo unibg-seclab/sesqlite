@@ -214,7 +214,7 @@ LIBOBJS0 = alter.lo analyze.lo attach.lo auth.lo \
          update.lo util.lo vacuum.lo \
          vdbe.lo vdbeapi.lo vdbeaux.lo vdbeblob.lo vdbemem.lo vdbesort.lo \
          vdbetrace.lo wal.lo walker.lo where.lo utf.lo vtab.lo \
-         sesqlite_hash_impl.lo sesqlite_hash.lo sesqlite_bihash.lo \
+         sesqlite_hash_impl.lo sesqlite_hash_wrapper.lo sesqlite_hash.lo \
          sesqlite_compute_label.lo sesqlite_init.lo sesqlite_authorizer.lo \
          sesqlite_vtab.lo
 
@@ -367,16 +367,16 @@ SRC += \
 SRC += \
   $(TOP)/ext/security/sesqlite/sesqlite.h \
   $(TOP)/ext/security/sesqlite/hash/sesqlite_hash_impl.h \
-  $(TOP)/ext/security/sesqlite/hash/sesqlite_hash.h \
-  $(TOP)/ext/security/sesqlite/hash/sesqlite_bihash.h \
+  $(TOP)/ext/security/sesqlite/hash/sesqlite_hash_wrapper.h \
+  $(TOP)/ext/security/sesqlite/sesqlite_hash.h \
   $(TOP)/ext/security/sesqlite/sesqlite_vtab.h \
   $(TOP)/ext/security/sesqlite/sesqlite_init.h \
   $(TOP)/ext/security/sesqlite/sesqlite_authorizer.h \
   $(TOP)/ext/security/sesqlite/sesqlite_contexts.h \
   $(TOP)/ext/security/sesqlite/sesqlite_utils.h \
   $(TOP)/ext/security/sesqlite/hash/sesqlite_hash_impl.c \
-  $(TOP)/ext/security/sesqlite/hash/sesqlite_hash.c \
-  $(TOP)/ext/security/sesqlite/hash/sesqlite_bihash.c \
+  $(TOP)/ext/security/sesqlite/hash/sesqlite_hash_wrapper.c \
+  $(TOP)/ext/security/sesqlite/sesqlite_hash.c \
   $(TOP)/ext/security/sesqlite/sesqlite_compute_label.c \
   $(TOP)/ext/security/sesqlite/sesqlite_vtab.c \
   $(TOP)/ext/security/sesqlite/sesqlite_init.c \
@@ -548,8 +548,8 @@ EXTHDR += \
 EXTHDR += \
   $(TOP)/ext/security/sesqlite/sesqlite.h \
   $(TOP)/ext/security/sesqlite/hash/sesqlite_hash_impl.h \
-  $(TOP)/ext/security/sesqlite/hash/sesqlite_hash.h \
-  $(TOP)/ext/security/sesqlite/hash/sesqlite_bihash.h \
+  $(TOP)/ext/security/sesqlite/hash/sesqlite_hash_wrapper.h \
+  $(TOP)/ext/security/sesqlite/sesqlite_hash.h \
   $(TOP)/ext/security/sesqlite/sesqlite_vtab.h \
   $(TOP)/ext/security/sesqlite/sesqlite_init.h \
   $(TOP)/ext/security/sesqlite/sesqlite_authorizer.h \
@@ -960,11 +960,11 @@ sesqlite_compute_label.lo:	$(TOP)/ext/security/sesqlite/sesqlite_compute_label.c
 sesqlite_hash_impl.lo:	$(TOP)/ext/security/sesqlite/hash/sesqlite_hash_impl.c $(HDR) $(EXTHDR)
 	$(LTCOMPILE) -DSQLITE_CORE -c $(TOP)/ext/security/sesqlite/hash/sesqlite_hash_impl.c
 
-sesqlite_hash.lo:	$(TOP)/ext/security/sesqlite/hash/sesqlite_hash.c $(HDR) $(EXTHDR)
-	$(LTCOMPILE) -DSQLITE_CORE -c $(TOP)/ext/security/sesqlite/hash/sesqlite_hash.c
+sesqlite_hash_wrapper.lo:	$(TOP)/ext/security/sesqlite/hash/sesqlite_hash_wrapper.c $(HDR) $(EXTHDR)
+	$(LTCOMPILE) -DSQLITE_CORE -c $(TOP)/ext/security/sesqlite/hash/sesqlite_hash_wrapper.c
 
-sesqlite_bihash.lo:	$(TOP)/ext/security/sesqlite/hash/sesqlite_bihash.c $(HDR) $(EXTHDR)
-	$(LTCOMPILE) -DSQLITE_CORE -c $(TOP)/ext/security/sesqlite/hash/sesqlite_bihash.c
+sesqlite_hash.lo:	$(TOP)/ext/security/sesqlite/sesqlite_hash.c $(HDR) $(EXTHDR)
+	$(LTCOMPILE) -DSQLITE_CORE -c $(TOP)/ext/security/sesqlite/sesqlite_hash.c
 
 sesqlite_vtab.lo:	$(TOP)/ext/security/sesqlite/sesqlite_vtab.c $(HDR) $(EXTHDR)
 	$(LTCOMPILE) -DSQLITE_CORE -c $(TOP)/ext/security/sesqlite/sesqlite_vtab.c
