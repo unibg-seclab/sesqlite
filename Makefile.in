@@ -214,8 +214,9 @@ LIBOBJS0 = alter.lo analyze.lo attach.lo auth.lo \
          update.lo util.lo vacuum.lo \
          vdbe.lo vdbeapi.lo vdbeaux.lo vdbeblob.lo vdbemem.lo vdbesort.lo \
          vdbetrace.lo wal.lo walker.lo where.lo utf.lo vtab.lo \
-         sesqlite_compute_label.lo sesqlite_hash.lo sesqlite_bihash.lo \
-         sesqlite_vtab.lo sesqlite_init.lo sesqlite_authorizer.lo
+         sesqlite_hash_impl.lo sesqlite_hash.lo sesqlite_bihash.lo \
+         sesqlite_compute_label.lo sesqlite_init.lo sesqlite_authorizer.lo \
+         sesqlite_vtab.lo
 
 # Object files for the amalgamation.
 #
@@ -365,6 +366,7 @@ SRC += \
   $(TOP)/ext/rtree/rtree.c
 SRC += \
   $(TOP)/ext/security/sesqlite/sesqlite.h \
+  $(TOP)/ext/security/sesqlite/hash/sesqlite_hash_impl.h \
   $(TOP)/ext/security/sesqlite/hash/sesqlite_hash.h \
   $(TOP)/ext/security/sesqlite/hash/sesqlite_bihash.h \
   $(TOP)/ext/security/sesqlite/sesqlite_vtab.h \
@@ -372,6 +374,7 @@ SRC += \
   $(TOP)/ext/security/sesqlite/sesqlite_authorizer.h \
   $(TOP)/ext/security/sesqlite/sesqlite_contexts.h \
   $(TOP)/ext/security/sesqlite/sesqlite_utils.h \
+  $(TOP)/ext/security/sesqlite/hash/sesqlite_hash_impl.c \
   $(TOP)/ext/security/sesqlite/hash/sesqlite_hash.c \
   $(TOP)/ext/security/sesqlite/hash/sesqlite_bihash.c \
   $(TOP)/ext/security/sesqlite/sesqlite_compute_label.c \
@@ -544,6 +547,7 @@ EXTHDR += \
   $(TOP)/ext/rtree/sqlite3rtree.h
 EXTHDR += \
   $(TOP)/ext/security/sesqlite/sesqlite.h \
+  $(TOP)/ext/security/sesqlite/hash/sesqlite_hash_impl.h \
   $(TOP)/ext/security/sesqlite/hash/sesqlite_hash.h \
   $(TOP)/ext/security/sesqlite/hash/sesqlite_bihash.h \
   $(TOP)/ext/security/sesqlite/sesqlite_vtab.h \
@@ -952,6 +956,9 @@ rtree.lo:	$(TOP)/ext/rtree/rtree.c $(HDR) $(EXTHDR)
 
 sesqlite_compute_label.lo:	$(TOP)/ext/security/sesqlite/sesqlite_compute_label.c $(HDR) $(EXTHDR)
 	$(LTCOMPILE) -DSQLITE_CORE -c $(TOP)/ext/security/sesqlite/sesqlite_compute_label.c
+
+sesqlite_hash_impl.lo:	$(TOP)/ext/security/sesqlite/hash/sesqlite_hash_impl.c $(HDR) $(EXTHDR)
+	$(LTCOMPILE) -DSQLITE_CORE -c $(TOP)/ext/security/sesqlite/hash/sesqlite_hash_impl.c
 
 sesqlite_hash.lo:	$(TOP)/ext/security/sesqlite/hash/sesqlite_hash.c $(HDR) $(EXTHDR)
 	$(LTCOMPILE) -DSQLITE_CORE -c $(TOP)/ext/security/sesqlite/hash/sesqlite_hash.c
