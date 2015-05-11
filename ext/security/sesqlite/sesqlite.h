@@ -14,14 +14,15 @@
 #include <selinux/selinux.h>
 
 #include "sesqlite_hash.h"
+#include "sesqlite_bihash.h"
 
 extern security_context_t scon;
 extern security_context_t tcon;
 extern int scon_id;
 extern int tcon_id;
 
-extern seSQLiteHash *hash;
-extern seSQLiteBiHash *hash_id;
+extern SESQLITE_HASH *hash;
+extern SESQLITE_BIHASH *hash_id;
 
 extern sqlite3_stmt *stmt_insert;
 extern sqlite3_stmt *stmt_update;
@@ -85,7 +86,7 @@ const char *authtype[] = { "SQLITE_COPY", "SQLITE_CREATE_INDEX",
 extern struct sesqlite_context *contexts;
 
 int lookup_security_context(
-	seSQLiteBiHash *hash,
+	SESQLITE_BIHASH *hash,
 	char *db_name,
 	char *tbl_name
 );
@@ -93,7 +94,7 @@ int lookup_security_context(
 int lookup_security_label(
 	sqlite3 *db,
 	sqlite3_stmt *stmt,
-	seSQLiteBiHash *hash,
+	SESQLITE_BIHASH *hash,
 	int type,
 	char *db_name,
 	char *tbl_name,

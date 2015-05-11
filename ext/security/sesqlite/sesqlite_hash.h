@@ -18,9 +18,8 @@
 #define _HASH_H_
 
 /* Forward declarations of structures. */
-typedef struct seSQLiteHash seSQLiteHash;
-typedef struct seSQLiteBiHash seSQLiteBiHash;
-typedef struct seSQLiteHashElem seSQLiteHashElem;
+typedef struct sqliteHash sqliteHash;
+typedef struct sqliteHashElem sqliteHashElem;
 
 /* A complete hash table is an instance of the following structure.
 ** The internals of this structure are intended to be opaque -- client
@@ -30,25 +29,19 @@ typedef struct seSQLiteHashElem seSQLiteHashElem;
 ** accessing this structure are really macros, so we can't really make
 ** this structure opaque.
 */
-struct seSQLiteHash {
+struct sqliteHash {
   char keyClass;          /* HASH_INT, _POINTER, _STRING, _BINARY */
   char copyKey;           /* True if copy of key made on insert */
   char copyValue;         /* True if copy of values made on insert */
   int count;              /* Number of entries in this table */
-  seSQLiteHashElem *first;        /* The first element of the array */
+  sqliteHashElem *first;        /* The first element of the array */
   void *(*xMalloc)(int);  /* malloc() function to use */
   void (*xFree)(void *);  /* free() function to use */
   int htsize;             /* Number of buckets in the hash table */
-  struct sesqlite_ht {            /* the hash table */
+  struct sqlite_ht {            /* the hash table */
     int count;               /* Number of entries with this hash */
-    seSQLiteHashElem *chain;         /* Pointer to first entry with this hash */
-  } *sesqlite_ht;
-};
-
-/* Bidirection hash table (it just uses two hash tables */
-struct seSQLiteBiHash {
-  seSQLiteHash *key2val;
-  seSQLiteHash *val2key;
+    sqliteHashElem *chain;         /* Pointer to first entry with this hash */
+  } *sqlite_ht;
 };
 
 /* Each element in the hash table is an instance of the following 
@@ -57,8 +50,8 @@ struct seSQLiteBiHash {
 ** Again, this structure is intended to be opaque, but it can't really
 ** be opaque because it is used by macros.
 */
-struct seSQLiteHashElem {
-  seSQLiteHashElem *next, *prev;   /* Next and previous elements in the table */
+struct sqliteHashElem {
+  sqliteHashElem *next, *prev;   /* Next and previous elements in the table */
   void *pData; int nData;          /* Data associated with this element */
   void *pKey; int nKey;            /* Key associated with this element */
 };
@@ -82,28 +75,18 @@ struct seSQLiteHashElem {
 **
 ** A copy of the value is made if copyValue parameter to HashInit is 1.
 */
-#define SESQLITE_HASH_INT       1
-/* #define SESQLITE_HASH_POINTER   2 NOT USED */
-#define SESQLITE_HASH_STRING    3
-#define SESQLITE_HASH_BINARY    4
+#define SQLITE_HASH_INT       1
+/* #define SQLITE_HASH_POINTER   2 NOT USED */
+#define SQLITE_HASH_STRING    3
+#define SQLITE_HASH_BINARY    4
 
 /*
 ** Access routines.  To delete, insert a NULL pointer.
 */
-void seSQLiteHashInit(seSQLiteHash*, int keytype, int copyKey, int copyValue);
-void seSQLiteHashInsert(seSQLiteHash*, const void *pKey, int nKey, void *pData, int nData);
-void seSQLiteHashFind(const seSQLiteHash*, const void *pKey, int nKey, void **pRes, int *nRes);
-void seSQLiteHashClear(seSQLiteHash*);
-
-/*
-** Access routines for bidirectional hash tables.
-*/
-void seSQLiteBiHashInit(seSQLiteBiHash*, int keytype, int valtype, int copyKey, int copyValue);
-void seSQLiteBiHashInsert(seSQLiteBiHash*, const void *pKey, int nKey, const void *pVal, int nVal);
-void seSQLiteBiHashFind(const seSQLiteBiHash*, const void *pKey, int nKey, void **pRes, int *nRes);
-void seSQLiteBiHashFindKey(const seSQLiteBiHash*, const void *pVal, int nVal, void **pRes, int *nRes);
-void seSQLiteBiHashClear(seSQLiteBiHash*);
-void seSQLiteBiHashFree(seSQLiteBiHash*);
+void sqliteHashInit(sqliteHash*, int keytype, int copyKey, int copyValue);
+void sqliteHashInsert(sqliteHash*, const void *pKey, int nKey, void *pData, int nData);
+void sqliteHashFind(const sqliteHash*, const void *pKey, int nKey, void **pRes, int *nRes);
+void sqliteHashClear(sqliteHash*);
 
 /*
 ** Macros for looping over all elements of a hash table.  The idiom is
@@ -117,15 +100,27 @@ void seSQLiteBiHashFree(seSQLiteBiHash*);
 **     // do something with pData
 **   }
 */
-#define seSQLiteHashFirst(H)  ((H)->first)
-#define seSQLiteHashNext(E)   ((E)->next)
-#define seSQLiteHashData(E)   ((E)->data)
-#define seSQLiteHashKey(E)    ((E)->pKey)
-#define seSQLiteHashKeysize(E) ((E)->nKey)
+#define sqliteHashFirst(H)  ((H)->first)
+#define sqliteHashNext(E)   ((E)->next)
+#define sqliteHashData(E)   ((E)->data)
+#define sqliteHashKey(E)    ((E)->pKey)
+#define sqliteHashKeysize(E) ((E)->nKey)
 
 /*
 ** Number of entries in a hash table
 */
-#define seSQLiteHashCount(H)  ((H)->count)
+#define sqliteHashCount(H)  ((H)->count)
+
+// seSQLite
+typedef sqliteHash SESQLITE_HASH;
+#define SESQLITE_HASH_INT                                     SQLITE_HASH_INT
+#define SESQLITE_HASH_STRING                                  SQLITE_HASH_STRING
+#define SESQLITE_HASH_BINARY                                  SQLITE_HASH_BINARY
+#define SESQLITE_HASH_INIT(HASH, KEYTYPE, COPYKEY, COPYVALUE)  sqliteHashInit(HASH, KEYTYPE, COPYKEY, COPYVALUE)
+#define SESQLITE_HASH_INSERT(HASH, PKEY, NKEY, PDATA, NDATA)   sqliteHashInsert(HASH, PKEY, NKEY, PDATA, NDATA)
+#define SESQLITE_HASH_REMOVE(HASH, PKEY, NKEY)                 sqliteHashInsert(HASH, PKEY, NKEY, NULL, 0)
+#define SESQLITE_HASH_FIND(HASH, PKEY, NKEY, PRES, NRES)       sqliteHashFind(HASH, PKEY, NKEY, PRES, NRES)
+#define SESQLITE_HASH_CLEAR(HASH)                              sqliteHashClear(HASH)
+
 
 #endif /* _HASH_H_ */

@@ -18,7 +18,7 @@
 
 #include "sesqlite_hash.h"
 
-void *sesqlite_malloc_and_zero(int n) {
+void *sqlite_malloc_and_zero(int n) {
 	void *p = malloc(n);
 	if (p) {
 		memset(p, 0, n);
@@ -40,18 +40,18 @@ void *sesqlite_malloc_and_zero(int n) {
  ** "copyValue" is true if the hash table should make its own private copy
  ** of values and false if it should just use the supplied pointer.
  */
-void seSQLiteHashInit(seSQLiteHash *pNew, int keyClass, int copyKey, int copyValue) {
+void sqliteHashInit(sqliteHash *pNew, int keyClass, int copyKey, int copyValue) {
 	assert(pNew != 0);
-	assert(keyClass>= SESQLITE_HASH_INT && keyClass<= SESQLITE_HASH_BINARY);
+	assert(keyClass>= SQLITE_HASH_INT && keyClass<= SQLITE_HASH_BINARY);
 	pNew->keyClass = keyClass;
-	if( keyClass== SESQLITE_HASH_INT ) copyKey = 0;
+	if( keyClass== SQLITE_HASH_INT ) copyKey = 0;
 	pNew->copyKey = copyKey;
 	pNew->copyValue = copyValue;
 	pNew->first = 0;
 	pNew->count = 0;
 	pNew->htsize = 0;
-	pNew->sesqlite_ht = 0;
-	pNew->xMalloc = sesqlite_malloc_and_zero;
+	pNew->sqlite_ht = 0;
+	pNew->xMalloc = sqlite_malloc_and_zero;
 	pNew->xFree = free;
 }
 
@@ -59,18 +59,18 @@ void seSQLiteHashInit(seSQLiteHash *pNew, int keyClass, int copyKey, int copyVal
  ** Call this routine to delete a hash table or to reset a hash table
  ** to the empty state.
  */
-void seSQLiteHashClear(seSQLiteHash *pH) {
-	seSQLiteHashElem *elem; /* For looping over all elements of the table */
+void sqliteHashClear(sqliteHash *pH) {
+	sqliteHashElem *elem; /* For looping over all elements of the table */
 
 	assert(pH != 0);
 	elem = pH->first;
 	pH->first = 0;
-	if (pH->sesqlite_ht)
-		pH->xFree(pH->sesqlite_ht);
-	pH->sesqlite_ht = 0;
+	if (pH->sqlite_ht)
+		pH->xFree(pH->sqlite_ht);
+	pH->sqlite_ht = 0;
 	pH->htsize = 0;
 	while (elem) {
-		seSQLiteHashElem *next_elem = elem->next;
+		sqliteHashElem *next_elem = elem->next;
 		if (pH->copyKey && elem->pKey) {
 			pH->xFree(elem->pKey);
 		}
@@ -86,10 +86,10 @@ void seSQLiteHashClear(seSQLiteHash *pH) {
 /*
  ** Hash and comparison functions when the mode is HASH_INT
  */
-static int seSQLiteIntHash(const void *pKey, int nKey) {
+static int sqliteIntHash(const void *pKey, int nKey) {
 	return nKey ^ (nKey<<8) ^ (nKey>>8);
 }
-static int seSQLiteIntCompare(const void *pKey1, int n1, const void *pKey2, int n2) {
+static int sqliteIntCompare(const void *pKey1, int n1, const void *pKey2, int n2) {
 	return n2 - n1;
 }
 
@@ -97,7 +97,7 @@ static int seSQLiteIntCompare(const void *pKey1, int n1, const void *pKey2, int 
 /*
  ** Hash and comparison functions when the mode is HASH_STRING
  */
-static int seSQLiteStrHash(const void *pKey, int nKey) {
+static int sqliteStrHash(const void *pKey, int nKey) {
 	const char *z = (const char *) pKey;
 	int h = 0;
 	if (nKey <= 0)
@@ -108,7 +108,7 @@ static int seSQLiteStrHash(const void *pKey, int nKey) {
 	}
 	return h & 0x7fffffff;
 }
-static int seSQLiteStrCompare(const void *pKey1, int n1, const void *pKey2,
+static int sqliteStrCompare(const void *pKey1, int n1, const void *pKey2,
 		int n2) {
 	if (n1 != n2)
 		return 1;
@@ -118,7 +118,7 @@ static int seSQLiteStrCompare(const void *pKey1, int n1, const void *pKey2,
 /*
  ** Hash and comparison functions when the mode is HASH_BINARY
  */
-static int seSQLiteBinHash(const void *pKey, int nKey) {
+static int sqliteBinHash(const void *pKey, int nKey) {
 	int h = 0;
 	const char *z = (const char *) pKey;
 	while (nKey-- > 0) {
@@ -127,7 +127,7 @@ static int seSQLiteBinHash(const void *pKey, int nKey) {
 	return h & 0x7fffffff;
 }
 
-static int seSQLiteBinCompare(const void *pKey1, int n1, const void *pKey2,
+static int sqliteBinCompare(const void *pKey1, int n1, const void *pKey2,
 		int n2) {
 	if (n1 != n2)
 		return 1;
@@ -146,11 +146,11 @@ static int seSQLiteBinCompare(const void *pKey1, int n1, const void *pKey2,
  ** of hashFunction() is a pointer to a function that takes two parameters
  ** with types "const void*" and "int" and returns an "int".
  */
-static int (*seSQLiteHashFunction(int keyClass))(const void*,int) {
+static int (*sqliteHashFunction(int keyClass))(const void*,int) {
 	switch( keyClass ) {
-		case SESQLITE_HASH_INT: return &seSQLiteIntHash;
-		case SESQLITE_HASH_STRING: return &seSQLiteStrHash;
-		case SESQLITE_HASH_BINARY: return &seSQLiteBinHash;
+		case SQLITE_HASH_INT: return &sqliteIntHash;
+		case SQLITE_HASH_STRING: return &sqliteStrHash;
+		case SQLITE_HASH_BINARY: return &sqliteBinHash;
 		default: break;
 	}
 	return 0;
@@ -163,11 +163,11 @@ static int (*seSQLiteHashFunction(int keyClass))(const void*,int) {
 ** For help in interpreted the obscure C code in the function definition,
 ** see the header comment on the previous function.
 */
-static int (*seSQLiteCompareFunction(int keyClass))(const void*,int,const void*,int){
+static int (*sqliteCompareFunction(int keyClass))(const void*,int,const void*,int){
   switch( keyClass ){
-    case SESQLITE_HASH_INT:     return &seSQLiteIntCompare;
-    case SESQLITE_HASH_STRING:  return &seSQLiteStrCompare;
-    case SESQLITE_HASH_BINARY:  return &seSQLiteBinCompare;
+    case SQLITE_HASH_INT:     return &sqliteIntCompare;
+    case SQLITE_HASH_STRING:  return &sqliteStrCompare;
+    case SQLITE_HASH_BINARY:  return &sqliteBinCompare;
     default: break;
   }
   return 0;
@@ -176,12 +176,12 @@ static int (*seSQLiteCompareFunction(int keyClass))(const void*,int,const void*,
 
 /* Link an element into the hash table
 */
-static void seSQLiteInsertElement(
-		seSQLiteHash *pH,              /* The complete hash table */
-  struct sesqlite_ht *pEntry,    /* The entry into which pNew is inserted */
-  seSQLiteHashElem *pNew         /* The element to be inserted */
+static void sqliteInsertElement(
+		sqliteHash *pH,              /* The complete hash table */
+  struct sqlite_ht *pEntry,    /* The entry into which pNew is inserted */
+  sqliteHashElem *pNew         /* The element to be inserted */
 ){
-  seSQLiteHashElem *pHead;       /* First element already in pEntry */
+  sqliteHashElem *pHead;       /* First element already in pEntry */
   pHead = pEntry->chain;
   if( pHead ){
     pNew->next = pHead;
@@ -204,22 +204,22 @@ static void seSQLiteInsertElement(
 ** "new_size" must be a power of 2.  The hash table might fail
 ** to resize if sqliteMalloc() fails.
 */
-static void seSQLiteRehash(seSQLiteHash *pH, int new_size){
-  struct sesqlite_ht *new_ht;            /* The new hash table */
-  seSQLiteHashElem *elem, *next_elem;    /* For looping over existing elements */
+static void sqliteRehash(sqliteHash *pH, int new_size){
+  struct sqlite_ht *new_ht;            /* The new hash table */
+  sqliteHashElem *elem, *next_elem;    /* For looping over existing elements */
   int (*xHash)(const void*,int); /* The hash function */
 
   assert( (new_size & (new_size-1))==0 );
-  new_ht = (struct sesqlite_ht *)pH->xMalloc( new_size*sizeof(struct sesqlite_ht) );
+  new_ht = (struct sqlite_ht *)pH->xMalloc( new_size*sizeof(struct sqlite_ht) );
   if( new_ht==0 ) return;
-  if( pH->sesqlite_ht ) pH->xFree(pH->sesqlite_ht);
-  pH->sesqlite_ht = new_ht;
+  if( pH->sqlite_ht ) pH->xFree(pH->sqlite_ht);
+  pH->sqlite_ht = new_ht;
   pH->htsize = new_size;
-  xHash = seSQLiteHashFunction(pH->keyClass);
+  xHash = sqliteHashFunction(pH->keyClass);
   for(elem=pH->first, pH->first=0; elem; elem = next_elem){
     int h = (*xHash)(elem->pKey, elem->nKey) & (new_size-1);
     next_elem = elem->next;
-    seSQLiteInsertElement(pH, &new_ht[h], elem);
+    sqliteInsertElement(pH, &new_ht[h], elem);
   }
 }
 
@@ -227,21 +227,21 @@ static void seSQLiteRehash(seSQLiteHash *pH, int new_size){
 ** hash table that matches the given key.  The hash for this key has
 ** already been computed and is passed as the 4th parameter.
 */
-static seSQLiteHashElem *seSQLiteFindElementGivenHash(
-  const seSQLiteHash *pH,     /* The pH to be searched */
+static sqliteHashElem *sqliteFindElementGivenHash(
+  const sqliteHash *pH,     /* The pH to be searched */
   const void *pKey,   /* The key we are searching for */
   int nKey,
   int h               /* The hash for this key. */
 ){
-	seSQLiteHashElem *elem;                /* Used to loop thru the element list */
+	sqliteHashElem *elem;                /* Used to loop thru the element list */
   int count;                     /* Number of elements left to test */
   int (*xCompare)(const void*,int,const void*,int);  /* comparison function */
 
-  if( pH->sesqlite_ht ){
-    struct sesqlite_ht *pEntry = &pH->sesqlite_ht[h];
+  if( pH->sqlite_ht ){
+    struct sqlite_ht *pEntry = &pH->sqlite_ht[h];
     elem = pEntry->chain;
     count = pEntry->count;
-    xCompare = seSQLiteCompareFunction(pH->keyClass);
+    xCompare = sqliteCompareFunction(pH->keyClass);
     while( count-- && elem ){
       if( (*xCompare)(elem->pKey,elem->nKey,pKey,nKey)==0 ){
         return elem;
@@ -255,12 +255,12 @@ static seSQLiteHashElem *seSQLiteFindElementGivenHash(
 /* Remove a single entry from the hash table given a pointer to that
 ** element and a hash on the element's key.
 */
-static void seSQLiteRemoveElementGivenHash(
-		seSQLiteHash *pH,         /* The pH containing "elem" */
-		seSQLiteHashElem* elem,   /* The element to be removed from the pH */
+static void sqliteRemoveElementGivenHash(
+		sqliteHash *pH,         /* The pH containing "elem" */
+		sqliteHashElem* elem,   /* The element to be removed from the pH */
   int h             /* Hash value for the element */
 ){
-  struct sesqlite_ht *pEntry;
+  struct sqlite_ht *pEntry;
   if( elem->prev ){
     elem->prev->next = elem->next;
   }else{
@@ -269,7 +269,7 @@ static void seSQLiteRemoveElementGivenHash(
   if( elem->next ){
     elem->next->prev = elem->prev;
   }
-  pEntry = &pH->sesqlite_ht[h];
+  pEntry = &pH->sqlite_ht[h];
   if( pEntry->chain==elem ){
     pEntry->chain = elem->next;
   }
@@ -288,7 +288,7 @@ static void seSQLiteRemoveElementGivenHash(
   if( pH->count<=0 ){
     assert( pH->first==0 );
     assert( pH->count==0 );
-    seSQLiteHashClear(pH);
+    sqliteHashClear(pH);
   }
 }
 
@@ -297,23 +297,23 @@ static void seSQLiteRemoveElementGivenHash(
 ** found, or NULL if there is no match, *nRes will be the n for the element.
 ** If nKey<0, the key is assumed to be a string and nKey is computed accordingly.
 */
-void seSQLiteHashFind(const seSQLiteHash *pH, const void *pKey, int nKey, void **pRes, int *nRes){
+void sqliteHashFind(const sqliteHash *pH, const void *pKey, int nKey, void **pRes, int *nRes){
   int h;             /* A hash on key */
-  seSQLiteHashElem *elem;    /* The element that matches key */
+  sqliteHashElem *elem;    /* The element that matches key */
   int (*xHash)(const void*,int);  /* The hash function */
 
-  if( pH==0 || pH->sesqlite_ht==0 ){
+  if( pH==0 || pH->sqlite_ht==0 ){
     if( pRes ){ *pRes = 0; }
     if( nRes ){ *nRes = 0; }
   }else{
-    xHash = seSQLiteHashFunction(pH->keyClass);
+    xHash = sqliteHashFunction(pH->keyClass);
     assert( xHash!=0 );
     if( nKey<0 && pKey!=0 ){
       nKey = sizeof(char) * (1 + strlen(pKey));
     }
     h = (*xHash)(pKey,nKey);
     assert( (pH->htsize & (pH->htsize-1))==0 );
-    elem = seSQLiteFindElementGivenHash(pH,pKey,nKey, h & (pH->htsize-1));
+    elem = sqliteFindElementGivenHash(pH,pKey,nKey, h & (pH->htsize-1));
     if( pRes ){ *pRes = elem ? elem->pData : 0; }
     if( nRes ){ *nRes = elem ? elem->nData : 0; }
   }
@@ -336,15 +336,15 @@ void seSQLiteHashFind(const seSQLiteHash *pH, const void *pKey, int nKey, void *
 ** if nKey is <0, the key is assumed to be a string and the correct
 ** number of bytes is computed. The same holds for nData.
 */
-void seSQLiteHashInsert(seSQLiteHash *pH, const void *pKey, int nKey, void *pData, int nData){
+void sqliteHashInsert(sqliteHash *pH, const void *pKey, int nKey, void *pData, int nData){
   int hraw;             /* Raw hash value of the key */
   int h;                /* the hash of the key modulo hash table size */
-  seSQLiteHashElem *elem;       /* Used to loop thru the element list */
-  seSQLiteHashElem *new_elem;   /* New element added to the pH */
+  sqliteHashElem *elem;       /* Used to loop thru the element list */
+  sqliteHashElem *new_elem;   /* New element added to the pH */
   int (*xHash)(const void*,int);  /* The hash function */
 
   assert( pH!=0 );
-  xHash = seSQLiteHashFunction(pH->keyClass);
+  xHash = sqliteHashFunction(pH->keyClass);
   assert( xHash!=0 );
 
   if( nKey<0  && pKey!=0  ){
@@ -357,10 +357,10 @@ void seSQLiteHashInsert(seSQLiteHash *pH, const void *pKey, int nKey, void *pDat
   hraw = (*xHash)(pKey, nKey);
   assert( (pH->htsize & (pH->htsize-1))==0 );
   h = hraw & (pH->htsize-1);
-  elem = seSQLiteFindElementGivenHash(pH,pKey,nKey,h);
+  elem = sqliteFindElementGivenHash(pH,pKey,nKey,h);
   if( elem ){
 	if( pData==0 ){
-		seSQLiteRemoveElementGivenHash(pH,elem,h);
+		sqliteRemoveElementGivenHash(pH,elem,h);
 	}else{
 		if( pH->copyValue ){
 			if( elem->pData ){
@@ -379,7 +379,7 @@ void seSQLiteHashInsert(seSQLiteHash *pH, const void *pKey, int nKey, void *pDat
 	return;
   }
   if( pData==0 ) return;
-  new_elem = (seSQLiteHashElem*)pH->xMalloc( sizeof(seSQLiteHashElem) );
+  new_elem = (sqliteHashElem*)pH->xMalloc( sizeof(sqliteHashElem) );
   if( new_elem==0 ) return;
   if( pH->copyKey && pKey!=0 ){
     new_elem->pKey = pH->xMalloc( nKey );
@@ -405,7 +405,7 @@ void seSQLiteHashInsert(seSQLiteHash *pH, const void *pKey, int nKey, void *pDat
   new_elem->nData = nData;
   pH->count++;
   if( pH->htsize==0 ){
-	  seSQLiteRehash(pH,8);
+	  sqliteRehash(pH,8);
     if( pH->htsize==0 ){
       pH->count = 0;
       pH->xFree(new_elem);
@@ -413,69 +413,13 @@ void seSQLiteHashInsert(seSQLiteHash *pH, const void *pKey, int nKey, void *pDat
     }
   }
   if( pH->count > pH->htsize ){
-	  seSQLiteRehash(pH,pH->htsize*2);
+	  sqliteRehash(pH,pH->htsize*2);
   }
   assert( pH->htsize>0 );
   assert( (pH->htsize & (pH->htsize-1))==0 );
   h = hraw & (pH->htsize-1);
-  seSQLiteInsertElement(pH, &pH->sesqlite_ht[h], new_elem);
+  sqliteInsertElement(pH, &pH->sqlite_ht[h], new_elem);
   return;
-}
-
-void seSQLiteBiHashInit(seSQLiteBiHash* bihash, int keytype, int valtype, int copyKey, int copyValue) {
-  bihash->key2val = sesqlite_malloc_and_zero(sizeof(seSQLiteHash));
-  bihash->val2key = sesqlite_malloc_and_zero(sizeof(seSQLiteHash));
-  seSQLiteHashInit(bihash->key2val, keytype, copyKey, copyValue);
-  seSQLiteHashInit(bihash->val2key, valtype, copyKey, copyValue);
-}
-
-void seSQLiteBiHashInsert(seSQLiteBiHash* bihash, const void *pKey, int nKey, const void *pVal, int nVal){
-  int nOld;
-  void *pOld;
-
-  // insert new key -> value association
-  seSQLiteHashFind(bihash->key2val, pKey, nKey, &pOld, &nOld);
-  seSQLiteHashInsert(bihash->key2val, pKey, nKey, (void*)pVal, nVal);
-
-  // remove old value -> key association if exists
-  if( pOld!=0 ){
-    if( nOld!=0 ){
-      seSQLiteHashInsert(bihash->val2key, pOld, nOld, 0, 0);
-    }else{
-      fprintf(stderr, "ERROR: cannot remove old value -> key association in BiHash (no nVal set).\n");
-    }
-  }
-
-  // insert new value -> key association if provided
-  if( pVal!=0 ){
-    seSQLiteHashFind(bihash->val2key, pVal, nVal, &pOld, &nOld);
-    if( pOld!=0 ){
-      fprintf(stderr, "ERROR: value already associated to another key in BiHash (not injective).\n");
-    }else{
-      seSQLiteHashInsert(bihash->val2key, pVal, nVal, (void*)pKey, nKey);
-    }
-  }
-}
-
-void seSQLiteBiHashFind(const seSQLiteBiHash* bihash, const void *pKey, int nKey, void **pRes, int *nRes){
-  return seSQLiteHashFind(bihash->key2val, pKey, nKey, pRes, nRes);
-}
-
-void seSQLiteBiHashFindKey(const seSQLiteBiHash* bihash, const void *pValue, int nValue, void **pRes, int *nRes){
-  return seSQLiteHashFind(bihash->val2key, pValue, nValue, pRes, nRes);
-}
-
-void seSQLiteBiHashClear(seSQLiteBiHash* bihash){
-  seSQLiteHashClear(bihash->val2key);
-  seSQLiteHashClear(bihash->key2val);
-}
-
-void seSQLiteBiHashFree(seSQLiteBiHash* bihash) {
-  seSQLiteBiHashClear(bihash);
-  if (bihash->key2val)
-    free(bihash->key2val);
-  if (bihash->val2key)
-    free(bihash->val2key);
 }
 
 #endif /* !defined(SQLITE_CORE) || defined(SQLITE_ENABLE_SELINUX) */

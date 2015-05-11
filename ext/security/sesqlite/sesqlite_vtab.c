@@ -9,7 +9,7 @@
 
 #include "sesqlite_vtab.h"
 
-int setHashMap(seSQLiteHash *h) {
+int setHashMap(SESQLITE_HASH *h) {
 	phash = h;
 	return 0;
 }

@@ -53,7 +53,7 @@ int compute_sql_context(
 }
 
 
-int lookup_security_context(seSQLiteBiHash *hash, char *db_name, char *tbl_name){
+int lookup_security_context(SESQLITE_BIHASH *hash, char *db_name, char *tbl_name){
 
     int *id = NULL;
     char *sec_context = NULL;
@@ -61,7 +61,7 @@ int lookup_security_context(seSQLiteBiHash *hash, char *db_name, char *tbl_name)
     compute_sql_context(0, db_name, tbl_name, NULL, 
 	    contexts->tuple_context, &sec_context);
 
-    seSQLiteBiHashFindKey(hash, sec_context, -1, (void**) &id, 0);
+    SESQLITE_BIHASH_FINDKEY(hash, sec_context, -1, (void**) &id, 0);
     assert(id != NULL); /* check if SELinux can compute a security context */
 
     return *id;
@@ -69,7 +69,7 @@ int lookup_security_context(seSQLiteBiHash *hash, char *db_name, char *tbl_name)
 
 int lookup_security_label(sqlite3 *db, 
 	sqlite3_stmt *stmt, 
-	seSQLiteBiHash *hash, 
+	SESQLITE_BIHASH *hash, 
 	int type, 
 	char *db_name, 
 	char *tbl_name, 
@@ -84,7 +84,7 @@ int lookup_security_label(sqlite3 *db,
 	    type ? contexts->column_context : contexts->table_context, &context);
 
     assert(context != NULL);
-    seSQLiteBiHashFindKey(hash, context, -1, (void**) &id, 0);
+    SESQLITE_BIHASH_FINDKEY(hash, context, -1, (void**) &id, 0);
     if( id!=NULL )
       return *id;
 
@@ -96,7 +96,7 @@ int lookup_security_label(sqlite3 *db,
 	rc = sqlite3_reset(stmt);
 
 	rowid = sqlite3_last_insert_rowid(db);
-	seSQLiteBiHashInsert(hash, &rowid, sizeof(int), context, -1);
+	SESQLITE_BIHASH_INSERT(hash, &rowid, sizeof(int), context, -1);
     return rowid;
 }
 
