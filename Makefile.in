@@ -365,15 +365,15 @@ SRC += \
   $(TOP)/ext/rtree/rtree.c
 SRC += \
   $(TOP)/ext/security/sesqlite/sesqlite.h \
-  $(TOP)/ext/security/sesqlite/sesqlite_hash.h \
-  $(TOP)/ext/security/sesqlite/sesqlite_bihash.h \
+  $(TOP)/ext/security/sesqlite/hash/sesqlite_hash.h \
+  $(TOP)/ext/security/sesqlite/hash/sesqlite_bihash.h \
   $(TOP)/ext/security/sesqlite/sesqlite_vtab.h \
   $(TOP)/ext/security/sesqlite/sesqlite_init.h \
   $(TOP)/ext/security/sesqlite/sesqlite_authorizer.h \
   $(TOP)/ext/security/sesqlite/sesqlite_contexts.h \
   $(TOP)/ext/security/sesqlite/sesqlite_utils.h \
-  $(TOP)/ext/security/sesqlite/sesqlite_hash.c \
-  $(TOP)/ext/security/sesqlite/sesqlite_bihash.c \
+  $(TOP)/ext/security/sesqlite/hash/sesqlite_hash.c \
+  $(TOP)/ext/security/sesqlite/hash/sesqlite_bihash.c \
   $(TOP)/ext/security/sesqlite/sesqlite_compute_label.c \
   $(TOP)/ext/security/sesqlite/sesqlite_vtab.c \
   $(TOP)/ext/security/sesqlite/sesqlite_init.c \
@@ -544,8 +544,8 @@ EXTHDR += \
   $(TOP)/ext/rtree/sqlite3rtree.h
 EXTHDR += \
   $(TOP)/ext/security/sesqlite/sesqlite.h \
-  $(TOP)/ext/security/sesqlite/sesqlite_hash.h \
-  $(TOP)/ext/security/sesqlite/sesqlite_bihash.h \
+  $(TOP)/ext/security/sesqlite/hash/sesqlite_hash.h \
+  $(TOP)/ext/security/sesqlite/hash/sesqlite_bihash.h \
   $(TOP)/ext/security/sesqlite/sesqlite_vtab.h \
   $(TOP)/ext/security/sesqlite/sesqlite_init.h \
   $(TOP)/ext/security/sesqlite/sesqlite_authorizer.h \
@@ -953,11 +953,11 @@ rtree.lo:	$(TOP)/ext/rtree/rtree.c $(HDR) $(EXTHDR)
 sesqlite_compute_label.lo:	$(TOP)/ext/security/sesqlite/sesqlite_compute_label.c $(HDR) $(EXTHDR)
 	$(LTCOMPILE) -DSQLITE_CORE -c $(TOP)/ext/security/sesqlite/sesqlite_compute_label.c
 
-sesqlite_hash.lo:	$(TOP)/ext/security/sesqlite/sesqlite_hash.c $(HDR) $(EXTHDR)
-	$(LTCOMPILE) -DSQLITE_CORE -c $(TOP)/ext/security/sesqlite/sesqlite_hash.c
+sesqlite_hash.lo:	$(TOP)/ext/security/sesqlite/hash/sesqlite_hash.c $(HDR) $(EXTHDR)
+	$(LTCOMPILE) -DSQLITE_CORE -c $(TOP)/ext/security/sesqlite/hash/sesqlite_hash.c
 
-sesqlite_bihash.lo:	$(TOP)/ext/security/sesqlite/sesqlite_bihash.c $(HDR) $(EXTHDR)
-	$(LTCOMPILE) -DSQLITE_CORE -c $(TOP)/ext/security/sesqlite/sesqlite_bihash.c
+sesqlite_bihash.lo:	$(TOP)/ext/security/sesqlite/hash/sesqlite_bihash.c $(HDR) $(EXTHDR)
+	$(LTCOMPILE) -DSQLITE_CORE -c $(TOP)/ext/security/sesqlite/hash/sesqlite_bihash.c
 
 sesqlite_vtab.lo:	$(TOP)/ext/security/sesqlite/sesqlite_vtab.c $(HDR) $(EXTHDR)
 	$(LTCOMPILE) -DSQLITE_CORE -c $(TOP)/ext/security/sesqlite/sesqlite_vtab.c

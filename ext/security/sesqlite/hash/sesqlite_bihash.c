@@ -1,7 +1,7 @@
 
 #if !defined(SQLITE_CORE) || defined(SQLITE_ENABLE_SELINUX)
 
-#include "sesqlite_bihash.h"
+#include "hash/sesqlite_bihash.h"
 
 void SESQLITE_BIHASH_INIT(SESQLITE_BIHASH* bihash, int keytype, int valtype, int copyKey, int copyValue) {
   bihash->key2val = malloc(sizeof(SESQLITE_HASH));

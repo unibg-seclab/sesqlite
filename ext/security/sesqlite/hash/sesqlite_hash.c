@@ -16,7 +16,7 @@
 
 #if !defined(SQLITE_CORE) || defined(SQLITE_ENABLE_SELINUX)
 
-#include "sesqlite_hash.h"
+#include "hash/sesqlite_hash.h"
 
 void *sqlite_malloc_and_zero(int n) {
 	void *p = malloc(n);
