@@ -103,28 +103,6 @@ int insert_context(sqlite3 *db, int isColumn, char *dbName, char *tblName,
 }
 
 /*
- * Makes the key based on the database, the table and the column.
- * The user must invoke free on the returned pointer to free the memory.
- * It returns db:tbl:col if the column is not NULL, otherwise db:tbl.
- */
-char *make_key(
-	const char *dbName,
-	const char *tblName,
-	const char *colName
-){
-	char *key;
-
-	if( tblName==NULL )
-		key = sqlite3_mprintf("%s", dbName);
-	else if( colName==NULL )
-		key = sqlite3_mprintf("%s:%s", dbName, tblName);
-	else
-		key = sqlite3_mprintf("%s:%s:%s", dbName, tblName, colName);
-
-	return key;
-}
-
-/*
  * Returns the context id associated to the column or the table (if
  * colName is NULL) or -1 if there is no context associated.
  */

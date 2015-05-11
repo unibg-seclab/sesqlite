@@ -61,23 +61,7 @@ int getContext(
     int *res = NULL;
 	int id = 0;
 
-	// TODO use make_key
-    switch (tclass) {
-
-    case SELINUX_DB_DATABASE:
-        key = sqlite3_mprintf("%s", dbname);
-        break;
-
-    case SELINUX_DB_TABLE:
-        key = sqlite3_mprintf("%s:%s", dbname, table);
-        break;
-
-    case SELINUX_DB_COLUMN:
-        key = sqlite3_mprintf("%s:%s:%s", dbname, table, column);
-        break;
-
-    }
-
+    key = make_key(dbname, table, column);
     assert(key != NULL);
     seSQLiteHashFind(hash, key, -1, (void**) &res, 0);
 
