@@ -118,6 +118,8 @@ foreach hdr {
    wal.h
    whereInt.h
    sesqlite.h
+   sesqlite_hash_impl.h
+   sesqlite_hash_wrapper.h
    sesqlite_hash.h
    sesqlite_vtab.h
    sesqlite_init.h
@@ -336,6 +338,8 @@ foreach file {
    fts3_icu.c
 
    sesqlite_compute_label.c
+   sesqlite_hash_impl.c
+   sesqlite_hash_wrapper.c
    sesqlite_hash.c
    sesqlite_vtab.c
    sesqlite_init.c

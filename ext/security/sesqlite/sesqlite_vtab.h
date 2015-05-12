@@ -12,7 +12,7 @@ extern "C" {
 #endif  /* __cplusplus */
 
 //TODO can be shared among all users in the db
-seSQLiteHash *phash; /* HashMap */
+SESQLITE_HASH *phash; /* HashMap */
 
 static const char *sesqlite_sql =
 		"CREATE TABLE selinuxModule ( security_context TEXT, name TEXT, column TEXT );";
