@@ -1,12 +1,15 @@
 #!/usr/bin/env python
 
 from pyparsing import *
-from colorama import init, Fore
 import argparse
 import re
 
-# initialize colorama
-init(autoreset=True)
+try:
+    from colorama import init, Fore
+    init(autoreset=True)
+    RED, YELLOW, GREEN = Fore.RED, Fore.YELLOW, Fore.GREEN
+except ImportError:
+    RED = YELLOW = GREEN = ""
 
 lineno = 0
 errors = 0
@@ -14,11 +17,11 @@ warnings = 0
 
 def error(message):
     global errors; errors += 1
-    print Fore.RED + "ERROR [line %d]: %s" % (lineno, message)
+    print RED + "ERROR [line %d]: %s" % (lineno, message)
 
 def warning(message):
     global warnings; warnings += 1
-    print Fore.YELLOW + "WARNING [line %d]: %s" % (lineno, message)
+    print YELLOW + "WARNING [line %d]: %s" % (lineno, message)
 
 # do not skip whitespaces
 ParserElement.setDefaultWhitespaceChars('')
@@ -55,16 +58,16 @@ def parse(args):
             try:
                 res = Line.parseString(line)
                 if args.verbose:
-                    print Fore.GREEN + 'RULE [line %d]: %s' % (lineno, res)
+                    print GREEN + 'RULE [line %d]: %s' % (lineno, res)
             except Exception as e:
                 error(re.sub(r',?\s?\(line.*?\)', '', str(e)))
-    color = Fore.RED if errors else Fore.YELLOW if warnings else Fore.GREEN
+    color = RED if errors else YELLOW if warnings else GREEN
     print '\n' + color + '[%d errors and %d warnings]' % (errors, warnings)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
             description='Validate sesqlite_contexts file.',
-            epilog='This tool does not have Super Cow Powers.')
+            epilog='Install colorama to have colored output.')
     parser.add_argument('FILE', nargs='?', default="sesqlite_contexts",
             type=file, help='The sesqlite_contexts file to validate')
     parser.add_argument('--verbose', '-v', action='count',
@@ -74,5 +77,5 @@ if __name__ == '__main__':
         print 'Validating file: %s' % args.FILE.name
         parse(args)
     except IOError as e:
-        print Fore.RED + str(e)
+        print RED + str(e)
 
