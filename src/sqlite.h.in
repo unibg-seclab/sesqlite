@@ -2494,6 +2494,8 @@ int sqlite3_set_authorizer(
   void *pUserData
 );
 
+#ifdef SQLITE_ENABLE_SELINUX
+
 /*
 ** CAPI3REF: Add extra columns
 **
@@ -2504,6 +2506,8 @@ int sqlite3_set_add_extra_column(
   int (*xAddExtraColumn)(void*,void*,int,void*,char**),
   void *pUserData
 );
+
+#endif
 
 /*
 ** CAPI3REF: Authorizer Return Codes
@@ -7338,6 +7342,18 @@ int sqlite3_create_pragma(
 );
 #endif
 
+#ifndef SQLITE_OMIT_SCHEMACHANGE_NOTIFICATIONS
+int sqlite3_set_xattr(
+	sqlite3 *db,
+	char *key, 
+	char *value);
+
+char *sqlite3_get_xattr(
+	sqlite3 *db,
+	char *key);
+
+#endif
+
 #ifdef SQLITE_ENABLE_SELINUX
 
 /*
@@ -7351,15 +7367,9 @@ int sqlite3_schemachange_hook(
   void *pArg
 );
 
-int sqlite3_set_xattr(
-	sqlite3 *db,
-	char *key, 
-	char *value);
-
-char *sqlite3_get_xattr(
-	sqlite3 *db,
-	char *key);
 #endif
+
+#ifndef SQLITE_OMIT_SCHEMACHANGE_NOTIFICATIONS
 
 /*
 ** CAPI3REF: Schema Change Notification Codes
@@ -7380,6 +7390,8 @@ char *sqlite3_get_xattr(
 #define SQLITE_SCHEMA_DROP_TABLE     2   /* isView          pSelect         */
 #define SQLITE_SCHEMA_ALTER_RENAME   3   /* Old name        NULL            */
 #define SQLITE_SCHEMA_ALTER_ADD      4   /* Column def      NULL            */
+
+#endif
 
 /*
 ** Undo the hack that converts floating point types to integer for

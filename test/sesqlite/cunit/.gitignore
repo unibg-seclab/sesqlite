@@ -3,4 +3,6 @@
 
 test.db
 test_sesqlite
+test_schema_level
+test_tuple_level
 sesqlite_contexts

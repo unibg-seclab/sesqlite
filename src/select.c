@@ -77,6 +77,9 @@ Select *sqlite3SelectNew(
   if( pSrc==0 ) pSrc = sqlite3DbMallocZero(db, sizeof(*pSrc));
   pNew->pSrc = pSrc;
 
+
+#if defined(SQLITE_ENABLE_SELINUX)
+
   int test = 0;
   int i;
   for(i = 0; i < pSrc->nAlloc; i++){
@@ -86,7 +89,7 @@ Select *sqlite3SelectNew(
     }
   }
 
-#if defined(SQLITE_ENABLE_SELINUX)
+
 if(test && selFlags != 128){
   char *f_name = sqlite3MPrintf(db, "%s", "selinux_check_access");
   char *f_column = sqlite3MPrintf(db, "%s", "security_context");

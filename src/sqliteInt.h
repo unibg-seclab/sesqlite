@@ -1063,10 +1063,6 @@ struct sqlite3 {
   int (*xAddExtraColumn)(void*,void*,int,void*,char**);                             /* Add extra column callback */
   void *pAddColumnArg;         /* 1st argument to the add extra column function */
 
-  /* Callback used for schema notification changes */
-  int (*xSchemaChangeCallback)(void*,int,const char*,const char*,void*,void*);
-  void *pSchemaChangeArg;
-
   /*
   ** This field is used to store (key,value) pairs associated with a database connection.
   ** The main purpose is the same as the 'extended attributes' (xattrs) used for file system.
@@ -1074,6 +1070,15 @@ struct sqlite3 {
   Hash *pXattrs;
 
 #endif
+
+#ifndef SQLITE_OMIT_SCHEMACHANGE_NOTIFICATIONS
+
+  /* Callback used for schema notification changes */
+  int (*xSchemaChangeCallback)(void*,int,const char*,const char*,void*,void*);
+  void *pSchemaChangeArg;
+
+#endif
+
 };
 
 /*

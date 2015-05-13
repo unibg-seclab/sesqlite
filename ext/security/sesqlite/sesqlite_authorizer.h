@@ -43,5 +43,3 @@ void decompress(
 	*perm   = ( data & PERM_MASK   ) >> PERM_SHIFT;
 }
 
-
-

@@ -1,0 +1,81 @@
+#!/usr/bin/env python
+
+from pyparsing import *
+import argparse
+import re
+
+try:
+    from colorama import init, Fore
+    init(autoreset=True)
+    RED, YELLOW, GREEN = Fore.RED, Fore.YELLOW, Fore.GREEN
+except ImportError:
+    RED = YELLOW = GREEN = ""
+
+lineno = 0
+errors = 0
+warnings = 0
+
+def error(message):
+    global errors; errors += 1
+    print RED + "ERROR [line %d]: %s" % (lineno, message)
+
+def warning(message):
+    global warnings; warnings += 1
+    print YELLOW + "WARNING [line %d]: %s" % (lineno, message)
+
+# do not skip whitespaces
+ParserElement.setDefaultWhitespaceChars('')
+
+# define text elements
+Spaces = White(' \t').suppress()
+CR = Literal('\r').setParseAction(lambda: warning("Found '\\r'")).suppress()
+EOL = Optional(CR) - LineEnd().suppress()
+SOL = LineStart().suppress()
+
+def Id(parts=1, sep='.'):
+    '''define an id element composed by *parts* parts separated by *sep*'''
+    identifier = (Word(alphas + "_", alphanums + "_") | '*')
+    return Combine(reduce(lambda x, y: x + Suppress(sep) + y,
+        [identifier] * parts), joinString=sep)
+
+def Rule(name, parts):
+    '''define a rule with a name and an id composed by *parts* parts'''
+    return name - Spaces - Id(parts) - Spaces - Id(4, sep=':')
+
+DbDatabase = Rule('db_database', 1)
+DbTable    = Rule('db_table',    2)
+DbView     = Rule('db_view',     2)
+DbColumn   = Rule('db_column',   3)
+DbTuple    = Rule('db_tuple',    2)
+
+Command = (DbDatabase | DbTable | DbView | DbColumn | DbTuple)
+Line = SOL + Optional(Spaces) + Command + Optional(Spaces) + EOL
+
+def parse(args):
+    global lineno
+    for lineno, line in enumerate(l.lstrip() for l in args.FILE.readlines()):
+        if line and not line.startswith('#'):
+            try:
+                res = Line.parseString(line)
+                if args.verbose:
+                    print GREEN + 'RULE [line %d]: %s' % (lineno, res)
+            except Exception as e:
+                error(re.sub(r',?\s?\(line.*?\)', '', str(e)))
+    color = RED if errors else YELLOW if warnings else GREEN
+    print '\n' + color + '[%d errors and %d warnings]' % (errors, warnings)
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+            description='Validate sesqlite_contexts file.',
+            epilog='Install colorama to have colored output.')
+    parser.add_argument('FILE', nargs='?', default="sesqlite_contexts",
+            type=file, help='The sesqlite_contexts file to validate')
+    parser.add_argument('--verbose', '-v', action='count',
+            help='Be more verbose')
+    try:
+        args = parser.parse_args()
+        print 'Validating file: %s' % args.FILE.name
+        parse(args)
+    except IOError as e:
+        print RED + str(e)
+
