@@ -1669,6 +1669,9 @@ void *sqlite3_rollback_hook(
   return pRet;
 }
 
+
+#ifdef SQLITE_ENABLE_SELINUX
+
 /*
 ** Register a callback to be invoked each time a new table is created,
 ** using this database connection.
@@ -1684,6 +1687,11 @@ int sqlite3_set_add_extra_column(
   sqlite3_mutex_leave(db->mutex);
   return SQLITE_OK;
 }
+
+#endif
+
+#ifndef SQLITE_OMIT_SCHEMACHANGE_NOTIFICATIONS
+
 /*
 ** Register a callback that is invoked every time a schema change happens.
 */
@@ -1698,6 +1706,8 @@ int sqlite3_schemachange_hook(
   sqlite3_mutex_leave(db->mutex);
   return SQLITE_OK;
 }
+
+#endif
 
 #ifndef SQLITE_OMIT_WAL
 /*
