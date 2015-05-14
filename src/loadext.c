@@ -400,10 +400,14 @@ static const sqlite3_api_routines sqlite3Apis = {
 
 #ifdef SQLITE_ENABLE_SELINUX
   sqlite3_set_add_extra_column,
-  sqlite3_schemachange_hook,
   sqlite3_set_xattr,
   sqlite3_get_xattr,
 #endif
+  
+#ifndef SQLITE_OMIT_SCHEMACHANGE_NOTIFICATIONS
+  sqlite3_schemachange_hook,
+#endif
+
 };
 
 /*

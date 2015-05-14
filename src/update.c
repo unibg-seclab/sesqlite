@@ -249,6 +249,7 @@ sqlite3ExprSetHeight(pParse, pFName);
 /* ------------------------------------------------------------ */
 #endif /* defined(SQLITE_ENABLE_SELINUX) */
 
+
   /* Figure out if we have any triggers and if the table being
   ** updated is a view.
   */
@@ -282,7 +283,7 @@ sqlite3ExprSetHeight(pParse, pFName);
   iIdxCur = iDataCur+1;
   pPk = HasRowid(pTab) ? 0 : sqlite3PrimaryKeyIndex(pTab);
   for(nIdx=0, pIdx=pTab->pIndex; pIdx; pIdx=pIdx->pNext, nIdx++){
-    if( pIdx->autoIndex==2 && pPk!=0 ){
+    if( IsPrimaryKeyIndex(pIdx) && pPk!=0 ){
       iDataCur = pParse->nTab;
       pTabList->a[0].iCursor = iDataCur;
     }
@@ -533,7 +534,8 @@ sqlite3ExprSetHeight(pParse, pFName);
     }
     labelContinue = labelBreak;
     sqlite3VdbeAddOp2(v, OP_IsNull, pPk ? regKey : regOldRowid, labelBreak);
-    VdbeCoverage(v);
+    VdbeCoverageIf(v, pPk==0);
+    VdbeCoverageIf(v, pPk!=0);
   }else if( pPk ){
     labelContinue = sqlite3VdbeMakeLabel(v);
     sqlite3VdbeAddOp2(v, OP_Rewind, iEph, labelBreak); VdbeCoverage(v);
@@ -678,6 +680,7 @@ sqlite3ExprSetHeight(pParse, pFName);
       VdbeCoverageNeverTaken(v);
     }
     sqlite3GenerateRowIndexDelete(pParse, pTab, iDataCur, iIdxCur, aRegIdx);
+  
     /* If changing the record number, delete the old record.  */
     if( hasFK || chngKey || pPk!=0 ){
       sqlite3VdbeAddOp2(v, OP_Delete, iDataCur, 0);

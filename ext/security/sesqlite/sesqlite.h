@@ -101,9 +101,7 @@ int lookup_security_label(
 );
 
 /* */
-int sqlite3SelinuxInit(
-	sqlite3 *db
-);
+int sqlite3SelinuxInit(sqlite3 *db);
 /**
  * Used to store
  */

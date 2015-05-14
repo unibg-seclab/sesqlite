@@ -116,6 +116,7 @@ static void renameParentFunc(
   int token;                      /* Type of token */
 
   UNUSED_PARAMETER(NotUsed);
+  if( zInput==0 || zOld==0 ) return;
   for(z=zInput; *z; z=z+n){
     n = sqlite3GetToken(z, &token);
     if( token==TK_REFERENCES ){
@@ -729,6 +730,7 @@ void sqlite3AlterFinishAddColumn(Parse *pParse, Token *pColDef){
       zDb, SCHEMA_TABLE(iDb), pNew->addColOffset, zCol, pNew->addColOffset+1,
       zTab
     );
+    sqlite3DbFree(db, zCol);
     db->flags = savedDbFlags;
   }
 
@@ -754,9 +756,6 @@ void sqlite3AlterFinishAddColumn(Parse *pParse, Token *pColDef){
   }
 #endif
 
-  if( zCol ){
-    sqlite3DbFree(db, zCol);
-  }
 }
 
 /*
