@@ -87,72 +87,72 @@ int callback(void *param, int numCols, char **col, char **colName) {
 void test_create_table(void) {
 
     SQLITE_INIT
-    CU_ASSERT(SQLITE_EXEC(db, "CREATE TABLE t1(a INT, b INT);") == SQLITE_OK);
-    CU_ASSERT(SQLITE_EXEC(db, "CREATE TABLE t2(d INT, e INT);") == SQLITE_OK);
-    CU_ASSERT(SQLITE_EXEC(db, "CREATE TABLE t3(f INT, g INT);") == SQLITE_OK);
+    CU_ASSERT(SQLITE_EXEC(db, "CREATE TABLE t1001(a INT, b INT);") == SQLITE_OK);
+    CU_ASSERT(SQLITE_EXEC(db, "CREATE TABLE t1002(d INT, e INT);") == SQLITE_OK);
+    CU_ASSERT(SQLITE_EXEC(db, "CREATE TABLE t1003(f INT, g INT);") == SQLITE_OK);
 }
 
 void test_insert_table(void) {
 
 	SQLITE_INIT
-	CU_ASSERT(SQLITE_EXEC(db, "INSERT INTO t1(a, b) values(100, 101), (102, 103), (104, 105);") == SQLITE_OK);
-	CU_ASSERT(SQLITE_EXEC(db, "INSERT INTO t2(d, e) values(200, 201), (202,203);") == SQLITE_OK);
-	CU_ASSERT(SQLITE_EXEC(db, "INSERT INTO t3(f, g) values(300, 301), (302, 303);") == SQLITE_OK);
+	CU_ASSERT(SQLITE_EXEC(db, "INSERT INTO t1001(a, b) values(100, 101), (102, 103), (104, 105);") == SQLITE_OK);
+	CU_ASSERT(SQLITE_EXEC(db, "INSERT INTO t1002(d, e) values(200, 201), (202,203);") == SQLITE_OK);
+	CU_ASSERT(SQLITE_EXEC(db, "INSERT INTO t1003(f, g) values(300, 301), (302, 303);") == SQLITE_OK);
 
 }
 
 void test_select(void) {
 
 	SQLITE_INIT
-	CU_ASSERT(SQLITE_ASSERT(db, "SELECT * FROM t1;", ROW("100","101"), ROW("102","103"), ROW("104","105")) == SQLITE_OK);
-	CU_ASSERT(SQLITE_ASSERT(db, "SELECT * FROM t2;", ROW("200","201"), ROW("202","203")) == SQLITE_OK);
-	CU_ASSERT(SQLITE_ASSERT(db, "SELECT f FROM t3;", ROW("300"), ROW("302")) == SQLITE_OK);
+	CU_ASSERT(SQLITE_ASSERT(db, "SELECT * FROM t1001;", ROW("100","101"), ROW("102","103"), ROW("104","105")) == SQLITE_OK);
+	CU_ASSERT(SQLITE_ASSERT(db, "SELECT * FROM t1002;", ROW("200","201"), ROW("202","203")) == SQLITE_OK);
+	CU_ASSERT(SQLITE_ASSERT(db, "SELECT f FROM t1003;", ROW("300"), ROW("302")) == SQLITE_OK);
 
 }
 
 void test_chcon(void) {
 
 	SQLITE_INIT
-	CU_ASSERT(SQLITE_EXEC(db, "PRAGMA chcon('unconfined_u:object_r:column_all:s0 main.t1.security_context');") == SQLITE_OK);
+	CU_ASSERT(SQLITE_EXEC(db, "PRAGMA chcon('unconfined_u:object_r:column_all:s0 main.t1001.security_context');") == SQLITE_OK);
 
-	CU_ASSERT(SQLITE_EXEC(db, "PRAGMA chcon('unconfined_u:object_r:column_all:s0 main.t2.security_context');") == SQLITE_OK);
-	CU_ASSERT(SQLITE_EXEC(db, "PRAGMA chcon('unconfined_u:object_r:column_all:s0 main.t2.d');") == SQLITE_OK);
-	CU_ASSERT(SQLITE_EXEC(db, "PRAGMA chcon('unconfined_u:object_r:column_all:s0 main.t2.e');") == SQLITE_OK);
+	CU_ASSERT(SQLITE_EXEC(db, "PRAGMA chcon('unconfined_u:object_r:column_all:s0 main.t1002.security_context');") == SQLITE_OK);
+	CU_ASSERT(SQLITE_EXEC(db, "PRAGMA chcon('unconfined_u:object_r:column_all:s0 main.t1002.d');") == SQLITE_OK);
+	CU_ASSERT(SQLITE_EXEC(db, "PRAGMA chcon('unconfined_u:object_r:column_all:s0 main.t1002.e');") == SQLITE_OK);
 
 	
-	CU_ASSERT(SQLITE_EXEC(db, "PRAGMA chcon('unconfined_u:object_r:column_all:s0 main.t3.security_context');") == SQLITE_OK);
+	CU_ASSERT(SQLITE_EXEC(db, "PRAGMA chcon('unconfined_u:object_r:column_all:s0 main.t1003.security_context');") == SQLITE_OK);
 
 }
 
 void test_update_label(void) {
 
 	SQLITE_INIT
-	CU_ASSERT(SQLITE_EXEC(db, "UPDATE t1 SET security_context=getcon_id('unconfined_u:object_r:sqlite_tuple_no_select_t:s0') WHERE a=100;") == SQLITE_OK);
-	CU_ASSERT(SQLITE_EXEC(db, "UPDATE t2 SET security_context=getcon_id('unconfined_u:object_r:sqlite_tuple_no_update_t:s0') WHERE d=202;") == SQLITE_OK);
-	CU_ASSERT(SQLITE_EXEC(db, "UPDATE t3 SET security_context=getcon_id('unconfined_u:object_r:sqlite_tuple_no_delete_t:s0') WHERE f=300;") == SQLITE_OK);
+	CU_ASSERT(SQLITE_EXEC(db, "UPDATE t1001 SET security_context=getcon_id('unconfined_u:object_r:sqlite_tuple_no_select_t:s0') WHERE a=100;") == SQLITE_OK);
+	CU_ASSERT(SQLITE_EXEC(db, "UPDATE t1002 SET security_context=getcon_id('unconfined_u:object_r:sqlite_tuple_no_update_t:s0') WHERE d=202;") == SQLITE_OK);
+	CU_ASSERT(SQLITE_EXEC(db, "UPDATE t1003 SET security_context=getcon_id('unconfined_u:object_r:sqlite_tuple_no_delete_t:s0') WHERE f=300;") == SQLITE_OK);
 
 }
 
 void test_select_tuple(void) {
 
 	SQLITE_INIT
-	CU_ASSERT(SQLITE_ASSERT(db, "SELECT * FROM t1;", ROW("102","103"), ROW("104","105")) == SQLITE_OK);
+	CU_ASSERT(SQLITE_ASSERT(db, "SELECT * FROM t1001;", ROW("102","103"), ROW("104","105")) == SQLITE_OK);
 
 }
 
 void test_update_tuple(void) {
 
 	SQLITE_INIT
-	CU_ASSERT(SQLITE_EXEC(db, "UPDATE t2 SET d=100000;") == SQLITE_OK);
-	CU_ASSERT(SQLITE_ASSERT(db, "SELECT * FROM t2;", ROW("100000","201"), ROW("202","203")) == SQLITE_OK);
+	CU_ASSERT(SQLITE_EXEC(db, "UPDATE t1002 SET d=100000;") == SQLITE_OK);
+	CU_ASSERT(SQLITE_ASSERT(db, "SELECT * FROM t1002;", ROW("100000","201"), ROW("202","203")) == SQLITE_OK);
 
 }
 
 void test_delete_tuple(void) {
 
 	SQLITE_INIT
-	CU_ASSERT(SQLITE_EXEC(db, "DELETE FROM t3;") == SQLITE_OK);
-	CU_ASSERT(SQLITE_ASSERT(db, "SELECT f FROM t3;", ROW("300")) == SQLITE_OK);
+	CU_ASSERT(SQLITE_EXEC(db, "DELETE FROM t1003;") == SQLITE_OK);
+	CU_ASSERT(SQLITE_ASSERT(db, "SELECT f FROM t1003;", ROW("300")) == SQLITE_OK);
 
 }
 

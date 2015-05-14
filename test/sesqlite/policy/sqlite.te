@@ -51,7 +51,7 @@ allow { unconfined_t } { sqlite_master_t sqlite_temp_master_t selinux_context_t 
 allow { unconfined_t } table_all:db_table { create select update insert delete setattr getattr drop };
 allow { unconfined_t } table_no_create:db_table { select update insert delete setattr getattr drop };
 allow { unconfined_t } table_no_insert:db_table { create select update delete setattr getattr drop };
-allow { unconfined_t } table_other:db_table { create select update insert setattr getattr drop };
+allow { unconfined_t } table_other:db_table { create select update insert setattr getattr drop delete };
 
 #columns
 allow { unconfined_t } column_all:db_column { select update insert drop };
