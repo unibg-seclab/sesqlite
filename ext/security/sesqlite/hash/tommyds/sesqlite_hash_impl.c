@@ -1,9 +1,5 @@
 #include "sesqlite_hash_impl.h"
 
-
-/* start of file main.c */
-
-
 /* start of file tommyhash.c */
 
 /*
@@ -602,39 +598,3 @@ tommy_size_t tommy_hashlin_memory_usage(tommy_hashlin* hashlin)
 
 
 /* end of file tommyhashlin.c */
-
-#include <stdio.h>
-
-struct object {
-	tommy_node node;
-	// other fields
-	int value;
-};
-
-int compare(const void* arg, const void* obj)
-{
-	return *(const int*)arg != ((const struct object*)obj)->value;
-}
-
-int main(){
-	tommy_hashlin hashlin;
-	tommy_hashlin_init(&hashlin);
-	struct object* obj = malloc(sizeof(struct object)); // creates the object
-	obj->value = 1; // initializes the object
-	tommy_hashlin_insert(&hashlin, &obj->node, obj, tommy_inthash_u32(obj->value)); // inserts the object
-	int value_to_find = 1;
-	obj = tommy_hashlin_search(&hashlin, compare, &value_to_find, tommy_inthash_u32(value_to_find));
-	if (!obj) {
-		printf("not found\n");
-	} else {
-		printf("found\n");
-	}
-	obj = tommy_hashlin_remove(&hashlin, compare, &value_to_find, tommy_inthash_u32(value_to_find));
-	if (obj) {
-	 free(obj); // frees the object allocated memory
-	}
-	tommy_hashlin_done(&hashlin);
-}
-
-/* end of file main.c */
-

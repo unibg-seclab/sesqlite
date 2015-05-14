@@ -1,3 +1,5 @@
+#ifndef _SESQLITE_HASH_IMPL_H_
+#define _SESQLITE_HASH_IMPL_H_
 
 /* start of file tommyhashlin.h */
 
@@ -1489,3 +1491,4 @@ tommy_inline void tommy_chain_mergesort(tommy_chain* chain, tommy_compare_func* 
 
 /* end of file tommychain.h */
 
+#endif /* _SESQLITE_HASH_IMPL_H_ */
