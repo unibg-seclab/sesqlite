@@ -59,7 +59,6 @@ struct VdbeOp {
     KeyInfo *pKeyInfo;     /* Used when p4type is P4_KEYINFO */
     int *ai;               /* Used when p4type is P4_INTARRAY */
     SubProgram *pProgram;  /* Used when p4type is P4_SUBPROGRAM */
-    Table *pTab;           /* Used when p4type is P4_TABLE */
     int (*xAdvance)(BtCursor *, int *);
   } p4;
 #ifdef SQLITE_ENABLE_EXPLAIN_COMMENTS
@@ -120,7 +119,6 @@ typedef struct VdbeOpList VdbeOpList;
 #define P4_INTARRAY (-15) /* P4 is a vector of 32-bit integers */
 #define P4_SUBPROGRAM  (-18) /* P4 is a pointer to a SubProgram structure */
 #define P4_ADVANCE  (-19) /* P4 is a pointer to BtreeNext() or BtreePrev() */
-#define P4_TABLE    (-20) /* P4 is a pointer to a Table structure */
 
 /* Error message codes for OP_Halt */
 #define P5_ConstraintNotNull 1
@@ -211,12 +209,13 @@ void sqlite3VdbeSetVarmask(Vdbe*, int);
 #ifndef SQLITE_OMIT_TRACE
   char *sqlite3VdbeExpandSql(Vdbe*, const char*);
 #endif
+int sqlite3MemCompare(const Mem*, const Mem*, const CollSeq*);
 
 void sqlite3VdbeRecordUnpack(KeyInfo*,int,const void*,UnpackedRecord*);
-int sqlite3VdbeRecordCompare(int,const void*,const UnpackedRecord*,int);
+int sqlite3VdbeRecordCompare(int,const void*,UnpackedRecord*,int);
 UnpackedRecord *sqlite3VdbeAllocUnpackedRecord(KeyInfo *, char *, int, char **);
 
-typedef int (*RecordCompare)(int,const void*,const UnpackedRecord*,int);
+typedef int (*RecordCompare)(int,const void*,UnpackedRecord*,int);
 RecordCompare sqlite3VdbeFindCompare(UnpackedRecord*);
 
 #ifndef SQLITE_OMIT_TRIGGER

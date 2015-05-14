@@ -678,7 +678,6 @@ else
 fi
 AC_SUBST(USE_GCOV)
 
-
 #########
 # See whether we should allow selinux extensions
 #
