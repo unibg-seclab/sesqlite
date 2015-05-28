@@ -13,7 +13,10 @@
 set testdir [file dirname $argv0]
 source $testdir/tester.tcl
 source $testdir/malloc_common.tcl
-ifcapable !fts3 { finish_test ; return }
+ifcapable !fts3||!fts4_deferred {
+  finish_test 
+  return
+}
 
 set testprefix fts3defer2
 
@@ -55,6 +58,7 @@ do_execsql_test 1.2.0 {
 do_execsql_test 1.2.1 {
   SELECT content FROM t1 WHERE t1 MATCH 'f (e NEAR/2 a)';
 } {{a b c d e f a x y}}
+
 
 do_execsql_test 1.2.2 {
   SELECT snippet(t1, '[', ']'), offsets(t1), mit(matchinfo(t1, 'pcxnal'))
@@ -150,4 +154,3 @@ foreach {tn sql} {
 
 
 finish_test
-

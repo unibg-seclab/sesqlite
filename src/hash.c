@@ -53,7 +53,7 @@ void sqlite3HashClear(Hash *pH){
 ** The hashing function.
 */
 static unsigned int strHash(const char *z, int nKey){
-  int h = 0;
+  unsigned int h = 0;
   assert( nKey>=0 );
   while( nKey > 0  ){
     h = (h<<3) ^ h ^ sqlite3UpperToLower[(unsigned char)*z++];
@@ -113,7 +113,11 @@ static int rehash(Hash *pH, unsigned int new_size){
 
   /* The inability to allocates space for a larger hash table is
   ** a performance hit but it is not a fatal error.  So mark the
-  ** allocation as a benign.
+  ** allocation as a benign. Use sqlite3Malloc()/memset(0) instead of 
+  ** sqlite3MallocZero() to make the allocation, as sqlite3MallocZero()
+  ** only zeroes the requested number of bytes whereas this module will
+  ** use the actual amount of space allocated for the hash table (which
+  ** may be larger than the requested amount).
   */
   sqlite3BeginBenignMalloc();
   new_ht = (struct _ht *)sqlite3Malloc( new_size*sizeof(struct _ht) );
@@ -189,7 +193,7 @@ static void removeElementGivenHash(
   }
   sqlite3_free( elem );
   pH->count--;
-  if( pH->count<=0 ){
+  if( pH->count==0 ){
     assert( pH->first==0 );
     assert( pH->count==0 );
     sqlite3HashClear(pH);

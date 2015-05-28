@@ -22,7 +22,8 @@
 #include <string.h>
 #include <assert.h>
 
-#ifdef SQLITE_TEST
+#if defined(SQLITE_TEST)
+#if defined(SQLITE_ENABLE_FTS3) || defined(SQLITE_ENABLE_FTS4)
 
 /* Required so that the "ifdef SQLITE_ENABLE_FTS3" below works */
 #include "fts3Int.h"
@@ -161,6 +162,8 @@ static int fts3_near_match_cmd(
   Tcl_Obj **apExprToken;
   int nExprToken;
 
+  UNUSED_PARAMETER(clientData);
+
   /* Must have 3 or more arguments. */
   if( objc<3 || (objc%2)==0 ){
     Tcl_WrongNumArgs(interp, 1, objv, "DOCUMENT EXPR ?OPTION VALUE?...");
@@ -264,7 +267,7 @@ static int fts3_near_match_cmd(
 **
 ** Whether or not the arguments are present, this command returns a list of
 ** two integers - the initial chunksize and threshold when the command is
-** invoked. This can be used to restore the default behaviour after running
+** invoked. This can be used to restore the default behavior after running
 ** tests. For example:
 **
 **    # Override incr-load settings for testing:
@@ -314,6 +317,7 @@ static int fts3_configure_incr_load_cmd(
   Tcl_SetObjResult(interp, pRet);
   Tcl_DecrRefCount(pRet);
 #endif
+  UNUSED_PARAMETER(clientData);
   return TCL_OK;
 }
 
@@ -352,6 +356,8 @@ static int testTokenizerCreate(
   sqlite3_tokenizer **ppTokenizer
 ){
   test_tokenizer *pNew;
+  UNUSED_PARAMETER(argc);
+  UNUSED_PARAMETER(argv);
 
   pNew = sqlite3_malloc(sizeof(test_tokenizer));
   if( !pNew ) return SQLITE_NOMEM;
@@ -384,7 +390,7 @@ static int testTokenizerOpen(
     memset(pCsr, 0, sizeof(test_tokenizer_cursor));
     pCsr->aInput = pInput;
     if( nBytes<0 ){
-      pCsr->nInput = strlen(pInput);
+      pCsr->nInput = (int)strlen(pInput);
     }else{
       pCsr->nInput = nBytes;
     }
@@ -437,7 +443,7 @@ static int testTokenizerNext(
     const char *pToken = p;
     int nToken;
     while( p<pEnd && testIsTokenChar(*p) ) p++;
-    nToken = p-pToken;
+    nToken = (int)(p-pToken);
 
     /* Copy the token into the buffer */
     if( nToken>pCsr->nBuffer ){
@@ -455,12 +461,12 @@ static int testTokenizerNext(
         for(i=0; i<nToken; i++) pCsr->aBuffer[i] = testTolower(pToken[i]);
       }
       pCsr->iToken++;
-      pCsr->iInput = p - pCsr->aInput;
+      pCsr->iInput = (int)(p - pCsr->aInput);
 
       *ppToken = pCsr->aBuffer;
       *pnBytes = nToken;
-      *piStartOffset = pToken - pCsr->aInput;
-      *piEndOffset = p - pCsr->aInput;
+      *piStartOffset = (int)(pToken - pCsr->aInput);
+      *piEndOffset = (int)(p - pCsr->aInput);
       *piPosition = pCsr->iToken;
     }
   }
@@ -507,6 +513,52 @@ static int fts3_test_tokenizer_cmd(
     (const unsigned char *)&pPtr, sizeof(sqlite3_tokenizer_module *)
   ));
 #endif
+  UNUSED_PARAMETER(clientData);
+  return TCL_OK;
+}
+
+static int fts3_test_varint_cmd(
+  ClientData clientData,
+  Tcl_Interp *interp,
+  int objc,
+  Tcl_Obj *CONST objv[]
+){
+#ifdef SQLITE_ENABLE_FTS3
+  char aBuf[24];
+  int rc;
+  Tcl_WideInt w, w2;
+  int nByte, nByte2;
+
+  if( objc!=2 ){
+    Tcl_WrongNumArgs(interp, 1, objv, "INTEGER");
+    return TCL_ERROR;
+  }
+
+  rc = Tcl_GetWideIntFromObj(interp, objv[1], &w);
+  if( rc!=TCL_OK ) return rc;
+
+  nByte = sqlite3Fts3PutVarint(aBuf, w);
+  nByte2 = sqlite3Fts3GetVarint(aBuf, &w2);
+  if( w!=w2 || nByte!=nByte2 ){
+    char *zErr = sqlite3_mprintf("error testing %lld", w);
+    Tcl_ResetResult(interp);
+    Tcl_AppendResult(interp, zErr, 0);
+    return TCL_ERROR;
+  }
+
+  if( w<=2147483647 && w>=0 ){
+    int i;
+    nByte2 = fts3GetVarint32(aBuf, &i);
+    if( (int)w!=i || nByte!=nByte2 ){
+      char *zErr = sqlite3_mprintf("error testing %lld (32-bit)", w);
+      Tcl_ResetResult(interp);
+      Tcl_AppendResult(interp, zErr, 0);
+      return TCL_ERROR;
+    }
+  }
+
+#endif
+  UNUSED_PARAMETER(clientData);
   return TCL_OK;
 }
 
@@ -522,6 +574,11 @@ int Sqlitetestfts3_Init(Tcl_Interp *interp){
   Tcl_CreateObjCommand(
       interp, "fts3_test_tokenizer", fts3_test_tokenizer_cmd, 0, 0
   );
+
+  Tcl_CreateObjCommand(
+      interp, "fts3_test_varint", fts3_test_varint_cmd, 0, 0
+  );
   return TCL_OK;
 }
+#endif                  /* SQLITE_ENABLE_FTS3 || SQLITE_ENABLE_FTS4 */
 #endif                  /* ifdef SQLITE_TEST */
