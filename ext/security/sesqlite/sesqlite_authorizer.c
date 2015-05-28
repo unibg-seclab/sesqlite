@@ -902,21 +902,21 @@ int initialize_authorizer(sqlite3 *db){
 
     /* create the SQL function selinux_check_access */
     rc = sqlite3_create_function(db, "selinux_check_access", 4,
-	SQLITE_UTF8 /* | SQLITE_DETERMINISTIC */, 0, selinuxCheckAccessFunction,
+	SQLITE_UTF8 | SQLITE_DETERMINISTIC, 0, selinuxCheckAccessFunction,
 	0, 0);
     if (rc != SQLITE_OK)
 	return rc;
 
     /* create the SQL function getcon_id */
     rc = sqlite3_create_function(db, "getcon_id", 1,
-	SQLITE_UTF8 /* | SQLITE_DETERMINISTIC */, db, selinuxGetconIdFunction,
+	SQLITE_UTF8 | SQLITE_DETERMINISTIC, db, selinuxGetconIdFunction,
 	0, 0);
     if (rc != SQLITE_OK)
 	return rc;
 
     /* create the SQL function getcon_id */
     rc = sqlite3_create_function(db, "getcon_label", 1,
-	SQLITE_UTF8 /* | SQLITE_DETERMINISTIC */, db, selinuxGetconLabelFunction,
+	SQLITE_UTF8 | SQLITE_DETERMINISTIC, db, selinuxGetconLabelFunction,
 	0, 0);
     if (rc != SQLITE_OK)
 	return rc;
