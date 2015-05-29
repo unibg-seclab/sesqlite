@@ -1,13 +1,16 @@
 .PHONY: all clean clean_test_db \
 	graph results_base results_se \
 	graph1 test1 test1_se \
-	graph8 test8 test8_se test8_tuple test8_tuple_static
+	graph8 test8 test8_se test8_tuple test8_tuple_static \
+	graphrl testrl testrl_se
 
 n			:= 2
 TOP			:= ../../..
 CONTEXTS		:= sesqlite_contexts
 SQLITE_OBJ		:= sqlite3.o
-SE_SQLITE_OBJ		:= sesqlite3.o
+SQLITE_LIB		:= libsqlite3.so
+SE_SQLITE_OBJ	:= sesqlite3.o
+SE_SQLITE_LIB	:= libsesqlite3.so
 INCLUDES		:= -I$(TOP)/src
 LDFLAGS			+= -ldl
 
@@ -40,6 +43,14 @@ OUT8_SE			:= $(OUTDIR8)/2.se.out
 OUT8_TUPLE		:= $(OUTDIR8)/4.se_tuple.out
 OUT8_TUPLE_STATIC	:= $(OUTDIR8)/3.se_tuple_static.out
 
+### speedtest_rl
+
+BINRL			:= speedtestrl.py
+TESTRL_DB		:= test_rl.db
+OUTDIRRL		:= results/rl
+OUTRL_BASE		:= $(OUTDIRRL)/1.base.out
+OUTRL_SE		:= $(OUTDIRRL)/2.se.out
+
 
 #########################
 #      COMMON PART      #
@@ -60,29 +71,33 @@ all: $(BIN1) $(BIN1_SE) \
      $(CONTEXTS) \
      $(TEST8_SQL) $(TEST8_TUPLE_SQL) $(TEST8_TUPLE_STATIC_SQL)
 
-$(SQLITE_OBJ):
+$(SQLITE_OBJ) $(SQLITE_LIB):
 	@ make performance -C $(TOP)
 	cp $(TOP)/build/sqlite3.o ./$(SQLITE_OBJ)
+	cp $(TOP)/build/.libs/libsqlite3.so ./$(SQLITE_LIB)
 
-$(SE_SQLITE_OBJ):
+$(SE_SQLITE_OBJ) $(SE_SQLITE_LIB):
 	@ make performance-selinux -C $(TOP)
 	cp $(TOP)/build/sqlite3.o ./$(SE_SQLITE_OBJ)
+	cp $(TOP)/build/.libs/libsqlite3.so ./$(SE_SQLITE_LIB)
 
 $(CONTEXTS):
 	cp $(TOP)/test/sesqlite/policy/$@ .
 
-graph: graph1 graph8
+graph: graph1 graph8 graphrl
 
-results_base: $(OUT1_BASE) $(OUT8_BASE)
+results_base: $(OUT1_BASE) $(OUT8_BASE) $(OUTRL_BASE)
 
-results_se: $(OUT1_SE) $(OUT8_SE) $(OUT8_TUPLE) $(OUT8_TUPLE_STATIC)
+results_se: $(OUT1_SE) $(OUT8_SE) $(OUT8_TUPLE) $(OUT8_TUPLE_STATIC) $(OUTRL_SE)
 
 clean_test_db:
-	@- $(RM) $(TEST8_DB)* $(TEST1_DB)*
+	@- $(RM) $(TEST8_DB)* $(TEST1_DB)* $(TESTRL_DB)*
 
 clean: clean_test_db
+	@- $(RM) $(SQLITE_OBJ) $(SE_SQLITE_OBJ)
+	@- $(RM) $(SQLITE_LIB) $(SE_SQLITE_LIB)
 	@- $(RM) $(BIN1) $(BIN1_SE) $(BIN8) $(BIN8_SE)
-	@- $(RM) $(OBJS1) $(OBJS8) $(SQLITE_OBJ) $(SE_SQLITE_OBJ)
+	@- $(RM) $(OBJS1) $(OBJS8)
 	@- $(RM) $(CONTEXTS)
 	@- $(RM) -rf results
 
@@ -178,4 +193,32 @@ $(OUT8_TUPLE_STATIC): $(OUTDIR8) $(CONTEXTS) $(TEST8_TUPLE_STATIC_SQL) $(BIN8_SE
 
 graph8: $(OUT8_BASE) $(OUT8_SE) $(OUT8_TUPLE) $(OUT8_TUPLE_STATIC)
 	@ python makegraph8.py
+
+#########################
+#  SPEEDTESTRL SPECIFIC  #
+#########################
+
+### tests
+
+testrl: clean_test_db $(SQLITE_LIB) $(BINRL)
+	@ LD_PRELOAD=./$(SQLITE_LIB) python $(BINRL) $(TESTRL_DB)
+
+testrl_se: clean_test_db $(CONTEXTS) $(SE_SQLITE_LIB) $(BINRL)
+	@ LD_PRELOAD=./$(SE_SQLITE_LIB) python $(BINRL) $(TESTRL_DB)
+
+### result files
+
+$(OUTDIRRL):
+	mkdir -p $@
+
+$(OUTRL_BASE): $(OUTDIRRL) $(SQLITE_LIB)
+	@ $(call testout,testrl)
+
+$(OUTRL_SE): $(OUTDIRRL) $(CONTEXTS) $(SE_SQLITE_LIB)
+	@ $(call testout,testrl_se)
+
+# graph
+
+graphrl: $(OUTRL_BASE) $(OUTRL_SE)
+	@ python makegraphrl.py
 

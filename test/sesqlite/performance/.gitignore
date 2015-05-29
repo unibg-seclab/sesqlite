@@ -1,4 +1,5 @@
 *.o
+*.so
 *.db
 *.db-journal
 *.out
