@@ -432,6 +432,8 @@ int sqlite3SelinuxInit(sqlite3 *db) {
 	fprintf(stdout, "\n == SeSqlite Initialization == \n");
 #endif
 
+	sqlite3_mutex_enter(db->mutex);
+
 	/* Allocate and initialize the hash-table used to store tokenizers. */
 	hash = sqlite3_malloc(sizeof(SESQLITE_HASH));
 	hash_id = sqlite3_malloc(sizeof(SESQLITE_BIHASH));
@@ -443,7 +445,6 @@ int sqlite3SelinuxInit(sqlite3 *db) {
 		SESQLITE_BIHASH_INIT(hash_id, SESQLITE_HASH_BINARY, SESQLITE_HASH_STRING, 1, 1); /* init mapping */
 	}
 
-	sqlite3_mutex_enter(db->mutex);
 	rc = isReopen(db, &reopen);
 	if( SQLITE_OK!=rc ) return rc;
 
