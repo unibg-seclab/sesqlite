@@ -45,7 +45,7 @@ int isReopen(
 		&check_stmt, 0);
 
 	if( SQLITE_OK!=rc ){
-		fprintf(stderr, "Error: SQL error in function isReopen\n");
+		fprintf(stderr, "Error: SQL error in function isReopen (Error code: %d)\n", rc);
 		return SQLITE_ERROR;
 	}
 
