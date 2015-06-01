@@ -24,6 +24,7 @@ type other_t, domain;
 type table_all, domain;
 type table_no_create, domain;
 type table_no_insert, domain;
+type table_no_delete, domain;
 type table_other, domain;
 
 #<columns>
@@ -51,6 +52,7 @@ allow { unconfined_t } { sqlite_master_t sqlite_temp_master_t selinux_context_t 
 allow { unconfined_t } table_all:db_table { create select update insert delete setattr getattr drop };
 allow { unconfined_t } table_no_create:db_table { select update insert delete setattr getattr drop };
 allow { unconfined_t } table_no_insert:db_table { create select update delete setattr getattr drop };
+allow { unconfined_t } table_no_delete:db_table { create select update insert setattr getattr };
 allow { unconfined_t } table_other:db_table { create select update insert setattr getattr drop delete };
 
 #columns

@@ -17,6 +17,7 @@ db_table	*.t1001	unconfined_u:object_r:table_all:s0
 db_table	*.t1002	unconfined_u:object_r:table_all:s0
 db_table	*.t1003	unconfined_u:object_r:table_all:s0
 db_table	*.t1004	unconfined_u:object_r:table_no_create:s0
+db_table	*.t1005	unconfined_u:object_r:table_no_delete:s0
 db_table	*.t1006	unconfined_u:object_r:table_no_insert:s0
 db_table	*.*	unconfined_u:object_r:table_other:s0
 
