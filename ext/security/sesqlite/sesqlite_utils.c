@@ -55,7 +55,7 @@ int sesqlite_get_allowed(
 	security_class_t class_t
 ){
 	struct av_decision avd;
-	security_compute_av(scon, tcon, class_t, 0, &avd);
+	security_compute_av_flags_raw(scon, tcon, class_t, 0, &avd);
 	return (avd.allowed | avd.auditallow);
 }
 
