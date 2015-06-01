@@ -1688,6 +1688,19 @@ int sqlite3_set_add_extra_column(
   return SQLITE_OK;
 }
 
+
+int sqlite3_register_queryrewrite_callback(
+  sqlite3 *db,
+  int (*queryrewrite_callback)(void*,int,void*),
+  void *pArg
+){
+  sqlite3_mutex_enter(db->mutex);
+  db->queryrewrite_callback = queryrewrite_callback;
+  sqlite3_mutex_leave(db->mutex);
+  return SQLITE_OK;
+}
+
+
 #endif
 
 #ifndef SQLITE_OMIT_SCHEMACHANGE_NOTIFICATIONS

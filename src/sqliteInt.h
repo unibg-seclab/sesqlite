@@ -1080,6 +1080,8 @@ struct sqlite3 {
   int (*xAddExtraColumn)(void*,void*,int,void*,char**);                             /* Add extra column callback */
   void *pAddColumnArg;         /* 1st argument to the add extra column function */
 
+
+  int (*queryrewrite_callback)(void*,int,void*);
   /*
   ** This field is used to store (key,value) pairs associated with a database connection.
   ** The main purpose is the same as the 'extended attributes' (xattrs) used for file system.

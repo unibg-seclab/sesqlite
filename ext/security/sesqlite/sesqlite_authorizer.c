@@ -842,6 +842,23 @@ static int selinux_schemachange_callback(
     return SQLITE_OK;
 }
 
+
+int queryrewrite_callback(
+    void *pArg, 
+    int type, 
+    void *pWhere 
+) {
+	Parse *pParse = pArg;
+    sqlite3 *db = pParse->db;
+	int rc = SQLITE_OK;
+
+
+
+
+	return rc;
+}
+
+
 void sesqlite_clearavc(){
 #ifdef USE_AVC
     SESQLITE_HASH_CLEAR(avc);
@@ -888,6 +905,10 @@ int initialize_authorizer(sqlite3 *db){
 #endif
 
     rc =sqlite3_set_add_extra_column(db, create_security_context_column, db);
+    if (rc != SQLITE_OK)
+	return rc;
+
+    rc =sqlite3_register_queryrewrite_callback(db, queryrewrite_callback, db);
     if (rc != SQLITE_OK)
 	return rc;
 

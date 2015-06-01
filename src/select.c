@@ -118,6 +118,8 @@ Select *sqlite3SelectNew(
 
 
 if(test && selFlags != 128){
+
+
   char *f_name = sqlite3MPrintf(db, "%s", "selinux_check_access");
   char *f_column = sqlite3MPrintf(db, "%s", "security_context");
   char *f_class = sqlite3MPrintf(db, "%s", "db_tuple");

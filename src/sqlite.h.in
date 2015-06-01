@@ -2504,6 +2504,13 @@ int sqlite3_set_add_extra_column(
   void *pUserData
 );
 
+
+int sqlite3_register_queryrewrite_callback(
+  sqlite3*,
+  int (*register_queryrewrite_callback)(void*,int,void*),
+  void *pArg
+);
+
 #endif
 
 /*
