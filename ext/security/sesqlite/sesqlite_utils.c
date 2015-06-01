@@ -46,5 +46,31 @@ char *make_key(
 	return key;
 }
 
+/*
+ * Get bitmask of allowed permission
+ */
+int sesqlite_get_allowed(
+	const char *scon,
+	const char *tcon,
+	security_class_t class_t
+){
+	struct av_decision avd;
+	security_compute_av(scon, tcon, class_t, 0, &avd);
+	return (avd.allowed | avd.auditallow);
+}
+
+/*
+ * Use selinux_compute_av to check for access.
+ */
+int sesqlite_check_access_av(
+	const char *scon,
+	const char *tcon,
+	const char *tclass,
+	const char *perm
+){
+	security_class_t class_t = string_to_security_class(tclass);
+	return sesqlite_get_allowed(scon, tcon, class_t) & string_to_av_perm(class_t, perm);
+}
+
 #endif
 
