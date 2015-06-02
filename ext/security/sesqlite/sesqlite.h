@@ -15,6 +15,8 @@
 
 #include "sesqlite_hash.h"
 
+#define TEST_IN_OPTIMIZATION	2
+
 extern security_context_t scon;
 extern security_context_t tcon;
 extern int scon_id;

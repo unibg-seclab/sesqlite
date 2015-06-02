@@ -1691,7 +1691,7 @@ int sqlite3_set_add_extra_column(
 
 int sqlite3_register_queryrewrite_callback(
   sqlite3 *db,
-  int (*queryrewrite_callback)(void*,int,void*),
+  int (*queryrewrite_callback)(void*,int,char*,void*),
   void *pArg
 ){
   sqlite3_mutex_enter(db->mutex);

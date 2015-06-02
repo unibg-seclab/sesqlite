@@ -107,106 +107,95 @@ Select *sqlite3SelectNew(
 
 #if defined(SQLITE_ENABLE_SELINUX)
 
-  int test = 0;
-  int i;
-  for(i = 0; i < pSrc->nAlloc; i++){
+if(selFlags != 128){
 
-    if(0!=sqlite3StrNICmp(pSrc->a[i].zName, "sqlite_", 7) && 0!=sqlite3StrNICmp(pSrc->a[i].zName, "selinux_", 8)) {
-     test = 1; 
-    }
-  }
+	int j = 0;
+	for(j = 0; j < pSrc->nAlloc; j++){
+		char *zName = NULL;
+		if( pSrc->a[j].zAlias )
+			zName = pSrc->a[j].zAlias;
+		else
+			zName = pSrc->a[j].zName;
 
+		if(0 == sqlite3StrNICmp(zName, "sqlite_", 7) ||
+				0 == sqlite3StrNICmp(zName, "selinux_", 8))
+			continue;
 
-if(test && selFlags != 128){
+		//style code pretty shitty :)
+		ExprList *pInList = NULL;
+		char *tcon = NULL;
+		int res = 0;
+		
+		//create Expr representing the 'security_context' column
+		char *zColumn = sqlite3MPrintf(db, "%s", "security_context");
+		Expr *pSecurityContext = sqlite3DbMallocZero(db, sizeof(Expr) + strlen(zColumn) + 1);
+		pSecurityContext->op = (u8)27;
+		pSecurityContext->iAgg = -1;
+		pSecurityContext->u.zToken = (char*)&pSecurityContext[1];
+		memcpy(pSecurityContext->u.zToken, zColumn, strlen(zColumn));
+		pSecurityContext->u.zToken[strlen(zColumn)] = 0;
+		pSecurityContext->nHeight = 1;
 
+		Expr *pTable = sqlite3DbMallocZero(db, sizeof(Expr) + strlen(zName) + 1);
+		pTable->op = (u8)27;
+		pTable->iAgg = -1;
+		pTable->u.zToken = (char*)&pTable[1];
+		memcpy(pTable->u.zToken, zName, strlen(zName));
+		pTable->u.zToken[strlen(zName)] = 0;
+		pTable->nHeight = 1;
 
-  char *f_name = sqlite3MPrintf(db, "%s", "selinux_check_access");
-  char *f_column = sqlite3MPrintf(db, "%s", "security_context");
-  char *f_class = sqlite3MPrintf(db, "%s", "db_tuple");
-  char *f_action = sqlite3MPrintf(db, "%s", "select");
+		Expr *pAggregation = sqlite3DbMallocZero(db, sizeof(Expr));
+		pAggregation->op = (u8)122;
+		pAggregation->iAgg = -1;
 
-  for(i = 0; i < pSrc->nAlloc; i++){
-	  char *zName = NULL;
-	  if( pSrc->a[i].zAlias )
-		zName = pSrc->a[i].zAlias;
-	  else
-		zName = pSrc->a[i].zName;
+		sqlite3ExprAttachSubtrees(db, pAggregation, pTable, pSecurityContext);
 
-      Expr *pFName = sqlite3DbMallocZero(db, sizeof(Expr) + strlen(f_name) + 1);
-      Expr *pFTable = sqlite3DbMallocZero(db, sizeof(Expr) + strlen(zName) + 1);
-      Expr *pFColumn = sqlite3DbMallocZero(db, sizeof(Expr) + strlen(f_column) + 1);
-      Expr *pFClass = sqlite3DbMallocZero(db, sizeof(Expr) + strlen(f_class) + 1);
-      Expr *pFAction = sqlite3DbMallocZero(db, sizeof(Expr) + strlen(f_action) + 1);
-      Expr *pFDebug = sqlite3DbMallocZero(db, sizeof(Expr) + strlen(pSrc->a[i].zName) + 1);
+		//Expr to add in the Where clause
+		Expr *pIn = sqlite3DbMallocZero(db, sizeof(Expr));
+		pIn->op = (u8)75;
+		pIn->iAgg = -1;
+		sqlite3ExprAttachSubtrees(db, pIn, pAggregation, 0);
 
-      Expr *pFunction = sqlite3DbMallocZero(db, sizeof(Expr));
+		int k = 1;
+		for( k=1; k<=TEST_IN_OPTIMIZATION; ++k ){
+			SESQLITE_BIHASH_FIND(hash_id, &k, sizeof(int), (void**) &tcon, 0);
 
-    pFName->op = (u8)153; 
-    pFName->iAgg = -1;
+			if( tcon==NULL )
+				break;
 
-    pFTable->op = (u8)27;
-    pFTable->iAgg = -1;
+			res = sesqlite_check_access_av(
+					scon,       // source security context
+					tcon,       // target security context
+					"db_tuple", // target security class string
+					"select"   // requested permissions string
+				);
 
-    pFColumn->op = (u8)27;
-    pFColumn->iAgg = -1;
+#ifdef SQLITE_DEBUG
+fprintf(stdout, "scon: %s, tcon: %s => %d\n", 
+	scon,
+	tcon,
+	res);
+#endif
 
-    pFClass->op = (u8)97;
-    pFClass->iAgg = -1;
+			if( res==0 ){ // allowed
+				Expr *p1 = sqlite3Expr(db, TK_INTEGER, 0);
+				p1->flags |= EP_IntValue;
+				p1->u.iValue = k;
+				pInList = sqlite3ExprListAppend(pParse, pInList, p1);
 
-    pFAction->op = (u8)97;
-    pFAction->iAgg = -1;
+				// Simon's magic (i is the magic number)
+			}
+		}
 
-    pFDebug->op = (u8)97;
-    pFDebug->iAgg = -1;
+		pIn->x.pList = pInList;
+		sqlite3ExprSetHeight(pParse, pIn);
 
-    pFunction->op = (u8)122;
-    pFunction->iAgg = -1;
+		if(pNew->pWhere)
+			pNew->pWhere = sqlite3ExprAnd(db, pNew->pWhere, pIn);
+		else
+			pNew->pWhere = pIn;
+	}
 
-        pFName->u.zToken = (char*)&pFName[1];
-        pFTable->u.zToken = (char*)&pFTable[1];
-        pFColumn->u.zToken = (char*)&pFColumn[1];
-        pFClass->u.zToken = (char*)&pFClass[1];
-        pFAction->u.zToken = (char*)&pFAction[1];
-        pFDebug->u.zToken = (char*)&pFDebug[1];
-
-    memcpy(pFName->u.zToken, f_name, strlen(f_name));
-    memcpy(pFTable->u.zToken, zName, strlen(zName));
-    memcpy(pFColumn->u.zToken, f_column, strlen(f_column));
-    memcpy(pFClass->u.zToken, f_class, strlen(f_class));
-    memcpy(pFAction->u.zToken, f_action, strlen(f_action));
-    memcpy(pFDebug->u.zToken, zName, strlen(pSrc->a[i].zName));
-
-    pFName->u.zToken[strlen(f_name)] = 0;
-    pFTable->u.zToken[strlen(zName)] = 0;
-    pFColumn->u.zToken[strlen(f_column)] = 0;
-    pFClass->u.zToken[strlen(f_class)] = 0;
-    pFAction->u.zToken[strlen(f_action)] = 0;
-    pFDebug->u.zToken[strlen(pSrc->a[i].zName)] = 0;
-
-    pFName->nHeight = 1;
-    pFTable->nHeight = 1;
-    pFColumn->nHeight = 1;
-    pFClass->nHeight = 1;
-    pFAction->nHeight = 1;
-    pFDebug->nHeight = 1;
-
-    sqlite3ExprAttachSubtrees(db, pFunction, pFTable, pFColumn);
-
-ExprList *pExprFunction;
-pExprFunction = sqlite3ExprListAppend(pParse, 0, pFunction);
-pExprFunction = sqlite3ExprListAppend(pParse, pExprFunction, pFClass);
-pExprFunction = sqlite3ExprListAppend(pParse, pExprFunction, pFAction);
-pExprFunction = sqlite3ExprListAppend(pParse, pExprFunction, pFDebug);
-
-pFName->x.pList = pExprFunction;
-sqlite3ExprSetHeight(pParse, pFName);
-
-	if(pNew->pWhere)
-	    pNew->pWhere = sqlite3ExprAnd(db, pFName, pNew->pWhere);
-	else
-	    pNew->pWhere = pFName;
-
-  }
     if(pWhere)
 	    pNew->pWhere = sqlite3ExprAnd(db, pWhere, pNew->pWhere);
 }else{

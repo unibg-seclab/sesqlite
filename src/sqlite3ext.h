@@ -257,7 +257,7 @@ struct sqlite3_api_routines {
 
 #ifdef SQLITE_ENABLE_SELINUX
   int (*set_add_extra_column)(sqlite3*,int(*)(void*,void*,int,void*,char**),void*);
-  int (*queryrewrite_callback)(sqlite3*,int(*)(void*,int,void*),void*);
+  int (*queryrewrite_callback)(sqlite3*,int(*)(void*,int,char*,void*),void*);
   int (*set_xattr)(sqlite3*, char*, char*);
   char* (*get_xattr)(sqlite3*, char*);
 #endif

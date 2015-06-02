@@ -846,16 +846,19 @@ static int selinux_schemachange_callback(
 int queryrewrite_callback(
     void *pArg, 
     int type, 
+	char *zTable, 
     void *pWhere 
 ) {
+
 	Parse *pParse = pArg;
     sqlite3 *db = pParse->db;
-	int rc = SQLITE_OK;
 
+    if(0!=sqlite3StrNICmp(zTable, "sqlite_", 7) && 
+			0!=sqlite3StrNICmp(zTable, "selinux_", 8)) {
+		return SQLITE_OK;
+    }
 
-
-
-	return rc;
+	return SQLITE_OK;
 }
 
 
