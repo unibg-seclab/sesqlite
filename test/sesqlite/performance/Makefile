@@ -2,7 +2,8 @@
 	graph results_base results_se \
 	graph1 test1 test1_se \
 	graph8 test8 test8_se test8_tuple test8_tuple_static \
-	graphrl testrl testrl_se
+	graphrl testrl testrl_se \
+	graphnum testnum testnum_se
 
 n			:= 2
 TOP			:= ../../..
@@ -50,6 +51,13 @@ TESTRL_DB		:= test_rl.db
 OUTDIRRL		:= results/rl
 OUTRL_BASE		:= $(OUTDIRRL)/1.base.out
 OUTRL_SE		:= $(OUTDIRRL)/2.se.out
+
+### speedtest_num
+
+BINNUM			:= speedtestnum.py
+OUTDIRNUM		:= results/num
+OUTNUM_BASE		:= $(OUTDIRNUM)/1.base.out
+OUTNUM_SE		:= $(OUTDIRNUM)/2.se.out
 
 
 #########################
@@ -123,7 +131,7 @@ test1_se: clean_test_db $(BIN1_SE) $(CONTEXTS)
 ### result files
 
 $(OUTDIR1):
-	mkdir -p $@
+	@ mkdir -p $@
 
 $(OUT1_BASE): $(OUTDIR1) $(BIN1)
 	@ $(call testout,test1)
@@ -194,9 +202,9 @@ $(OUT8_TUPLE_STATIC): $(OUTDIR8) $(CONTEXTS) $(TEST8_TUPLE_STATIC_SQL) $(BIN8_SE
 graph8: $(OUT8_BASE) $(OUT8_SE) $(OUT8_TUPLE) $(OUT8_TUPLE_STATIC)
 	@ python makegraph8.py
 
-#########################
+##########################
 #  SPEEDTESTRL SPECIFIC  #
-#########################
+##########################
 
 ### tests
 
@@ -209,7 +217,7 @@ testrl_se: clean_test_db $(CONTEXTS) $(SE_SQLITE_LIB) $(BINRL)
 ### result files
 
 $(OUTDIRRL):
-	mkdir -p $@
+	@ mkdir -p $@
 
 $(OUTRL_BASE): $(OUTDIRRL) $(SQLITE_LIB)
 	@ $(call testout,testrl)
@@ -221,4 +229,24 @@ $(OUTRL_SE): $(OUTDIRRL) $(CONTEXTS) $(SE_SQLITE_LIB)
 
 graphrl: $(OUTRL_BASE) $(OUTRL_SE)
 	@ python makegraphrl.py
+
+###########################
+#  SPEEDTESTNUM SPECIFIC  #
+###########################
+
+### result files
+
+$(OUTDIRNUM):
+	@ mkdir -p $@
+
+$(OUTNUM_BASE) testnum: $(OUTDIRNUM) $(SQLITE_LIB) $(BINNUM)
+	@ LD_PRELOAD=./$(SQLITE_LIB) python $(BINNUM) -f1000 -t10000 -s1000 -r10 -d2 -o$(OUTNUM_BASE)
+
+$(OUTNUM_SE) testnum_se: $(OUTDIRNUM) $(CONTEXTS) $(SE_SQLITE_LIB) $(BINNUM)
+	@ LD_PRELOAD=./$(SE_SQLITE_LIB) python $(BINNUM) -f1000 -t10000 -s1000 -r10 -d2 -o$(OUTNUM_SE)
+
+# graph
+
+graphnum: $(OUTNUM_BASE) $(OUTNUM_SE)
+	@ python makegraphnum.py $(OUTNUM_BASE) $(OUTNUM_SE)
 

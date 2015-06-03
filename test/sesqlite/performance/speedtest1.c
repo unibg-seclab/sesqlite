@@ -637,7 +637,7 @@ void testset_main(void){
 
   n = sz;
   speedtest1_begin_test(190, "DELETE and REFILL one table", n);
-  speedtest1_exec("DELETE FROM t2;");
+  speedtest1_exec("DELETE FROM t2 WHERE 1=1;");
   speedtest1_exec("INSERT INTO t2 SELECT * FROM t1;");
   speedtest1_end_test();
 
@@ -733,7 +733,7 @@ void testset_main(void){
   speedtest1_end_test();
 
   speedtest1_begin_test(300, "Refill a %d-row table using (b&1)==(a&1)", sz);
-  speedtest1_exec("DELETE FROM t2;");
+  speedtest1_exec("DELETE FROM t2 WHERE 1=1;");
   speedtest1_exec("INSERT INTO t2(a,b,c)\n"
                   " SELECT a,b,c FROM t1  WHERE (b&1)==(a&1);");
   speedtest1_exec("INSERT INTO t2(a,b,c)\n"

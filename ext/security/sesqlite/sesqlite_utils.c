@@ -69,7 +69,7 @@ int sesqlite_check_access_av(
 	const char *perm
 ){
 	security_class_t class_t = string_to_security_class(tclass);
-	return sesqlite_get_allowed(scon, tcon, class_t) & string_to_av_perm(class_t, perm);
+	return sesqlite_get_allowed(scon, tcon, class_t) & string_to_av_perm(class_t, perm) ? 0 : -1;
 }
 
 #endif
