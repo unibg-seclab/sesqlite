@@ -234,19 +234,27 @@ graphrl: $(OUTRL_BASE) $(OUTRL_SE)
 #  SPEEDTESTNUM SPECIFIC  #
 ###########################
 
+### tests
+
+testnum: $(SQLITE_LIB) $(BINNUM)
+	@ LD_PRELOAD=./$(SQLITE_LIB) python $(BINNUM) -f0 -t100000 -s10000 -r20 -d5
+
+testnum_se: $(CONTEXTS) $(SE_SQLITE_LIB) $(BINNUM)
+	@ LD_PRELOAD=./$(SE_SQLITE_LIB) python $(BINNUM) -f0 -t100000 -s10000 -r20 -d5
+
 ### result files
 
 $(OUTDIRNUM):
 	@ mkdir -p $@
 
-$(OUTNUM_BASE) testnum: $(OUTDIRNUM) $(SQLITE_LIB) $(BINNUM)
-	@ LD_PRELOAD=./$(SQLITE_LIB) python $(BINNUM) -f1000 -t10000 -s1000 -r10 -d2 -o$(OUTNUM_BASE)
+$(OUTNUM_BASE): $(OUTDIRNUM) $(SQLITE_LIB) $(BINNUM)
+	make -s testnum > $(OUTNUM_BASE)
 
-$(OUTNUM_SE) testnum_se: $(OUTDIRNUM) $(CONTEXTS) $(SE_SQLITE_LIB) $(BINNUM)
-	@ LD_PRELOAD=./$(SE_SQLITE_LIB) python $(BINNUM) -f1000 -t10000 -s1000 -r10 -d2 -o$(OUTNUM_SE)
+$(OUTNUM_SE): $(OUTDIRNUM) $(CONTEXTS) $(SE_SQLITE_LIB) $(BINNUM)
+	make -s testnum_se > $(OUTNUM_SE)
 
 # graph
 
 graphnum: $(OUTNUM_BASE) $(OUTNUM_SE)
-	@ python makegraphnum.py $(OUTNUM_BASE) $(OUTNUM_SE)
+	@ python makegraphnum.py $(OUTNUM_BASE) $(OUTNUM_SE) --outdir $(OUTDIRNUM)
 
