@@ -110,7 +110,7 @@ clean: clean_test_db
 	@- $(RM) $(SQLITE_OBJ) $(SE_SQLITE_OBJ)
 	@- $(RM) $(SQLITE_LIB) $(SE_SQLITE_LIB)
 	@- $(RM) $(BIN1) $(BIN1_SE) $(BIN8) $(BIN8_SE)
-	@- $(RM) $(OBJS1) $(OBJS8)
+	@- $(RM) $(OBJS1) $(OBJS1_SE) $(OBJS8) $(OBJS8_SE)
 	@- $(RM) $(CONTEXTS)
 	@- $(RM) -rf results
 
