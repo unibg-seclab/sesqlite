@@ -69,6 +69,7 @@ if __name__ == "__main__":
 
     out = {}
     for n in ns:
+        sys.stderr.write('Testing with n=%d\n' % n)
         res = [(t.insert(n), t.select(), t.update(), t.delete())
                for t in [Test()] for rep in xrange(args.r)]
         res = [avg(lst, args.d) for lst in zip(*res)]

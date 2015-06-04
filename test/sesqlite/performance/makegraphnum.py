@@ -47,7 +47,6 @@ def plot_single(sqlite, sesqlite, outdir, ext='pdf', log=False):
         ax.set_title(test.upper())
         ax.legend(loc='upper left')
         ax.yaxis.set_major_formatter(FuncFormatter(lambda x, pos: '%gms' % (x*1e3)))
-        print ax.get_xlim(), ax.get_ylim()
 
     plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
     plt.gca().xaxis.get_major_ticks()[0].label1.set_visible(False)
