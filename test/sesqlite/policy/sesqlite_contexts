@@ -36,6 +36,21 @@ db_column	*.*.*	unconfined_u:object_r:column_other:s0
 
 # <tuples>
 db_tuple	*.*	unconfined_u:object_r:sqlite_tuple_t:s0
+db_tuple	*.a	unconfined_u:object_r:sqlite_tuple1_t:s0
+db_tuple	*.b	unconfined_u:object_r:sqlite_tuple2_t:s0
+db_tuple	*.c	unconfined_u:object_r:sqlite_tuple3_t:s0
+db_tuple	*.d	unconfined_u:object_r:sqlite_tuple4_t:s0
+db_tuple	*.e	unconfined_u:object_r:sqlite_tuple5_t:s0
+db_tuple	*.f	unconfined_u:object_r:sqlite_tuple6_t:s0
+db_tuple	*.g	unconfined_u:object_r:sqlite_tuple7_t:s0
+db_tuple	*.h	unconfined_u:object_r:sqlite_tuple8_t:s0
+db_tuple	*.i	unconfined_u:object_r:sqlite_tuple9_t:s0
+db_tuple	*.l	unconfined_u:object_r:sqlite_tuple10_t:s0
+db_tuple	*.k	unconfined_u:object_r:sqlite_tuple11_t:s0
+db_tuple	*.m	unconfined_u:object_r:sqlite_tuple12_t:s0
+db_tuple	*.n	unconfined_u:object_r:sqlite_tuple13_t:s0
+db_tuple	*.o	unconfined_u:object_r:sqlite_tuple14_t:s0
+db_tuple	*.p	unconfined_u:object_r:sqlite_tuple15_t:s0
 
 # <views>
 #db_view	*			system_u:object_r:sepgsql_view_t
