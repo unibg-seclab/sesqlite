@@ -19,12 +19,12 @@ clean:
 	@- rm -f $(MODULE_MOD) $(MODULE_PP)
 
 install: uninstall
-	sudo semodule -v -i $(MODULE_PP)
+	@ sudo semodule -v -i $(MODULE_PP)
 
 uninstall:
-	if sudo semodule -l | grep -q $(MODULE_NAME) ; \
-	  then sudo semodule -v -r $(MODULE_NAME) ; \
-	fi
+	@ if sudo semodule -l | grep -q $(MODULE_NAME) ; \
+	    then sudo semodule -v -r $(MODULE_NAME) ; \
+	  fi
 
 validate:
 	$(VALIDATOR) -v $(CONTEXTS)
