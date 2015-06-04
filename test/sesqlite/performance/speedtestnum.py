@@ -35,8 +35,8 @@ class Test:
 
     def select(self, where="1=1"):
         start = time()
-        self.cursor.execute("SELECT B FROM TEST WHERE %s" % where)
-        while self.cursor.fetchone(): pass
+        self.cursor.execute("SELECT A FROM TEST WHERE %s" % where)
+        self.cursor.fetchall()
         return time() - start
 
     def update(self, where="1=1"):

@@ -58,6 +58,11 @@ BINNUM			:= speedtestnum.py
 OUTDIRNUM		:= results/num
 OUTNUM_BASE		:= $(OUTDIRNUM)/1.base.out
 OUTNUM_SE		:= $(OUTDIRNUM)/2.se.out
+NUM_FROM		:= 0
+NUM_TO			:= 100000
+NUM_STEP		:= 10000
+NUM_REP			:= 10
+NUM_DROP		:= 2
 
 
 #########################
@@ -237,10 +242,10 @@ graphrl: $(OUTRL_BASE) $(OUTRL_SE)
 ### tests
 
 testnum: $(SQLITE_LIB) $(BINNUM)
-	@ LD_PRELOAD=./$(SQLITE_LIB) python $(BINNUM) -f0 -t100000 -s10000 -r20 -d5
+	@ LD_PRELOAD=./$(SQLITE_LIB) python $(BINNUM) -f$(NUM_FROM) -t$(NUM_TO) -s$(NUM_STEP) -r$(NUM_REP) -d$(NUM_DROP)
 
 testnum_se: $(CONTEXTS) $(SE_SQLITE_LIB) $(BINNUM)
-	@ LD_PRELOAD=./$(SE_SQLITE_LIB) python $(BINNUM) -f0 -t100000 -s10000 -r20 -d5
+	@ LD_PRELOAD=./$(SE_SQLITE_LIB) python $(BINNUM) -f$(NUM_FROM) -t$(NUM_TO) -s$(NUM_STEP) -r$(NUM_REP) -d$(NUM_DROP)
 
 ### result files
 
