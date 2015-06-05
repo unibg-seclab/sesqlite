@@ -395,6 +395,14 @@ void selinux_clearavc_pragma(
 	fprintf(stdout, "AVC cleared\n");
 }
 
+void selinux_inlimit_pragma(
+	void* pArg,
+	sqlite3 *db,
+	char *args
+){
+	sqlite3_set_xattr(db, "inlimit", args);
+}
+
 int register_pragmas(sqlite3 *db){
 	int rc;
 
@@ -411,6 +419,9 @@ int register_pragmas(sqlite3 *db){
 	if( SQLITE_OK!=rc ) return rc;
 
 	rc = sqlite3_create_pragma(db, "clearavc", selinux_clearavc_pragma, 0);
+	if( SQLITE_OK!=rc ) return rc;
+
+	rc = sqlite3_create_pragma(db, "inlimit", selinux_inlimit_pragma, 0);
 	return rc;
 }
 

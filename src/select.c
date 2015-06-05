@@ -112,6 +112,7 @@ if(selFlags != 128){
 	int j = 0;
 	for(j = 0; j < pSrc->nAlloc; j++){
 		char *zName = NULL;
+		Expr *pIn = NULL;
 		if( pSrc->a[j].zAlias )
 			zName = pSrc->a[j].zAlias;
 		else
@@ -121,7 +122,9 @@ if(selFlags != 128){
 				0 == sqlite3StrNICmp(zName, "selinux_", 8))
 			continue;
 
-#if USE_IN_OPTIMIZATION > 0
+		char *pInlimitopt = sqlite3_get_xattr(db, "inlimit");
+		int inlimit = (pInlimitopt==NULL ? 1000 : atoi(pInlimitopt));
+		if( inlimit>0 ){
 
 		//style code pretty shitty :)
 		ExprList *pInList = NULL;
@@ -153,15 +156,36 @@ if(selFlags != 128){
 		sqlite3ExprAttachSubtrees(db, pAggregation, pTable, pSecurityContext);
 
 		//Expr to add in the Where clause
-		Expr *pIn = sqlite3DbMallocZero(db, sizeof(Expr));
+		pIn = sqlite3DbMallocZero(db, sizeof(Expr));
 		pIn->op = (u8)75;
 		pIn->iAgg = -1;
 		sqlite3ExprAttachSubtrees(db, pIn, pAggregation, 0);
 
-		int k = 1;
-		for( k=1; k<=USE_IN_OPTIMIZATION; ++k ){
-			SESQLITE_BIHASH_FIND(hash_id, &k, sizeof(int), (void**) &tcon, 0);
+		// Always add default for tests
+		int defaultid = lookup_security_context(hash_id, "*", "*");
+		SESQLITE_BIHASH_FIND(hash_id, &defaultid, sizeof(int), (void**) &tcon, 0);
+		res = sesqlite_check_access_av(scon, tcon, "db_tuple", "select");
+#ifdef SQLITE_DEBUG
+		fprintf(stdout, "scon: %s, tcon: %s, db_tuple.select => %d\n", scon, tcon, res);
+#endif
+		if( 0==res ){
+			Expr *pdefault = sqlite3Expr(db, TK_INTEGER, 0);
+			pdefault->flags |= EP_IntValue;
+			pdefault->u.iValue = defaultid;
+			pInList = sqlite3ExprListAppend(pParse, pInList, pdefault);
+			--inlimit;
+		}
 
+		// Add the others
+		int k = 1;
+		for( k=1; k<=inlimit ; ++k ){
+
+			if( k==defaultid ){
+				++inlimit;
+				continue;
+			}
+
+			SESQLITE_BIHASH_FIND(hash_id, &k, sizeof(int), (void**) &tcon, 0);
 			if( tcon==NULL )
 				break;
 
@@ -173,10 +197,7 @@ if(selFlags != 128){
 				);
 
 #ifdef SQLITE_DEBUG
-fprintf(stdout, "scon: %s, tcon: %s => %d\n", 
-	scon,
-	tcon,
-	res);
+		fprintf(stdout, "scon: %s, tcon: %s, db_tuple.select => %d\n", scon, tcon, res);
 #endif
 
 			if( res==0 ){ // allowed
@@ -192,13 +213,14 @@ fprintf(stdout, "scon: %s, tcon: %s => %d\n",
 		pIn->x.pList = pInList;
 		sqlite3ExprSetHeight(pParse, pIn);
 
-#else
+	}else{ // inlimit = 0
+
 	char *f_name = sqlite3MPrintf(db, "%s", "selinux_check_access");
 	char *f_column = sqlite3MPrintf(db, "%s", "security_context");
 	char *f_class = sqlite3MPrintf(db, "%s", "db_tuple");
 	char *f_action = sqlite3MPrintf(db, "%s", "select");
 
-	Expr *pIn = sqlite3DbMallocZero(db, sizeof(Expr) + strlen(f_name) + 1);
+	pIn = sqlite3DbMallocZero(db, sizeof(Expr) + strlen(f_name) + 1);
 	Expr *pFTable = sqlite3DbMallocZero(db, sizeof(Expr) + strlen(zName) + 1);
 	Expr *pFColumn = sqlite3DbMallocZero(db, sizeof(Expr) + strlen(f_column) + 1);
 	Expr *pFClass = sqlite3DbMallocZero(db, sizeof(Expr) + strlen(f_class) + 1);
@@ -267,7 +289,7 @@ fprintf(stdout, "scon: %s, tcon: %s => %d\n",
 	pIn->x.pList = pExprFunction;
 	sqlite3ExprSetHeight(pParse, pIn);
 
-#endif
+	} // end iflimit
 
 		if(pNew->pWhere)
 			pNew->pWhere = sqlite3ExprAnd(db, pNew->pWhere, pIn);
