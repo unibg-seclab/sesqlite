@@ -63,6 +63,7 @@ NUM_TO			:= 100000
 NUM_STEP		:= 10000
 NUM_REP			:= 10
 NUM_DROP		:= 2
+NUM_INLIMIT		:= 1000
 
 
 #########################
@@ -242,10 +243,10 @@ graphrl: $(OUTRL_BASE) $(OUTRL_SE)
 ### tests
 
 testnum: $(SQLITE_LIB) $(BINNUM)
-	@ LD_PRELOAD=./$(SQLITE_LIB) python $(BINNUM) -f$(NUM_FROM) -t$(NUM_TO) -s$(NUM_STEP) -r$(NUM_REP) -d$(NUM_DROP)
+	@ LD_PRELOAD=./$(SQLITE_LIB) python $(BINNUM) -f$(NUM_FROM) -t$(NUM_TO) -s$(NUM_STEP) -r$(NUM_REP) -d$(NUM_DROP) -i$(NUM_INLIMIT)
 
 testnum_se: $(CONTEXTS) $(SE_SQLITE_LIB) $(BINNUM)
-	@ LD_PRELOAD=./$(SE_SQLITE_LIB) python $(BINNUM) -f$(NUM_FROM) -t$(NUM_TO) -s$(NUM_STEP) -r$(NUM_REP) -d$(NUM_DROP)
+	@ LD_PRELOAD=./$(SE_SQLITE_LIB) python $(BINNUM) -f$(NUM_FROM) -t$(NUM_TO) -s$(NUM_STEP) -r$(NUM_REP) -d$(NUM_DROP) -i$(NUM_INLIMIT)
 
 ### result files
 
