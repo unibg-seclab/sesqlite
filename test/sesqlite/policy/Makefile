@@ -1,30 +1,27 @@
 .PHONY: all clean install uninstall
 
-MODULE_NAME	:= sqlite
-MODULE_TE	:= $(MODULE_NAME).te
-MODULE_MOD	:= $(MODULE_NAME).mod
-MODULE_PP	:= $(MODULE_NAME).pp
 VALIDATOR	:= ./validate_contexts
 CONTEXTS	:= sesqlite_contexts
+TE			:= $(wildcard *.te)
+MOD			:= $(TE:.te=.mod)
+PP			:= $(TE:.te=.pp)
 
-all: $(MODULE_PP)
+all: $(PP)
 
-$(MODULE_MOD):
-	checkmodule -M -m $(MODULE_TE) -o $(MODULE_MOD)
+%.mod: %.te
+	checkmodule -M -m $< -o $@
 
-$(MODULE_PP): $(MODULE_MOD)
-	semodule_package -m $(MODULE_MOD) -o $(MODULE_PP)
+%.pp: %.mod
+	semodule_package -m $< -o $@
 
 clean:
-	@- rm -f $(MODULE_MOD) $(MODULE_PP)
+	@ rm -f $(MOD) $(PP)
 
 install: uninstall
-	sudo semodule -v -i $(MODULE_PP)
-
+	@ $(foreach p, $(shell ls *.pp), sudo semodule -v -i $(p); )
+	
 uninstall:
-	if sudo semodule -l | grep -q $(MODULE_NAME) ; \
-	  then sudo semodule -v -r $(MODULE_NAME) ; \
-	fi
+	@ $(foreach m, $(basename $(shell ls *.pp)), if sudo semodule -l | grep -q "^$(m)\b"; then sudo semodule -v -r $(m); fi; )
 
 validate:
 	$(VALIDATOR) -v $(CONTEXTS)
