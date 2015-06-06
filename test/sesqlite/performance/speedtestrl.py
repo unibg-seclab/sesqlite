@@ -36,10 +36,12 @@ class SQL:
     def test4(cursor):
         for i in xrange(100):
             cursor.execute("SELECT count(*), avg(b) FROM t2 WHERE b>=%d AND b<%d" % (i * 100, i * 100 + 1000))
+            cursor.fetchall()
 
     def test5(cursor):
         for i in xrange(100):
             cursor.execute("SELECT count(*), avg(b) FROM t2 WHERE c LIKE '%%%d%%'" % random.randint(0, 999))
+            cursor.fetchall()
 
     def test6(cursor):
         cursor.execute("CREATE INDEX i2a ON t2(a)")
@@ -48,6 +50,7 @@ class SQL:
     def test7(cursor):
         for i in xrange(5000):
             cursor.execute("SELECT count(*), avg(b) FROM t2 WHERE b>=%d AND b<%d" % (i * 100, (i + 1) * 100))
+            cursor.fetchall()
 
     def test8(cursor):
         cursor.executemany("UPDATE t1 SET b=b*2 WHERE a>=? AND a<?",
