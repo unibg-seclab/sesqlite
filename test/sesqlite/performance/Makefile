@@ -18,9 +18,7 @@ LDFLAGS			+= -ldl
 ### speedtest1
 
 SRCS1			:= speedtest1.c
-SRCS1_SE		:= speedtest1_se.c
 OBJS1			:= $(SRCS1:.c=.o)
-OBJS1_SE		:= $(SRCS1_SE:.c=.o)
 BIN1			:= speedtest1
 BIN1_SE			:= $(BIN1)_se
 TEST1_DB		:= test1.db
@@ -111,7 +109,7 @@ clean: clean_test_db
 	@- $(RM) $(SQLITE_OBJ) $(SE_SQLITE_OBJ)
 	@- $(RM) $(SQLITE_LIB) $(SE_SQLITE_LIB)
 	@- $(RM) $(BIN1) $(BIN1_SE) $(BIN8) $(BIN8_SE)
-	@- $(RM) $(OBJS1) $(OBJS1_SE) $(OBJS8) $(OBJS8_SE)
+	@- $(RM) $(OBJS1) $(OBJS8)
 	@- $(RM) $(CONTEXTS)
 	@- $(RM) -rf results
 
@@ -123,8 +121,8 @@ clean: clean_test_db
 $(BIN1): $(SQLITE_OBJ) $(OBJS1)
 	gcc -g $(SQLITE_OBJ) $(OBJS1) -o $@ $(INCLUDES) $(LDFLAGS)
 
-$(BIN1_SE): $(SE_SQLITE_OBJ) $(OBJS1_SE)
-	gcc -g $(SE_SQLITE_OBJ) $(OBJS1_SE) -o $@ $(INCLUDES) $(LDFLAGS) -lselinux
+$(BIN1_SE): $(SE_SQLITE_OBJ) $(OBJS1)
+	gcc -g $(SE_SQLITE_OBJ) $(OBJS1) -o $@ $(INCLUDES) $(LDFLAGS) -lselinux
 
 ### tests
 
