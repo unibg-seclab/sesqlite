@@ -3,6 +3,7 @@
 from subprocess import check_output
 import argparse
 import json
+import sys
 import re
 
 def avg(lst, drop=0):
@@ -20,7 +21,7 @@ def test(fr, to, st, reps, drop):
     ys_base, ys_se_sca, ys_se_in = [], [], []
 
     for i in xs:
-        print 'inlimit = %d' % i
+        sys.stderr.write('inlimit = %d\n' % i)
         ys_base.append(run('make test1', reps, drop))
         ys_se_sca.append(run('make test1_se', reps, drop))
         ys_se_in.append(run('make test1_se ARGS1="-inlimit %d"' % i, reps, drop))

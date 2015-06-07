@@ -3,7 +3,8 @@
 	graph1 test1 test1_se \
 	graph8 test8 test8_se test8_tuple test8_tuple_static \
 	graphrl testrl testrl_se \
-	graphnum testnum testnum_se
+	graphnum testnum testnum_se \
+	graphrewrite testrewrite
 
 n			:= 2
 TOP			:= ../../..
@@ -63,6 +64,17 @@ NUM_STEP		:= 10000
 NUM_REP			:= 10
 NUM_DROP		:= 2
 NUM_INLIMIT		:= 1000
+
+### speedtest_rewrite
+
+BINREW			:= speedtestrewrite.py
+OUTDIRREW		:= results/rewrite
+OUTREW			:= $(OUTDIRREW)/rewrite.json
+REW_FROM		:= 1
+REW_TO			:= 20
+REW_STEP		:= 1
+REW_REP			:= 10
+REW_DROP		:= 2
 
 
 #########################
@@ -262,4 +274,26 @@ $(OUTNUM_SE): $(OUTDIRNUM) $(CONTEXTS) $(SE_SQLITE_LIB) $(BINNUM)
 
 graphnum: $(OUTNUM_BASE) $(OUTNUM_SE)
 	@ python makegraphnum.py $(OUTNUM_BASE) $(OUTNUM_SE) --outdir $(OUTDIRNUM)
+
+###########################
+#  SPEEDTESTREW SPECIFIC  #
+###########################
+
+### tests
+
+testrewrite: $(BIN1) $(BIN1_SE) $(CONTEXTS) $(BINREW)
+	@ python $(BINREW) -f$(REW_FROM) -t$(REW_TO) -s$(REW_STEP) -r$(REW_REP) -d$(REW_DROP)
+
+### result files
+
+$(OUTDIRREW):
+	@ mkdir -p $@
+
+$(OUTREW): $(BIN1) $(BIN1_SE) $(CONTEXTS) $(BINREW) $(OUTDIRREW)
+	make -s testrewrite > $@
+
+# graph
+
+graphrewrite: $(OUTREW)
+	@ python makegraphrewrite.py
 
