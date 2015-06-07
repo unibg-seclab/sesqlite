@@ -123,7 +123,7 @@ if(selFlags != 128){
 			continue;
 
 		char *pInlimitopt = sqlite3_get_xattr(db, "inlimit");
-		int inlimit = (pInlimitopt==NULL ? 1000 : atoi(pInlimitopt));
+		int inlimit = (pInlimitopt==NULL ? 0 : atoi(pInlimitopt));
 		if( inlimit>0 ){
 
 		//style code pretty shitty :)
