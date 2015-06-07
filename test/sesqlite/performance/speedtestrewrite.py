@@ -24,7 +24,7 @@ def test(fr, to, st, reps, drop):
         sys.stderr.write('inlimit = %d\n' % i)
         ys_base.append(run('make test1', reps, drop))
         ys_se_sca.append(run('make test1_se', reps, drop))
-        ys_se_in.append(run('make test1_se ARGS1="-inlimit %d"' % i, reps, drop))
+        ys_se_in.append(run('make test1_se ARGS1_SE="-inlimit %d"' % i, reps, drop))
 
     return {'xs': xs, 'ys_base': ys_base, 'ys_se_sca': ys_se_sca, 'ys_se_in': ys_se_in}
 
