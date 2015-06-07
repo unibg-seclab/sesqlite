@@ -39,21 +39,6 @@ type column_other, domain;
 
 #<tuples>
 type sqlite_tuple_t, domain;
-type sqlite_tuple1_t, domain;
-type sqlite_tuple2_t, domain;
-type sqlite_tuple3_t, domain;
-type sqlite_tuple4_t, domain;
-type sqlite_tuple5_t, domain;
-type sqlite_tuple6_t, domain;
-type sqlite_tuple7_t, domain;
-type sqlite_tuple8_t, domain;
-type sqlite_tuple9_t, domain;
-type sqlite_tuple10_t, domain;
-type sqlite_tuple11_t, domain;
-type sqlite_tuple12_t, domain;
-type sqlite_tuple13_t, domain;
-type sqlite_tuple14_t, domain;
-type sqlite_tuple15_t, domain;
 
 type sqlite_tuple_no_select_t, domain;
 type sqlite_tuple_no_update_t, domain;
@@ -82,22 +67,4 @@ allow { unconfined_t } sqlite_tuple_t:db_tuple { select update insert delete };
 allow { unconfined_t } sqlite_tuple_no_select_t:db_tuple { update insert delete };
 allow { unconfined_t } sqlite_tuple_no_update_t:db_tuple { select insert delete };
 allow { unconfined_t } sqlite_tuple_no_delete_t:db_tuple { select };
-
-
-allow { unconfined_t } sqlite_tuple1_t:db_tuple { select update insert delete };
-allow { unconfined_t } sqlite_tuple2_t:db_tuple { select update insert delete };
-allow { unconfined_t } sqlite_tuple3_t:db_tuple { select update insert delete };
-allow { unconfined_t } sqlite_tuple4_t:db_tuple { select update insert delete };
-allow { unconfined_t } sqlite_tuple5_t:db_tuple { select update insert delete };
-allow { unconfined_t } sqlite_tuple6_t:db_tuple { select update insert delete };
-allow { unconfined_t } sqlite_tuple7_t:db_tuple { select update insert delete };
-allow { unconfined_t } sqlite_tuple8_t:db_tuple { select update insert delete };
-allow { unconfined_t } sqlite_tuple9_t:db_tuple { select update insert delete };
-allow { unconfined_t } sqlite_tuple10_t:db_tuple { select update insert delete };
-allow { unconfined_t } sqlite_tuple11_t:db_tuple { select update insert delete };
-allow { unconfined_t } sqlite_tuple12_t:db_tuple { select update insert delete };
-allow { unconfined_t } sqlite_tuple13_t:db_tuple { select update insert delete };
-allow { unconfined_t } sqlite_tuple14_t:db_tuple { select update insert delete };
-allow { unconfined_t } sqlite_tuple15_t:db_tuple { select update insert delete };
-
 
