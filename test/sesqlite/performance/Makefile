@@ -21,6 +21,7 @@ SRCS1			:= speedtest1.c
 OBJS1			:= $(SRCS1:.c=.o)
 BIN1			:= speedtest1
 BIN1_SE			:= $(BIN1)_se
+ARGS1			:=
 TEST1_DB		:= test1.db
 OUTDIR1			:= results/1
 OUT1_BASE		:= $(OUTDIR1)/1.base.out
@@ -127,10 +128,10 @@ $(BIN1_SE): $(SE_SQLITE_OBJ) $(OBJS1)
 ### tests
 
 test1: clean_test_db $(BIN1)
-	@ ./$(BIN1) $(TEST1_DB)
+	@ ./$(BIN1) $(ARGS1) $(TEST1_DB)
 
 test1_se: clean_test_db $(BIN1_SE) $(CONTEXTS)
-	@ ./$(BIN1_SE) $(TEST1_DB)
+	./$(BIN1_SE) $(ARGS1) $(TEST1_DB)
 
 ### result files
 
