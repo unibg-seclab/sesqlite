@@ -8,6 +8,12 @@ db_table	*.sqlite_master	unconfined_u:object_r:sqlite_master_t:s0
 db_table	*.selinux_context	unconfined_u:object_r:selinux_context_t:s0
 db_table	*.selinux_id	unconfined_u:object_r:selinux_context_t:s0
 db_table	*.sqlite_temp_master	unconfined_u:object_r:sqlite_temp_master_t:s0
+db_table	*.t1001	unconfined_u:object_r:table_all:s0
+db_table	*.t1002	unconfined_u:object_r:table_all:s0
+db_table	*.t1003	unconfined_u:object_r:table_all:s0
+db_table	*.t1004	unconfined_u:object_r:table_no_create:s0
+db_table	*.t1005	unconfined_u:object_r:table_no_delete:s0
+db_table	*.t1006	unconfined_u:object_r:table_no_insert:s0
 db_table	*.*	unconfined_u:object_r:table_other:s0
 
 # <column>
@@ -15,6 +21,10 @@ db_column	*.sqlite_master.*	unconfined_u:object_r:sqlite_master_t:s0
 db_column	*.sqlite_temp_master.*	unconfined_u:object_r:sqlite_temp_master_t:s0
 db_column	*.selinux_context.*	unconfined_u:object_r:selinux_context_t:s0
 db_column	*.selinux_id.*	unconfined_u:object_r:selinux_context_t:s0
+db_column	*.t1001.*	unconfined_u:object_r:column_all:s0
+db_column	*.t1002.d	unconfined_u:object_r:column_no_update:s0
+db_column	*.t1002.e	unconfined_u:object_r:column_no_update:s0
+db_column	*.t1003.g	unconfined_u:object_r:column_no_select_update:s0
 db_column	*.*.ROWID	unconfined_u:object_r:column_all:s0
 db_column	*.*.security_context	unconfined_u:object_r:column_no_update:s0
 db_column	*.*.*	unconfined_u:object_r:column_other:s0

@@ -11,6 +11,7 @@ LDFLAGS			+= -lselinux -lpthread -ldl -lcunit
 CUNIT_XML		:= cunit_testall-Results.xml		# do not change
 JUNIT_XML		:= junit_testall-Results.xml
 CUNIT_TO_JUNIT	:= cunit-to-junit.xsl
+CONTEXTS_FROM	:= $(TOP)/test/sesqlite/policy/sesqlite_contexts_cunit
 CONTEXTS		:= sesqlite_contexts
 
 all: $(TEST_SCHEMA) \
@@ -30,7 +31,7 @@ $(TEST_TUPLE): $(OBJS) $(TEST_TUPLE).o
 	gcc $(CFLAGS) $(OBJS) $(TEST_TUPLE).o -o $(TEST_TUPLE) $(LDFLAGS)
 
 $(CONTEXTS):
-	cp $(TOP)/test/sesqlite/policy/$(CONTEXTS) .
+	cp $(CONTEXTS_FROM) $@
 
 $(CUNIT_XML): $(CONTEXTS)
 	@- ./$(TEST_SCHEMA) -auto
