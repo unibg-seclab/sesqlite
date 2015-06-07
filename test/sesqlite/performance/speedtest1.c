@@ -32,6 +32,7 @@ static const char zHelp[] =
   "  --utf16le           Set text encoding to UTF-16LE\n"
   "  --verify            Run additional verification steps.\n"
   "  --without-rowid     Use WITHOUT ROWID where appropriate\n"
+  "  --inlimit N         Use inlimit=N (default 0)\n"
 ;
 
 
@@ -1151,6 +1152,7 @@ int main(int argc, char **argv){
   int nScratch = 0, szScratch=0;/* --scratch configuration */
   int showStats = 0;            /* True for --stats */
   int nThread = 0;              /* --threads value */
+  int inlimit = 0;              /* inlimit=0 per default */
   const char *zTSet = "main";   /* Which --testset torun */
   int doTrace = 0;              /* True for --trace */
   const char *zEncoding = 0;    /* --utf16be or --utf16le */
@@ -1251,6 +1253,9 @@ int main(int argc, char **argv){
       }else if( strcmp(z, "help")==0 || strcmp(z,"?")==0 ){
         printf(zHelp, argv[0]);
         exit(0);
+      }else if( strcmp(z,"inlimit")==0 ){
+        if( i>=argc-1 ) fatal_error("missing argument on %s\n", argv[i]);
+        inlimit = integerValue(argv[++i]);
       }else{
         fatal_error("unknown option: %s\nUse \"%s -?\" for help\n",
                     argv[i], argv[0]);
@@ -1328,6 +1333,12 @@ int main(int argc, char **argv){
   }
   if( zJMode ){
     speedtest1_exec("PRAGMA journal_mode=%s", zJMode);
+  }
+
+  speedtest1_exec("PRAGMA inlimit=%d", inlimit);
+  for( i=1; i<inlimit; ++i ){ // yes, actually one less, because the first is the default
+    speedtest1_prepare("SELECT getcon_id(\"unconfined_u:object_r:sqlite_unused_%d_t:s0\")", i);
+    speedtest1_run();
   }
 
   if( g.bExplain ) printf(".explain\n.echo on\n");
