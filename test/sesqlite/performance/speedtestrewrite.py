@@ -13,9 +13,11 @@ def avg(lst, drop=0):
     return float(sum(lst)) / len(lst)
 
 def run(command, n, drop):
-    sys.stderr.write(command + '\n')
-    return avg([float(re.findall(r'TOTAL.*?(\d+\.\d+)s',
-                     check_output(command, shell=True))[0]) for _ in xrange(n)], drop)
+    sys.stderr.write('%s\n' % command)
+    res = avg([float(re.findall(r'TOTAL.*?(\d+\.\d+)s', check_output(command, shell=True))[0])
+              for _ in xrange(n)], drop)
+    sys.stderr.write('%f\n' % res)
+    return res
 
 def test(fr, to, st, reps, drop):
     xs = range(fr, to + 1, st)
