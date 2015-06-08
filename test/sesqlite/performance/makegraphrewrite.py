@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 
 import matplotlib as mpl
-import numpy as np
 mpl.use('Agg')
+
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
+import numpy as np
 import json
 
 if __name__ == '__main__':
@@ -25,19 +26,19 @@ if __name__ == '__main__':
     cross = max(xs)
     for i in xrange(len(xs)):
         if ys_over_sca[i] < ys_over_in[i]:
-            cross = i + 1
+            cross = i + .5
             break
 
-    plt.plot(xs, ys_over_sca, color=cmap(.4), linewidth=2, marker='^', label='selinux_check_access')
-    plt.plot(xs, ys_over_in, color=cmap(.8), linewidth=2, marker='o', label='SQL IN clause')
-    plt.plot(xs, ys_over_min, color= 'r', linewidth=4, linestyle='--', label='SeSQLite')
+    plt.plot(xs, ys_over_sca, color=cmap(.4), linewidth=1.5, marker='D', markersize=8, linestyle='--', label='selinux_check_access')
+    plt.plot(xs, ys_over_in, color=cmap(.8), linewidth=1.5, marker='o', markersize=8, linestyle='--', label='SQL IN clause')
+    plt.plot(xs, ys_over_min, color= 'r', linewidth=3, label='SeSQLite')
     plt.axvspan(1, cross, color=cmap(.8), alpha=0.2)
     plt.axvspan(cross, max(xs), color=cmap(.4), alpha=0.2)
     plt.xlim(1, max(xs))
     plt.ylim(bottom=0, top=top+2.5)
     plt.legend(loc='lower right')
     plt.ylabel('overhead')
-    plt.xlabel('tuple contexts')
+    plt.xlabel('number of db_tuple contexts in the database')
     plt.gca().yaxis.set_major_formatter(mtick.FormatStrFormatter('%.0f%%'))
 
     ary = top + 2
