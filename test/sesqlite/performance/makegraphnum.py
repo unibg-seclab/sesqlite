@@ -11,6 +11,10 @@ import argparse
 import os.path
 import json
 
+csqlite = plt.get_cmap('Blues')(0.2)
+csesqlite = plt.get_cmap('Blues')(0.65)
+
+
 def plot(filename, testname, ax, **kwargs):
     with open(filename) as f:
         data = json.load(f)
@@ -25,10 +29,10 @@ def plot(filename, testname, ax, **kwargs):
 
 def plot_both(sqlite, sesqlite, test, ax=None):
     if not ax: _, ax = plt.subplots()
-    x1, y1 = plot(sesqlite, test, ax, label='SeSQLite', color='r', linestyle='-')
-    x2, y2 = plot(sqlite, test, ax, label='SQLite', color='b', linestyle='--')
-    ax.fill_between(x1, 0, y2, interpolate=True, color='b', alpha=0.1)
-    ax.fill_between(x1, y1, y2, interpolate=True, color='r', alpha=0.3)
+    x1, y1 = plot(sesqlite, test, ax, color='black')
+    x2, y2 = plot(sqlite, test, ax, color='black')
+    ax.fill_between(x1, 0, y2, interpolate=True, color=csqlite)
+    ax.fill_between(x1, y1, y2, interpolate=True, color=csesqlite)
 
 def plot_all(sqlite, sesqlite, outdir, ext='pdf', log=False):
     for test in ('insert', 'update', 'select', 'delete'):
@@ -49,7 +53,9 @@ def plot_single(sqlite, sesqlite, outdir, ext='pdf', log=False):
         print 'generating test %s' % test
         plot_both(sqlite, sesqlite, test, ax)
         ax.set_title(test.upper())
-        ax.legend(loc='upper left')
+        r1 = plt.Rectangle((0, 0), 1, 1, fc=csesqlite)
+        r2 = plt.Rectangle((0, 0), 1, 1, fc=csqlite)
+        ax.legend([r1, r2], ['SeSQLite', 'SQLite'], loc='upper left')
         ax.yaxis.set_major_formatter(FuncFormatter(lambda x, pos: '%gms' % (x*1e3)))
 
     plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
