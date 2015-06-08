@@ -23,11 +23,12 @@ OBJS1			:= $(SRCS1:.c=.o)
 BIN1			:= speedtest1
 BIN1_SE			:= $(BIN1)_se
 ARGS1			:=
-ARGS1_SE		:=
+ARGS1_SE		:= -inlimit 2
 TEST1_DB		:= test1.db
 OUTDIR1			:= results/1
 OUT1_BASE		:= $(OUTDIR1)/1.base.out
 OUT1_SE			:= $(OUTDIR1)/2.se.out
+OUT1_SE_SCA		:= $(OUTDIR1)/3.se_sca.out
 
 ### speedtest8
 
@@ -146,6 +147,9 @@ test1: clean_test_db $(BIN1)
 test1_se: clean_test_db $(BIN1_SE) $(CONTEXTS)
 	./$(BIN1_SE) $(ARGS1_SE) $(TEST1_DB)
 
+test1_se_sca: clean_test_db $(BIN1_SE) $(CONTEXTS)
+	./$(BIN1_SE) -inlimit 0 $(TEST1_DB)
+
 ### result files
 
 $(OUTDIR1):
@@ -154,12 +158,15 @@ $(OUTDIR1):
 $(OUT1_BASE): $(OUTDIR1) $(BIN1)
 	@ $(call testout,test1)
 
-$(OUT1_SE): $(OUTDIR1) $(BIN1_SE)
+$(OUT1_SE): $(OUTDIR1) $(BIN1_SE) $(CONTEXTS)
 	@ $(call testout,test1_se)
+
+$(OUT1_SE_SCA): $(OUTDIR1) $(BIN1_SE) $(CONTEXTS)
+	@ $(call testout,test1_se_sca)
 
 # graph
 
-graph1: $(OUT1_BASE) $(OUT1_SE)
+graph1: $(OUT1_BASE) $(OUT1_SE) $(OUT1_SE_SCA)
 	@ python makegraph1.py
 
 

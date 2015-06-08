@@ -17,9 +17,6 @@ if __name__ == '__main__':
     ys_se_sca = np.array(data['ys_se_sca'])
     ys_se_in = np.array(data['ys_se_in'])
 
-    ys_base[:] = np.mean(ys_base)
-    ys_se_sca[:] = np.mean(ys_se_sca)
-
     ys_over_sca = 100 * (ys_se_sca - ys_base) / ys_se_sca
     ys_over_in = 100 * (ys_se_in - ys_base) / ys_se_in
     ys_over_min = np.minimum(ys_over_sca, ys_over_in)

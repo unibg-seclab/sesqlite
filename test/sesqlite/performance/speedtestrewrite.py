@@ -13,18 +13,15 @@ def avg(lst, drop=0):
     return float(sum(lst)) / len(lst)
 
 def run(command, n, drop):
+    sys.stderr.write(command + '\n')
     return avg([float(re.findall(r'TOTAL.*?(\d+\.\d+)s',
                      check_output(command, shell=True))[0]) for _ in xrange(n)], drop)
 
 def test(fr, to, st, reps, drop):
     xs = range(fr, to + 1, st)
-    ys_base, ys_se_sca, ys_se_in = [], [], []
-
-    for i in xs:
-        sys.stderr.write('inlimit = %d\n' % i)
-        ys_base.append(run('make test1', reps, drop))
-        ys_se_sca.append(run('make test1_se', reps, drop))
-        ys_se_in.append(run('make test1_se ARGS1_SE="-inlimit %d"' % i, reps, drop))
+    ys_base = [run('make test1', reps, drop)] * len(xs)
+    ys_se_sca = [run('make test1_se ARGS1_SE="-inlimit 0"', reps, drop)] * len(xs)
+    ys_se_in = [run('make test1_se ARGS1_SE="-inlimit %d"' % i, reps, drop) for i in xs]
 
     return {'xs': xs, 'ys_base': ys_base, 'ys_se_sca': ys_se_sca, 'ys_se_in': ys_se_in}
 
