@@ -62,10 +62,10 @@ OUTNUM_BASE		:= $(OUTDIRNUM)/1.base.out
 OUTNUM_SE		:= $(OUTDIRNUM)/2.se.out
 NUM_FROM		:= 0
 NUM_TO			:= 100000
-NUM_STEP		:= 10000
-NUM_REP			:= 10
-NUM_DROP		:= 2
-NUM_INLIMIT		:= 1000
+NUM_STEP		:= 1000
+NUM_REP			:= 50
+NUM_DROP		:= 10
+NUM_INLIMIT		:= 2
 
 ### speedtest_rewrite
 
