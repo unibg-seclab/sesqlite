@@ -4,7 +4,9 @@ import matplotlib as mpl
 mpl.use('Agg')
 
 from matplotlib.ticker import FuncFormatter
+from scipy.interpolate import spline
 import matplotlib.pyplot as plt
+import numpy as np
 import argparse
 import os.path
 import json
@@ -14,10 +16,12 @@ def plot(filename, testname, ax, **kwargs):
         data = json.load(f)
     xs = sorted(map(int, data.keys()))
     ys = [data[str(x)][testname] for x in xs]
-    ax.plot(xs, ys, **kwargs)
-    ax.set_xlim(0, max(max(xs), ax.get_xlim()[1]))
-    ax.set_ylim(0, max(max(ys), ax.get_ylim()[1]))
-    return xs, ys
+    xnew = np.linspace(xs[0], xs[-1], len(xs)/5)
+    ynew = spline(xs, ys, xnew, 5)
+    ax.plot(xnew, ynew, **kwargs)
+    ax.set_xlim(0, max(max(xnew), ax.get_xlim()[1]))
+    ax.set_ylim(0, max(max(ynew), ax.get_ylim()[1]))
+    return xnew, ynew
 
 def plot_both(sqlite, sesqlite, test, ax=None):
     if not ax: _, ax = plt.subplots()
