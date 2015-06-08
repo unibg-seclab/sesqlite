@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 base = 'results/1/1.base.out'
 se = 'results/1/2.se.out'
-#no_opt = 'results/1/no-opt.out'
+se_sca = 'results/1/3.se_sca.out'
 width = .25
 
 def parsefile(filename):
@@ -29,7 +29,7 @@ def getdata(filename):
     return xs, ys, data
 
 def overhead(fr, to):
-    return (to - fr) / float(fr)
+    return (to - fr) / fr
 
 def mean(lst):
     lst = list(lst)
@@ -54,45 +54,34 @@ def graph_with_options(xs, xticks, name):
 # get data
 xs_base, ys_base, data_base = getdata(base)
 xs_se, ys_se, data_se = getdata(se)
-#xs_no_opt, ys_no_opt, data_no_opt = getdata(no_opt)
+xs_se_sca, ys_se_sca, data_se_sca = getdata(se_sca)
 
 # create arrays
 ys_base = np.array(ys_base)
 ys_se = np.array(ys_se)
+ys_se_sca = np.array(ys_se_sca)
 
 # print data
 print '\n===== SeSQLite Overhead ====='
-print '\n'.join('test {} -- base:{:4.3f} se:{:4.3f} ({:+3.3%})'.format(t, b, s, o)
-                for t, b, s, o in zip(data_base.keys(), ys_base, ys_se, ((ys_se - ys_base) / ys_base)))
+print '\n'.join('test {} -- base:{:4.3f} - se:{:4.3f} ({:+3.3%}) - sca:{:4.3f} ({:+3.3%})'.format(t, b, se, ose, sca, osca)
+    for t, b, se, ose, sca, osca in zip(data_base.keys(), ys_base,
+        ys_se, overhead(ys_base, ys_se),
+        ys_se_sca, overhead(ys_base, ys_se_sca)))
+
 print '\n=========== Total ==========='
-print 'base:{:4.3f} se:{:4.3f} ({:+3.3%})'.format(
-    sum(ys_base), sum(ys_se), overhead(sum(ys_base), sum(ys_se)))
-print 'mean overhead: {:+3.3%}'.format(
-    mean(overhead(b, s) for b, s in zip(ys_base, ys_se)))
+print 'base:{:4.3f} - se:{:4.3f} ({:+3.3%}) - sca:{:4.3f} ({:+3.3%})'.format(
+    sum(ys_base), sum(ys_se), overhead(sum(ys_base), sum(ys_se)),
+    sum(ys_se_sca), overhead(sum(ys_base), sum(ys_se_sca)))
 
 # we cannot improve!
 ys_se = np.maximum(ys_se, ys_base)
-#ys_no_opt = np.maximum(np.array(ys_no_opt), ys_base)
+ys_se_sca = np.maximum(ys_se_sca, ys_se)
 
 # graph optimized
 rect_se = ys_se - ys_base
-plt.bar(xs_se, rect_se, color=plt.get_cmap('Greens')(0.6), label='SeSQLite', width=.8, bottom=ys_base)
-plt.bar(xs_base, ys_base, color=plt.get_cmap('YlOrRd')(0.1), label='SQLite base', width=.8)
+rect_se_sca = ys_se_sca - ys_se
+plt.bar(xs_se, rect_se_sca, color=plt.get_cmap('Blues')(0.5), label='SeSQLite (100 contexts)', hatch='xx', width=.8, bottom=ys_se)
+plt.bar(xs_se, rect_se, color=plt.get_cmap('Greens')(0.3), label='SeSQLite (2 contexts)', hatch='//', width=.8, bottom=ys_base)
+plt.bar(xs_base, ys_base, color=plt.get_cmap('YlOrRd')(0.1), label='SQLite base', width=.8, hatch='..')
 graph_with_options(xs_base, data_base.keys(), 'graph')
-
-# graph not optimized
-#rect_no_opt = ys_no_opt - ys_base
-#plt.bar(xs_no_opt, rect_no_opt, color=plt.get_cmap('Reds')(0.8), label='SeSQLite not optimized', width=.8, bottom=ys_base)
-#plt.bar(xs_base, ys_base, color=plt.get_cmap('YlOrRd')(0.1), label='SQLite base', width=.8)
-#graph_with_options(xs_base, data_base.keys(), 'graph2')
-
-# print in latex format
-#printstat(ys_base, ys_base, base)
-#over_se = printstat(ys_se, ys_base, se)
-#over_no_opt = printstat(ys_no_opt, ys_base, no_opt)
-
-#print "\n== TESTS IN LATEX FORMAT =="
-#for test, yb, ys, os, yn, on in zip(data_base.keys(), ys_base, ys_se, over_se, ys_no_opt, over_no_opt):
-#    print ( '%s & $%.2f\\si{\\second}$ & $%.2f\\si{\\second}$ ($+%.2f\\%%$)'
-#            ' & $%.2f\\si{\\second}$ ($+%.2f\\%%$) \\\\' ) % (tets, yb, ys, os, yn, on)
 
