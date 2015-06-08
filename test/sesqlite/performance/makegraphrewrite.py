@@ -1,21 +1,46 @@
 #!/usr/bin/env python
 
 import matplotlib as mpl
+import numpy as np
 mpl.use('Agg')
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mtick
 import json
 
 if __name__ == '__main__':
     with open('results/rewrite/rewrite.json') as f:
         data = json.load(f)
 
-    xs = data['xs']
-    ys_base = data['ys_base']
-    ys_se_sca = data['ys_se_sca']
-    ys_se_in = data['ys_se_in']
+    cmap = plt.get_cmap('YlGnBu')
+    xs = np.array(data['xs'])
+    ys_base = np.array(data['ys_base'])
+    ys_se_sca = np.array(data['ys_se_sca'])
+    ys_se_in = np.array(data['ys_se_in'])
 
-    plt.plot(xs, ys_base, label='base')
-    plt.plot(xs, ys_se_sca, label='selinux_check_access')
-    plt.plot(xs, ys_se_in, label='selinux_in')
+    ys_base[:] = np.mean(ys_base)
+    ys_se_sca[:] = np.mean(ys_se_sca)
+
+    ys_over_sca = 100 * (ys_se_sca - ys_base) / ys_se_sca
+    ys_over_in = 100 * (ys_se_in - ys_base) / ys_se_in
+    ys_over_min = np.minimum(ys_over_sca, ys_over_in)
+
+    cross = max(xs)
+    for i in xrange(len(xs)):
+        if ys_over_sca[i] < ys_over_in[i]:
+            cross = i + 1
+            break
+
+    plt.plot(xs, ys_over_sca, color=cmap(.4), linewidth=2, marker='^', label='selinux_check_access')
+    plt.plot(xs, ys_over_in, color=cmap(.8), linewidth=2, marker='o', label='SQL IN clause')
+    plt.plot(xs, ys_over_min, color= 'r', linewidth=4, linestyle='--', label='SeSQLite')
+    p = plt.axvspan(1, cross, color=cmap(.8), alpha=0.2)
+    p = plt.axvspan(cross, max(xs), color=cmap(.4), alpha=0.2)
+    plt.ylim(bottom=0)
+    plt.xlim(1, max(xs))
+    plt.legend(loc='lower right')
+    plt.ylabel('overhead')
+    plt.xlabel('tuple contexts')
+    plt.gca().yaxis.set_major_formatter(mtick.FormatStrFormatter('%.0f%%'))
+    plt.tight_layout()
     plt.savefig('results/rewrite/rewrite.pdf')
 
