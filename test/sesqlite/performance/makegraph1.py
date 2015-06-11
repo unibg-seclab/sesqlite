@@ -49,6 +49,7 @@ def graph_with_options(xs, xticks, name):
     plt.legend(loc='upper left')
     plt.savefig('results/1/%s.pdf' % name)
     plt.savefig('results/1/%s.png' % name)
+    plt.savefig('results/1/%s.eps' % name)
     plt.clf()
 
 # get data
@@ -80,8 +81,8 @@ ys_se_sca = np.maximum(ys_se_sca, ys_se)
 # graph optimized
 rect_se = ys_se - ys_base
 rect_se_sca = ys_se_sca - ys_se
-plt.bar(xs_se, rect_se_sca, color=plt.get_cmap('Blues')(0.5), label='SeSQLite (100 contexts)', hatch='xx', width=.8, bottom=ys_se)
-plt.bar(xs_se, rect_se, color=plt.get_cmap('Greens')(0.3), label='SeSQLite (2 contexts)', hatch='//', width=.8, bottom=ys_base)
-plt.bar(xs_base, ys_base, color=plt.get_cmap('YlOrRd')(0.1), label='SQLite base', width=.8, hatch='..')
+plt.bar(xs_se, rect_se_sca, color=plt.get_cmap('Blues')(0.95), label='SeSQLite (100 contexts)', width=.8, bottom=ys_se)
+plt.bar(xs_se, rect_se, color=plt.get_cmap('Blues')(0.6), label='SeSQLite (2 contexts)', width=.8, bottom=ys_base)
+plt.bar(xs_base, ys_base, color=plt.get_cmap('Blues')(0.3), label='SQLite', width=.8)
 graph_with_options(xs_base, data_base.keys(), 'graph')
 
