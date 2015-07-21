@@ -520,54 +520,59 @@ void sqlite3Insert(
   withoutRowid = !HasRowid(pTab);
 
 #if defined(SQLITE_ENABLE_SELINUX)
-if(0!=sqlite3StrNICmp(zTab, "sqlite_", 7) && 0!=sqlite3StrNICmp(zTab, "selinux_", 8)) {
+if(0!=sqlite3StrNICmp(zTab, "sqlite_", 7) && 
+		0!=sqlite3StrNICmp(zTab, "selinux_", 8)) {
 
-    /* if the insert statement is in the following form 'insert into TABLE (IDLIST) ...' */
-    if(pColumn){
-	int idx;
-	pColumn->a = sqlite3ArrayAllocate(
-	  db,
-	  pColumn->a,
-	  sizeof(pColumn->a[0]),
-	  &pColumn->nId,
-	  &idx
-	);
-	pColumn->a[idx].zName = sqlite3MPrintf(db, "%s", SECURITY_CONTEXT_COLUMN_NAME);
-
-    }
+	/* if the insert statement is in the following form:
+	 * 'insert into TABLE (IDLIST) ...'
+	*/
+	if(pColumn){
+		int idx;
+		pColumn->a = sqlite3ArrayAllocate(
+		  db,
+		  pColumn->a,
+		  sizeof(pColumn->a[0]),
+		  &pColumn->nId,
+		  &idx
+		);
+		pColumn->a[idx].zName = sqlite3MPrintf(db,
+				"%s",
+				SECURITY_CONTEXT_COLUMN_NAME);
+	}
 
     /* create expression to inject */
-    Expr *pSValue = sqlite3DbMallocZero(db, sizeof(Expr));
-    pSValue->op = (u8)132; 
-    pSValue->iAgg = -1;
-    pSValue->flags |= EP_IntValue;
-    pSValue->u.iValue = lookup_security_context(hash_id, (char *) zDb, zTab);
-    pSValue->nHeight = 1;
+	Expr *pValue = sqlite3Expr(db, TK_INTEGER, 0);
+	pValue->flags |= EP_IntValue;
+	pValue->u.iValue = lookup_security_context(hash_id, (char *) zDb, zTab);
 
     if(pSelect){
-	/* if the insert statement is in the following form 'insert into TABLE SELECT ...' */
-	sqlite3ExprListAppend(pParse, pSelect->pEList, pSValue);
+		/* if the insert statement is in the following form:
+		 * 'insert into TABLE SELECT ...'
+		*/
+		sqlite3ExprListAppend(pParse, pSelect->pEList, pValue);
 
-	/* if the insert statement is in the following form 'insert into TABLE VALUES (EXPRLIST)' */
-	if(pSelect->pPrior){
-	    Select *pPrior;
-	    pPrior = pSelect->pPrior;
-	    while(pPrior != NULL){
-		Expr *pPSValue = sqlite3DbMallocZero(db, sizeof(Expr));
-		pPSValue->op = (u8)132; 
-		pPSValue->iAgg = -1;
-		pPSValue->flags |= EP_IntValue;
-		pPSValue->u.iValue = lookup_security_context(hash_id, (char *) zDb, zTab);
-		pPSValue->nHeight = 1;
-		sqlite3ExprListAppend(pParse, pPrior->pEList, pPSValue);
-		pPrior = pPrior->pPrior; 
-	    }
-	}
+		/* if the insert statement is in the following form:
+		 * 'insert into TABLE VALUES (EXPRLIST)'
+		*/
+		if(pSelect->pPrior){
+			Select *pPrior;
+			pPrior = pSelect->pPrior;
+			while(pPrior != NULL){
+				Expr *pPriorValue = sqlite3Expr(db, TK_INTEGER, 0);
+				pPriorValue->flags |= EP_IntValue;
+				pPriorValue->u.iValue = lookup_security_context(hash_id, 
+						(char *) zDb, 
+						zTab);
+				sqlite3ExprListAppend(pParse, pPrior->pEList, pPriorValue);
+				pPrior = pPrior->pPrior; 
+			}
+		}
     }else{
-	/* if the insert statement is in the following form 'insert into TABLE VALUES (EXPR)' */
-	pList = sqlite3ExprListAppend(pParse, pList, pSValue);
-    }
-
+		/* if the insert statement is in the following form:
+		 * 'insert into TABLE VALUES (EXPR)'
+		*/
+		pList = sqlite3ExprListAppend(pParse, pList, pValue);
+	}
 }
 #endif
 
