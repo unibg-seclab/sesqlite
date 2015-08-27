@@ -851,6 +851,18 @@ static int sqlite3Close(sqlite3 *db, int forceZombie){
   */
   sqlite3VtabRollback(db);
 
+#ifdef SQLITE_ENABLE_SELINUX
+	/* time to destroy */
+    ExtDestroyer *next = db->pDestroyerList;
+    while( next != 0 ){
+        next->xCallback(next->pCallbackArg, db);
+#ifdef SQLITE_DEBUG
+  fprintf(stdout, "call destroyer: '%s'\n", next->zName);
+#endif
+      next = next->pNext;
+	}
+#endif
+
   /* Legacy behavior (sqlite3_close() behavior) is to return
   ** SQLITE_BUSY if the connection can not be closed immediately.
   */
@@ -867,6 +879,8 @@ static int sqlite3Close(sqlite3 *db, int forceZombie){
     sqlite3GlobalConfig.xSqllog(sqlite3GlobalConfig.pSqllogArg, db, 0, 2);
   }
 #endif
+
+
 
   /* Convert the connection into a zombie and then close it.
   */
@@ -1001,8 +1015,18 @@ void sqlite3LeaveMutexAndCloseZombie(sqlite3 *db){
   }
 #endif
 
+
 #ifdef SQLITE_ENABLE_SELINUX
     sqlite3HashClear(db->pXattrs);
+	/* time to destroy */
+    ExtDestroyer *next = db->pDestroyerList;
+	ExtDestroyer *tmp;
+	while( next!=0 ){
+		sqlite3DbFree(db, next->zName);
+		tmp = next;
+		next = next->pNext;
+		sqlite3_free(tmp);
+	}
 #endif
 
   db->magic = SQLITE_MAGIC_ERROR;
@@ -3578,5 +3602,41 @@ char *sqlite3_get_xattr(sqlite3 *db,
 	else
 		return NULL;
 }
+
+int sqlite3_ext_destroyer_register(
+  sqlite3 *db,
+  char *zName,
+  void (*xCallback)(void*,sqlite3*),
+  void *pData
+){
+  sqlite3_mutex_enter(db->mutex);
+
+  ExtDestroyer *new = sqlite3_malloc(sizeof(ExtDestroyer));
+  new->zName = sqlite3MPrintf(db, "%s", zName);
+  new->xCallback = xCallback;
+  new->pCallbackArg = pData;
+  new->pNext = 0;
+
+  if( db->pDestroyerList==0 ){
+    db->pDestroyerList = new;
+  }else{
+    ExtDestroyer *iter = db->pDestroyerList;
+    while( iter->pNext!=0 )
+      iter = iter->pNext;
+    iter->pNext = new;
+  }
+
+#ifdef SQLITE_DEBUG
+  fprintf(stdout, "Destroyer registered: '%s'\n", zName);
+#endif
+
+  sqlite3_mutex_leave(db->mutex);
+  return SQLITE_OK;
+}
+
+
+
+
+
 
 #endif

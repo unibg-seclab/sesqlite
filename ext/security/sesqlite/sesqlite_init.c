@@ -136,9 +136,9 @@ void insert_key(
 	free(key);
 
 #ifdef SQLITE_DEBUG
-	char *after = sqlite3_mprintf("context: %d.", id);
+	char *after = sqlite3MPrintf(db, "context: %d.", id);
 	sesqlite_print(NULL, dbName, tblName, colName, after);
-	free(after);
+	sqlite3DbFree(db, after);
 #endif
 }
 
@@ -296,7 +296,7 @@ void selinux_restorecon_pragma(
 	free_sesqlite_context(contexts);
 	contexts = read_sesqlite_context(db, SESQLITE_CONTEXTS_PATH);
 
-	int count = reload_sesqlite_contexts(db, stmt_con_insert,
+	int count = reload_sesqlite_contexts(db,
 		contexts, dbName, tblName, colName);
 
 	fprintf(stdout, "%d contexts updated.\n", count);
@@ -414,6 +414,40 @@ int register_pragmas(sqlite3 *db){
 	return rc;
 }
 
+void selinux_close(
+	void* pArg,
+	sqlite3 *db){
+
+	sqlite3_finalize(stmt_insert);
+	sqlite3_finalize(stmt_select_id);
+	sqlite3_finalize(stmt_select_label);
+
+	sqlite3_reset(stmt_con_insert);
+	sqlite3_finalize(stmt_con_insert);
+
+	free_sesqlite_context(contexts);
+
+	SESQLITE_HASH_CLEAR(hash);
+	free(hash);
+
+	SESQLITE_BIHASH_CLEAR(hash_id);
+	free(hash_id);
+
+	
+//hash and hash_id
+
+
+	fprintf(stdout, "inside destroyer\n");
+
+}
+
+int register_destroyer(sqlite3 *db){
+	int rc;
+
+	rc = sqlite3_ext_destroyer_register(db, "selinux_free", selinux_close, 0);
+	return rc;
+}
+
 /*
  * Function: sqlite3SelinuxInit
  * Purpose: Initialize SeSqlite and register objects, authorizer and functions.
@@ -454,20 +488,24 @@ int sqlite3SelinuxInit(sqlite3 *db) {
 	rc = prepare_stmt(db);
 	if( SQLITE_OK!=rc ) return rc;
 	
+	contexts = read_sesqlite_context(db, SESQLITE_CONTEXTS_PATH);
+	if( !contexts ) return SQLITE_ERROR;
+
 	if( reopen ){
 		rc = load_contexts_from_table(db);
 		if( SQLITE_OK!=rc ) return rc;
 	}else{
-		contexts = read_sesqlite_context(db, SESQLITE_CONTEXTS_PATH);
-		if( !contexts ) return SQLITE_ERROR;
 
 		rc = initialize_mapping(db);
 		if( SQLITE_OK!=rc ) return rc;
 
-		load_sesqlite_contexts(db, stmt_con_insert, contexts);
+		load_sesqlite_contexts(db, contexts);
 	}
 
 	rc = register_pragmas(db);
+	if( SQLITE_OK!=rc ) return rc;
+
+	rc = register_destroyer(db);
 	if( SQLITE_OK!=rc ) return rc;
 
 	rc = initialize_authorizer(db);

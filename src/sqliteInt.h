@@ -825,6 +825,22 @@ typedef struct With With;
 typedef struct ExtPragma ExtPragma;
 #endif
 
+
+#ifdef SQLITE_ENABLE_SELINUX
+typedef struct ExtDestroyer ExtDestroyer;
+
+/*
+ * Linked list used to register a set of destroyer.
+*/
+struct ExtDestroyer {
+  char *zName;            /* an identifier */
+  void (*xCallback)(void*,sqlite3*); /* Callback function */
+  void *pCallbackArg;        /* user data passed to the callback */
+  ExtDestroyer *pNext;          /* Next node in the linked list */
+};
+
+#endif
+
 /*
 ** Defer sourcing vdbe.h and btree.h until after the "u8" and 
 ** "BusyHandler" typedefs. vdbe.h also requires a few of the opaque
@@ -1085,6 +1101,9 @@ struct sqlite3 {
   ** The main purpose is the same as the 'extended attributes' (xattrs) used for file system.
   */
   Hash *pXattrs;
+
+  ExtDestroyer *pDestroyerList;
+
 
 #endif
 

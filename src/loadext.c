@@ -402,6 +402,7 @@ static const sqlite3_api_routines sqlite3Apis = {
   sqlite3_set_add_extra_column,
   sqlite3_set_xattr,
   sqlite3_get_xattr,
+  sqlite3_ext_destroyer_register,
 #endif
   
 #ifndef SQLITE_OMIT_SCHEMACHANGE_NOTIFICATIONS

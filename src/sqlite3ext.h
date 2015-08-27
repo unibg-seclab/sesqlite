@@ -259,6 +259,7 @@ struct sqlite3_api_routines {
   int (*set_add_extra_column)(sqlite3*,int(*)(void*,void*,int,void*,char**),void*);
   int (*set_xattr)(sqlite3*, char*, char*);
   char* (*get_xattr)(sqlite3*, char*);
+  int (*ext_destroyer_register)(sqlite3*,char*,void(*)(void*,sqlite3*),void*);
 #endif
 
 #ifndef SQLITE_OMIT_SCHEMACHANGE_NOTIFICATIONS
@@ -492,6 +493,7 @@ struct sqlite3_api_routines {
 #define sqlite3_set_add_extra_column   sqlite3_api->set_add_extra_column
 #define sqlite3_set_xattr	       sqlite3_api->set_xattr
 #define sqlite3_get_xattr	       sqlite3_api->get_xattr
+#define sqlite3_register_destroy         sqlite3_api->register_destroy
 #endif /* SQLITE_ENABLE_SELINUX */
 
 #ifndef SQLITE_OMIT_SCHEMACHANGE_NOTIFICATIONS

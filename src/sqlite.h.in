@@ -7405,6 +7405,12 @@ char *sqlite3_get_xattr(
 	sqlite3 *db,
 	char *key);
 
+int sqlite3_ext_destroyer_register(
+  sqlite3 *db,
+  char *zName,
+  void (*xCallback)(void*,sqlite3*),
+  void *pData
+);
 #endif
 
 #ifndef SQLITE_OMIT_SCHEMACHANGE_NOTIFICATIONS
