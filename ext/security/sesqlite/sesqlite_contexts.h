@@ -20,7 +20,6 @@ struct sesqlite_context *read_sesqlite_context(
  */
 int reload_sesqlite_contexts(
 	sqlite3 *db,                  /* the database connection */
-	sqlite3_stmt *stmt,           /* the INSERT OR REPLACE statement */
 	struct sesqlite_context *sc,  /* the sesqlite_context */
 	char *dbFilter,               /* the db filter or NULL as wildcard */
 	char *tblFilter,              /* the table filter or NULL as wildcard */
@@ -33,7 +32,6 @@ int reload_sesqlite_contexts(
  */
 int load_sesqlite_contexts(
 	sqlite3 *db,                  /* the database connection */
-	sqlite3_stmt *stmt,           /* the INSERT OR REPLACE statement */
 	struct sesqlite_context *sc   /* the sesqlite_context */
 );
 

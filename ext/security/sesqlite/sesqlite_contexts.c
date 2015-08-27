@@ -248,7 +248,6 @@ int filter_accepts(
 
 int reload_sesqlite_contexts(
 	sqlite3 *db,                  /* the database connection */
-	sqlite3_stmt *stmt,           /* the INSERT OR REPLACE statement */
 	struct sesqlite_context *sc,  /* the sesqlite_context */
 	char *dbFilter,               /* the db filter or NULL as wildcard */
 	char *tblFilter,              /* the table filter or NULL as wildcard */
@@ -290,16 +289,19 @@ int reload_sesqlite_contexts(
 
 			insert_key(db, dbName, NULL, NULL, sec_label_id);
 
-			sqlite3_bind_int( stmt, 1, sec_con_id);
-			sqlite3_bind_int( stmt, 2, sec_label_id);
-			sqlite3_bind_text(stmt, 3, dbName,  -1, SQLITE_TRANSIENT);
-			sqlite3_bind_text(stmt, 4, "",      -1, SQLITE_TRANSIENT);
-			sqlite3_bind_text(stmt, 5, "",      -1, SQLITE_TRANSIENT);
+			sqlite3_bind_int( stmt_con_insert, 1, sec_con_id);
+			sqlite3_bind_int( stmt_con_insert, 2, sec_label_id);
+			sqlite3_bind_text(stmt_con_insert, 3, dbName,  -1, SQLITE_TRANSIENT);
+			sqlite3_bind_text(stmt_con_insert, 4, "",      -1, SQLITE_TRANSIENT);
+			sqlite3_bind_text(stmt_con_insert, 5, "",      -1, SQLITE_TRANSIENT);
 
-			rc = sqlite3_step(stmt);
+			rc = sqlite3_step(stmt_con_insert);
 			assert( rc==SQLITE_DONE );
 
-			rc = sqlite3_reset(stmt);
+			rc = sqlite3_clear_bindings(stmt_con_insert);
+			assert( rc==SQLITE_OK );
+
+			rc = sqlite3_reset(stmt_con_insert);
 			assert( rc==SQLITE_OK );
 
 		/* Scan the tables */
@@ -323,16 +325,19 @@ int reload_sesqlite_contexts(
 
 			insert_key(db, dbName, tblName, NULL, sec_label_id);
 
-			sqlite3_bind_int( stmt, 1, sec_con_id);
-			sqlite3_bind_int( stmt, 2, sec_label_id);
-			sqlite3_bind_text(stmt, 3, dbName,  -1, SQLITE_TRANSIENT);
-			sqlite3_bind_text(stmt, 4, tblName, -1, SQLITE_TRANSIENT);
-			sqlite3_bind_text(stmt, 5, "",      -1, SQLITE_TRANSIENT);
+			sqlite3_bind_int( stmt_con_insert, 1, sec_con_id);
+			sqlite3_bind_int( stmt_con_insert, 2, sec_label_id);
+			sqlite3_bind_text(stmt_con_insert, 3, dbName,  -1, SQLITE_TRANSIENT);
+			sqlite3_bind_text(stmt_con_insert, 4, tblName, -1, SQLITE_TRANSIENT);
+			sqlite3_bind_text(stmt_con_insert, 5, "",      -1, SQLITE_TRANSIENT);
 
-			rc = sqlite3_step(stmt);
+			rc = sqlite3_step(stmt_con_insert);
 			assert( rc==SQLITE_DONE );
 
-			rc = sqlite3_reset(stmt);
+			rc = sqlite3_clear_bindings(stmt_con_insert);
+			assert( rc==SQLITE_OK );
+
+			rc = sqlite3_reset(stmt_con_insert);
 			assert( rc==SQLITE_OK );
 			++count;
 
@@ -353,16 +358,19 @@ int reload_sesqlite_contexts(
 
 				insert_key(db, dbName, tblName, colName, sec_label_id);
 
-				sqlite3_bind_int( stmt, 1, sec_con_id);
-				sqlite3_bind_int( stmt, 2, sec_label_id);
-				sqlite3_bind_text(stmt, 3, dbName,  -1, SQLITE_TRANSIENT);
-				sqlite3_bind_text(stmt, 4, tblName, -1, SQLITE_TRANSIENT);
-				sqlite3_bind_text(stmt, 5, colName, -1, SQLITE_TRANSIENT);
+				sqlite3_bind_int( stmt_con_insert, 1, sec_con_id);
+				sqlite3_bind_int( stmt_con_insert, 2, sec_label_id);
+				sqlite3_bind_text(stmt_con_insert, 3, dbName,  -1, SQLITE_TRANSIENT);
+				sqlite3_bind_text(stmt_con_insert, 4, tblName, -1, SQLITE_TRANSIENT);
+				sqlite3_bind_text(stmt_con_insert, 5, colName, -1, SQLITE_TRANSIENT);
 
-				rc = sqlite3_step(stmt);
+				rc = sqlite3_step(stmt_con_insert);
 				assert( rc==SQLITE_DONE );
 
-				rc = sqlite3_reset(stmt);
+				rc = sqlite3_clear_bindings(stmt_con_insert);
+				assert( rc==SQLITE_OK );
+
+				rc = sqlite3_reset(stmt_con_insert);
 				assert( rc==SQLITE_OK );
 				++count;
 			}
@@ -377,16 +385,19 @@ int reload_sesqlite_contexts(
 
 				insert_key(db, dbName, tblName, "ROWID", sec_label_id);
 
-				sqlite3_bind_int( stmt, 1, sec_con_id);
-				sqlite3_bind_int( stmt, 2, sec_label_id);
-				sqlite3_bind_text(stmt, 3, dbName,  -1, SQLITE_TRANSIENT);
-				sqlite3_bind_text(stmt, 4, tblName, -1, SQLITE_TRANSIENT);
-				sqlite3_bind_text(stmt, 5, "ROWID", -1, SQLITE_TRANSIENT);
+				sqlite3_bind_int( stmt_con_insert, 1, sec_con_id);
+				sqlite3_bind_int( stmt_con_insert, 2, sec_label_id);
+				sqlite3_bind_text(stmt_con_insert, 3, dbName,  -1, SQLITE_TRANSIENT);
+				sqlite3_bind_text(stmt_con_insert, 4, tblName, -1, SQLITE_TRANSIENT);
+				sqlite3_bind_text(stmt_con_insert, 5, "ROWID", -1, SQLITE_TRANSIENT);
 
-				rc = sqlite3_step(stmt);
+				rc = sqlite3_step(stmt_con_insert);
 				assert( rc==SQLITE_DONE );
 
-				rc = sqlite3_reset(stmt);
+				rc = sqlite3_clear_bindings(stmt_con_insert);
+				assert( rc==SQLITE_OK );
+
+				rc = sqlite3_reset(stmt_con_insert);
 				assert( rc==SQLITE_OK );
 				++count;
 			}
@@ -398,10 +409,9 @@ int reload_sesqlite_contexts(
 
 int load_sesqlite_contexts(
 	sqlite3 *db,                   /* the database connection */
-	sqlite3_stmt *stmt,            /* the INSERT OR REPLACE statement */
 	struct sesqlite_context *sc    /* the sesqlite_context */
 ){
-	return reload_sesqlite_contexts(db, stmt, sc, "*", "*", "*");
+	return reload_sesqlite_contexts(db, sc, "*", "*", "*");
 }
 
 #endif
