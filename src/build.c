@@ -1966,7 +1966,7 @@ void sqlite3EndTable(
 
 	zStmt = sqlite3MPrintf(db, "CREATE %s %.*s", zType2, n, zNewStmt);
 	sqlite3_free(zNewStmt);
-	sqlite3_free(zColumn);
+	sqlite3DbFree(db, zColumn);
 
       }else{
 #endif

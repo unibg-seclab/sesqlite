@@ -207,6 +207,12 @@ sqlite3ExprSetHeight(pParse, pFName);
   }
     if(pWhere)
 	    pNew->pWhere = sqlite3ExprAnd(db, pWhere, pNew->pWhere);
+
+  sqlite3DbFree(db, f_name);
+  sqlite3DbFree(db, f_column);
+  sqlite3DbFree(db, f_class);
+  sqlite3DbFree(db, f_action);
+
 }else{
   pNew->pWhere = pWhere;
 }

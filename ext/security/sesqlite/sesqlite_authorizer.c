@@ -68,9 +68,9 @@ int getContext(
     if (res != NULL) {
 
 #ifdef SQLITE_DEBUG
-		char *after = sqlite3_mprintf("-> %d", *res);
+		char *after = sqlite3MPrintf(db, "-> %d", *res);
 		sesqlite_print("Hash hint for", dbname, table, column, after);
-		free(after);
+		sqlite3DbFree(db, after);
 #endif
 
 		id = *res;
@@ -628,7 +628,6 @@ int create_security_context_column(
 
 	Column *pCol;
 	char *zName = 0;
-	char *zType = 0;
 	int iDb = 0;
 	int i = 0;
 	int id = 0;
@@ -673,8 +672,7 @@ int create_security_context_column(
 	pCol->zName = zName;
 	p->nCol++;
 
-	zType = sqlite3MPrintf(db, SECURITY_CONTEXT_COLUMN_TYPE);
-	pCol->zType = sqlite3MPrintf(db, zType);
+	pCol->zType = sqlite3MPrintf(db, SECURITY_CONTEXT_COLUMN_TYPE);
 	pCol->affinity = SQLITE_AFF_INTEGER;
 	pCol->colFlags |= COLFLAG_HIDDEN;
 
@@ -785,6 +783,7 @@ int create_security_context_column(
 
 		sqlite3ChangeCookie(pParse, iDb);
 	}
+
 
 	return SQLITE_OK;
 }

@@ -245,6 +245,12 @@ sqlite3ExprSetHeight(pParse, pFName);
     pWhere = sqlite3ExprAnd(db, pNewWhere, pWhere);
   else
       pWhere = pNewWhere;
+
+  sqlite3DbFree(db, f_name);
+  sqlite3DbFree(db, f_column);
+  sqlite3DbFree(db, f_class);
+  sqlite3DbFree(db, f_action);
+
 }
 /* ------------------------------------------------------------ */
 #endif /* defined(SQLITE_ENABLE_SELINUX) */
