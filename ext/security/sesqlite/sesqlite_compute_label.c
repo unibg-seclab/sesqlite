@@ -88,15 +88,24 @@ int lookup_security_label(sqlite3 *db,
     if( id!=NULL )
       return *id;
 
-	sqlite3_bind_int(stmt, 1, lookup_security_context(hash, db_name, SELINUX_ID));
-	sqlite3_bind_text(stmt, 2, context, strlen(context),
+	rc = sqlite3_bind_int(stmt, 1, 
+			lookup_security_context(hash, db_name, SELINUX_ID));
+	assert( rc == SQLITE_OK);
+
+	rc = sqlite3_bind_text(stmt, 2, context, strlen(context),
 	    SQLITE_TRANSIENT);
+	assert( rc == SQLITE_OK);
 
 	rc = sqlite3_step(stmt);
-	rc = sqlite3_reset(stmt);
 
 	rowid = sqlite3_last_insert_rowid(db);
 	SESQLITE_BIHASH_INSERT(hash, &rowid, sizeof(int), context, -1);
+
+	rc = sqlite3_clear_bindings(stmt);
+	assert(rc == SQLITE_OK);
+	rc = sqlite3_reset(stmt);
+	assert(rc == SQLITE_OK);
+
     return rowid;
 }
 

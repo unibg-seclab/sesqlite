@@ -18,18 +18,21 @@ static int vacuum;
 
 int insert_id(sqlite3 *db, char *db_name, char *sec_label){
 
-    int rc = SQLITE_OK;
-    int *value = NULL;
-    int rowid = 0;
+	int rc = SQLITE_OK;
+	int *value = NULL;
+	int rowid = 0;
 
-    SESQLITE_BIHASH_FINDKEY(hash_id, sec_label, -1, (void**) &value, 0);
+	SESQLITE_BIHASH_FINDKEY(hash_id, sec_label, -1, (void**) &value, 0);
 	if( value!=NULL )
 		return *value;
 	sqlite3_bind_int(stmt_insert, 1, lookup_security_context(hash_id, db_name, SELINUX_ID));
 	sqlite3_bind_text(stmt_insert, 2, sec_label, strlen(sec_label), SQLITE_TRANSIENT);
 
 	rc = sqlite3_step(stmt_insert);
+	rc = sqlite3_clear_bindings(stmt_insert);
+	assert( rc == SQLITE_OK);
 	rc = sqlite3_reset(stmt_insert);
+	assert( rc == SQLITE_OK);
 
 	rowid = sqlite3_last_insert_rowid(db);
 	SESQLITE_BIHASH_INSERT(hash_id, &rowid, sizeof(int), sec_label, -1);
@@ -604,6 +607,7 @@ static void selinuxGetconLabelFunction(
     int argc,
     sqlite3_value **argv
 ){
+	int rc = SQLITE_OK;
     sqlite3 *db = sqlite3_user_data(context);
     int id = sqlite3_value_int(argv[0]);
     sqlite3_bind_int(stmt_select_label, 1, id);
@@ -615,7 +619,10 @@ static void selinuxGetconLabelFunction(
         sqlite3_result_error(context,
             "SeSQLite - The requested id is not registered.", -1);
 
-    sqlite3_reset(stmt_select_label);
+    rc = sqlite3_reset(stmt_select_label);
+	assert(rc == SQLITE_OK);
+	rc = sqlite3_clear_bindings(stmt_select_label);
+	assert(rc == SQLITE_OK);
 }
 
 int create_security_context_column(
@@ -716,6 +723,7 @@ int create_security_context_column(
 	for (iCol = 0; iCol < p->nCol; iCol++) {
 
 		/* Get id */
+		key = NULL;
 		rc = make_key(db, pParse->db->aDb[iDb].zName, 
 				p->zName, 
 				p->aCol[iCol].zName, 
@@ -757,6 +765,7 @@ int create_security_context_column(
 
 	if(HasRowid(p)){
 		/* Get id */
+		key = NULL;
 		rc = make_key(db, pParse->db->aDb[iDb].zName, p->zName, "ROWID", &key);
 		assert(rc == SQLITE_OK);
 		SESQLITE_HASH_FIND(hash, key, -1, (void**) &res, 0);

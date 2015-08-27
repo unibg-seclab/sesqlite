@@ -96,7 +96,10 @@ int insert_context(sqlite3 *db, int isColumn, char *dbName, char *tblName,
 	sqlite3_bind_text(stmt_insert, 2, sec_label, strlen(sec_label), SQLITE_TRANSIENT);
 
 	rc = sqlite3_step(stmt_insert);
+	rc = sqlite3_clear_bindings(stmt_insert);
+	assert(rc == SQLITE_OK);
 	rc = sqlite3_reset(stmt_insert);
+	assert(rc == SQLITE_OK);
 
 	rowid = sqlite3_last_insert_rowid(db);
 	SESQLITE_BIHASH_INSERT(hash_id, &rowid, sizeof(int), sec_label, -1);
@@ -215,6 +218,8 @@ int initialize_mapping(
 
 			rc = sqlite3_reset(stmt_insert);
 			assert( rc==SQLITE_OK);
+			rc = sqlite3_clear_bindings(stmt_insert);
+			assert(rc == SQLITE_OK);
 
 			SESQLITE_BIHASH_INSERT(hash_id, &id, sizeof(int), pp->security_context, -1);
 		}
@@ -227,12 +232,11 @@ int initialize_mapping(
 	sqlite3_bind_int(stmt_update, 1, *(int*)value);
 
 	rc = sqlite3_step(stmt_update);
+	rc = sqlite3_reset(stmt_update);
+	assert(rc == SQLITE_OK);
+	rc = sqlite3_clear_bindings(stmt_update);
+	assert(rc == SQLITE_OK);
 	sqlite3_finalize(stmt_update);
-
-	if( rc!=SQLITE_DONE ){
-		fprintf(stderr, "SESQLITE ERROR: Unable to update selinux_id table\n");
-		return SQLITE_ERROR;
-    }
 
 	return SQLITE_OK;
 }
@@ -342,6 +346,7 @@ void selinux_getcon_pragma(
 	CHECK_WRONG_USAGE( dbName==NULL || MORE_TOKENS,
 		"USAGE: pragma getcon(\"db.[table.[column]]\")\n" );
 
+	int rc = SQLITE_OK;
 	int tclass = -1;
 	if( tblName==NULL )
 		tclass = SELINUX_DB_DATABASE;
@@ -357,7 +362,10 @@ void selinux_getcon_pragma(
 	fprintf(stdout, "id: %d, label: %s\n", id,
 		sqlite3_column_text(stmt_select_label, 0), -1, SQLITE_TRANSIENT);
 
-	sqlite3_reset(stmt_select_label);
+	rc = sqlite3_reset(stmt_select_label);
+	assert(rc == SQLITE_OK);
+	rc = sqlite3_clear_bindings(stmt_select_label);
+	assert(rc == SQLITE_OK);
 }
 
 void selinux_getdefaultcon_pragma(
