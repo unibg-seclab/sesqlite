@@ -29,21 +29,25 @@ void sesqlite_print(
  * The user must invoke free on the returned pointer to free the memory.
  * It returns db:tbl:col if the column is not NULL, otherwise db:tbl.
  */
-char *make_key(
+int make_key(
+	sqlite3 *db,
 	const char *dbName,
 	const char *tblName,
-	const char *colName
+	const char *colName,
+	char **key
 ){
-	char *key;
 
 	if( tblName==NULL )
-		key = sqlite3_mprintf("%s", dbName);
+		sqlite3SetString(key, db, "%s", dbName);
 	else if( colName==NULL )
-		key = sqlite3_mprintf("%s:%s", dbName, tblName);
+		sqlite3SetString(key, db, "%s:%s", dbName, tblName);
 	else
-		key = sqlite3_mprintf("%s:%s:%s", dbName, tblName, colName);
+		sqlite3SetString(key, db, "%s:%s:%s", dbName, tblName, colName);
 
-	return key;
+	if(key == NULL)
+		return SQLITE_ERROR;
+
+	return SQLITE_OK;
 }
 
 #endif

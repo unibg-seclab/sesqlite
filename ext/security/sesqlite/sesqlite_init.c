@@ -113,10 +113,13 @@ int get_key(
 	const char *tblName,
 	const char *colName
 ){
-	char *key = make_key(dbName, tblName, colName);
+	char *key = NULL;
+	int rc = make_key(db, dbName, tblName, colName, &key);
+	assert(rc == SQLITE_OK);
+
 	int *id;
 	SESQLITE_HASH_FIND(hash, key, -1, (void**) &id, 0);
-	free(key);
+	sqlite3DbFree(db, key);
 	return id ? *id : -1;
 }
 
@@ -131,9 +134,12 @@ void insert_key(
 	const char *colName,
 	int id
 ){
-	char *key = make_key(dbName, tblName, colName);
+	char *key = NULL;
+	int rc = make_key(db, dbName, tblName, colName, &key);
+	assert(rc == SQLITE_OK);
+
 	SESQLITE_HASH_INSERT(hash, key, -1, &id, sizeof(int));
-	free(key);
+	sqlite3DbFree(db, key);
 
 #ifdef SQLITE_DEBUG
 	char *after = sqlite3MPrintf(db, "context: %d.", id);

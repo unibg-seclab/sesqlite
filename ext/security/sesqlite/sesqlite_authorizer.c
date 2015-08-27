@@ -61,8 +61,8 @@ int getContext(
     int *res = NULL;
 	int id = 0;
 
-    key = make_key(dbname, table, column);
-    assert(key != NULL);
+    int rc = make_key(db, dbname, table, column, &key);
+    assert(rc == SQLITE_OK);
     SESQLITE_HASH_FIND(hash, key, -1, (void**) &res, 0);
 
     if (res != NULL) {
@@ -116,7 +116,7 @@ int getContext(
 #endif
 
     }
-	sqlite3_free(key);
+	sqlite3DbFree(db, key);
 	return id;
 }
 
@@ -627,6 +627,7 @@ int create_security_context_column(
 ) {
 
 	Column *pCol;
+	int rc = SQLITE_OK;
 	char *zName = 0;
 	int iDb = 0;
 	int i = 0;
@@ -677,7 +678,8 @@ int create_security_context_column(
 	pCol->colFlags |= COLFLAG_HIDDEN;
 
 	/* Get id */
-	key = make_key(pParse->db->aDb[iDb].zName, p->zName, NULL);
+	rc = make_key(db, pParse->db->aDb[iDb].zName, p->zName, NULL, &key);
+	assert(rc == SQLITE_OK);
 	SESQLITE_HASH_FIND(hash, key, -1, (void**) &res, 0);
 	if( res!= NULL ){
 		id = *res;
@@ -692,7 +694,7 @@ int create_security_context_column(
 		);
 		SESQLITE_HASH_INSERT(hash, key, -1, &id, sizeof(int));
 	}
-	sqlite3_free(key);
+	sqlite3DbFree(db, key);
 
 	sqlite3NestedParse(pParse,
 		"INSERT INTO %Q.%s (security_context, security_label, db, name) VALUES(\
@@ -714,7 +716,11 @@ int create_security_context_column(
 	for (iCol = 0; iCol < p->nCol; iCol++) {
 
 		/* Get id */
-		key = make_key(pParse->db->aDb[iDb].zName, p->zName, p->aCol[iCol].zName);
+		rc = make_key(db, pParse->db->aDb[iDb].zName, 
+				p->zName, 
+				p->aCol[iCol].zName, 
+				&key);
+		assert(rc == SQLITE_OK);
 		SESQLITE_HASH_FIND(hash, key, -1, (void**) &res, 0);
 		if( res!= NULL ){
 			id = *res;
@@ -729,7 +735,7 @@ int create_security_context_column(
 			);
 			SESQLITE_HASH_INSERT(hash, key, -1, &id, sizeof(int));
 		}
-		sqlite3_free(key);
+		sqlite3DbFree(db, key);
 
 		sqlite3NestedParse(pParse,
 			"INSERT INTO %Q.%s(security_context, security_label, db, name, column) VALUES(\
@@ -751,7 +757,8 @@ int create_security_context_column(
 
 	if(HasRowid(p)){
 		/* Get id */
-		key = make_key(pParse->db->aDb[iDb].zName, p->zName, "ROWID");
+		rc = make_key(db, pParse->db->aDb[iDb].zName, p->zName, "ROWID", &key);
+		assert(rc == SQLITE_OK);
 		SESQLITE_HASH_FIND(hash, key, -1, (void**) &res, 0);
 		if( res!= NULL ){
 			id = *res;
@@ -766,7 +773,7 @@ int create_security_context_column(
 			);
 			SESQLITE_HASH_INSERT(hash, key, -1, &id, sizeof(int));
 		}
-		sqlite3_free(key);
+		sqlite3DbFree(db, key);
 
 		sqlite3NestedParse(pParse,
 			"INSERT INTO %Q.%s(security_context, security_label, db, name, column) VALUES(\
