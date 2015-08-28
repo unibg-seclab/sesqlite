@@ -92,8 +92,10 @@ int insert_context(sqlite3 *db, int isColumn, char *dbName, char *tblName,
 	SESQLITE_BIHASH_FINDKEY(hash_id, sec_context, -1, (void**) &tid, 0);
 	assert(tid != NULL); /* check if SELinux can compute a security context */
 
-	sqlite3_bind_int(stmt_insert, 1, *(int *)tid);
-	sqlite3_bind_text(stmt_insert, 2, sec_label, strlen(sec_label), SQLITE_TRANSIENT);
+	rc = sqlite3_bind_int(stmt_insert, 1, *(int *)tid);
+	assert(rc == SQLITE_OK);
+	rc = sqlite3_bind_text(stmt_insert, 2, sec_label, strlen(sec_label), SQLITE_TRANSIENT);
+	assert(rc == SQLITE_OK);
 
 	rc = sqlite3_step(stmt_insert);
 	rc = sqlite3_clear_bindings(stmt_insert);
@@ -145,7 +147,8 @@ void insert_key(
 	sqlite3DbFree(db, key);
 
 #ifdef SQLITE_DEBUG
-	char *after = sqlite3MPrintf(db, "context: %d.", id);
+	char *after = NULL;
+	sqlite3SetString(&after, db, "context: %d.", id);
 	sesqlite_print(NULL, dbName, tblName, colName, after);
 	sqlite3DbFree(db, after);
 #endif
@@ -264,6 +267,7 @@ int load_contexts_from_table(
 		SESQLITE_BIHASH_INSERT(hash_id, &rowid, sizeof(int), sqlite3_column_text(select_stmt, 2), -1);
 	}
 
+	sqlite3_reset(select_stmt);
 	sqlite3_finalize(select_stmt);
 
 	/* load the data from selinux_context table */
@@ -285,6 +289,7 @@ int load_contexts_from_table(
 			id);
 	}
 
+	sqlite3_reset(select_stmt);
 	sqlite3_finalize(select_stmt);
 	return SQLITE_OK;
 }
@@ -447,11 +452,14 @@ void selinux_close(
 	SESQLITE_BIHASH_CLEAR(hash_id);
 	free(hash_id);
 
-	
-//hash and hash_id
+	SESQLITE_HASH_CLEAR(avc);
+	free(avc);
+	free(avc_allow);
+	free(avc_deny);
 
-
-	fprintf(stdout, "inside destroyer\n");
+	free(scon);
+	sqlite3HashClear(db->pXattrs);
+	free(db->pXattrs);
 
 }
 

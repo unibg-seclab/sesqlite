@@ -32,6 +32,20 @@ extern sqlite3_stmt *stmt_con_insert;
 extern int set_vacuum(int type); 
 extern int is_vacuum(); 
 
+/* Comment the following line to disable the userspace AVC */
+#define USE_AVC
+
+#ifdef USE_AVC
+static SESQLITE_HASH *avc; /* userspace AVC HashMap*/
+static int *avc_deny;
+static int *avc_allow;
+#endif
+
+#define SECURITY_CONTEXT_FUNCTION "selinux_check_access"
+#define SECURITY_CONTEXT_CLASS "db_tuple"
+#define SECURITY_CONTEXT_ACTION "select"
+
+
 #define SECURITY_CONTEXT_COLUMN_NAME "security_context"
 #define SECURITY_CONTEXT_COLUMN_TYPE "hidden INT"
 #define SECURITY_CONTEXT_COLUMN_DEFINITION SECURITY_CONTEXT_COLUMN_NAME " " SECURITY_CONTEXT_COLUMN_TYPE

@@ -5,14 +5,7 @@
 #include "sesqlite_authorizer.h"
 #include "sesqlite_utils.h"
 
-/* Comment the following line to disable the userspace AVC */
-#define USE_AVC
 
-#ifdef USE_AVC
-static SESQLITE_HASH *avc; /* userspace AVC HashMap*/
-static int *avc_deny;
-static int *avc_allow;
-#endif
 
 static int vacuum;
 
@@ -71,7 +64,8 @@ int getContext(
     if (res != NULL) {
 
 #ifdef SQLITE_DEBUG
-		char *after = sqlite3MPrintf(db, "-> %d", *res);
+		char *after = NULL;
+		sqlite3SetString(&after, db, "-> %d", *res);
 		sesqlite_print("Hash hint for", dbname, table, column, after);
 		sqlite3DbFree(db, after);
 #endif
@@ -510,11 +504,6 @@ static void selinuxCheckAccessFunction(
     char *ttcon = NULL;
     assert(id != 0);
 
-
-	char *zClass = sqlite3_mprintf("%s", argv[1]->z);
-	char *zPerm = sqlite3_mprintf("%s", argv[2]->z);
-	char *zTable = sqlite3_mprintf("%s", argv[3]->z);
-
 #ifdef USE_AVC
     int tclass = 0;
     int tperm = 0;
@@ -635,7 +624,7 @@ int create_security_context_column(
 
 	Column *pCol;
 	int rc = SQLITE_OK;
-	char *zName = 0;
+	char *zName = NULL;
 	int iDb = 0;
 	int i = 0;
 	int id = 0;
@@ -647,8 +636,8 @@ int create_security_context_column(
 	Parse *pParse = ((Vdbe*) sqlite3_next_stmt(db, 0))->pParse;
 	Table *p = pNew;
 
-	*zColumn = sqlite3MPrintf(db, SECURITY_CONTEXT_COLUMN_DEFINITION);
-	zName = sqlite3MPrintf(db, SECURITY_CONTEXT_COLUMN_NAME);
+	sqlite3SetString(zColumn, db, "%s", SECURITY_CONTEXT_COLUMN_DEFINITION);
+	sqlite3SetString(&zName, db, "%s", SECURITY_CONTEXT_COLUMN_NAME);
 	sqlite3Dequote(*zColumn);
 	sqlite3Dequote(zName);
 

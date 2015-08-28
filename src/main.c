@@ -857,7 +857,7 @@ static int sqlite3Close(sqlite3 *db, int forceZombie){
     while( next != 0 ){
         next->xCallback(next->pCallbackArg, db);
 #ifdef SQLITE_DEBUG
-  fprintf(stdout, "call destroyer: '%s'\n", next->zName);
+  fprintf(stdout, "Cleaning up.\n");
 #endif
       next = next->pNext;
 	}
@@ -3571,8 +3571,8 @@ int sqlite3_set_xattr(sqlite3 *db,
 	void *res =  NULL;
 
 	if(value){
-		copy_key = sqlite3MPrintf(db, "%s", key);
-		copy_value = sqlite3MPrintf(db, "%s", value);
+		sqlite3SetString(&copy_key, db, "%s", key);
+		sqlite3SetString(&copy_value, db, "%s", value);
 		/* do not care if the hash contains an element with the same key,
 		** update anyway.
 		*/
@@ -3586,8 +3586,6 @@ int sqlite3_set_xattr(sqlite3 *db,
 				strlen(key),
 				NULL);
 	}
-
-
 	return rc;
 }
 
