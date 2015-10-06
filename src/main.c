@@ -852,15 +852,18 @@ static int sqlite3Close(sqlite3 *db, int forceZombie){
   sqlite3VtabRollback(db);
 
 #ifdef SQLITE_ENABLE_SELINUX
+/* are you opening the db in ro mode?  */
+if((db->openFlags & SQLITE_OPEN_READONLY) == 0){
 	/* time to destroy */
-    ExtDestroyer *next = db->pDestroyerList;
-    while( next != 0 ){
-        next->xCallback(next->pCallbackArg, db);
+	ExtDestroyer *next = db->pDestroyerList;
+	while( next != 0 ){
+		next->xCallback(next->pCallbackArg, db);
 #ifdef SQLITE_DEBUG
   fprintf(stdout, "Cleaning up.\n");
 #endif
-      next = next->pNext;
+	  next = next->pNext;
 	}
+}
 #endif
 
   /* Legacy behavior (sqlite3_close() behavior) is to return
@@ -1017,9 +1020,10 @@ void sqlite3LeaveMutexAndCloseZombie(sqlite3 *db){
 
 
 #ifdef SQLITE_ENABLE_SELINUX
-    sqlite3HashClear(db->pXattrs);
+if((db->openFlags & SQLITE_OPEN_READONLY) == 0){
+	sqlite3HashClear(db->pXattrs);
 	/* time to destroy */
-    ExtDestroyer *next = db->pDestroyerList;
+	ExtDestroyer *next = db->pDestroyerList;
 	ExtDestroyer *tmp;
 	while( next!=0 ){
 		sqlite3DbFree(db, next->zName);
@@ -1027,6 +1031,7 @@ void sqlite3LeaveMutexAndCloseZombie(sqlite3 *db){
 		next = next->pNext;
 		sqlite3_free(tmp);
 	}
+}
 #endif
 
   db->magic = SQLITE_MAGIC_ERROR;
@@ -2708,6 +2713,7 @@ static int openDatabase(
 #endif
 
 #ifdef SQLITE_ENABLE_SELINUX
+if((db->openFlags & SQLITE_OPEN_READONLY) == 0){
 	if( !db->mallocFailed && rc==SQLITE_OK ){
 		db->pXattrs = sqlite3_malloc(sizeof(Hash));
 		if( !db->pXattrs ){
@@ -2717,6 +2723,7 @@ static int openDatabase(
 			rc = sqlite3SelinuxInit(db);
 		}
 	}
+}
 #endif /* SQLITE_ENABLE_SELINUX */
 
   /* -DSQLITE_DEFAULT_LOCKING_MODE=1 makes EXCLUSIVE the default locking
@@ -3562,8 +3569,8 @@ int sqlite3_db_readonly(sqlite3 *db, const char *zDbName){
 **
 */
 int sqlite3_set_xattr(sqlite3 *db, 
-		char *key, 
-		char *value){
+		const char *key, 
+		const char *value){
 
 	int rc = SQLITE_OK;
 	char *copy_value = NULL;

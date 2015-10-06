@@ -155,7 +155,9 @@ void sqlite3Update(
   iDb = sqlite3SchemaToIndex(pParse->db, pTab->pSchema);
 
 #if defined(SQLITE_ENABLE_SELINUX)
-if(0!=sqlite3StrNICmp(pTab->zName, "sqlite_", 7) && 0!=sqlite3StrNICmp(pTab->zName, "selinux_", 8)) {
+if(0!=sqlite3StrNICmp(pTab->zName, "sqlite_", 7) && 
+		0!=sqlite3StrNICmp(pTab->zName, "selinux_", 8) &&
+		(db->openFlags & SQLITE_OPEN_READONLY) == 0){
 
   /* MODIFIED */
   Expr *pNewWhere = NULL;

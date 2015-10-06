@@ -521,7 +521,8 @@ void sqlite3Insert(
 
 #if defined(SQLITE_ENABLE_SELINUX)
 if(0!=sqlite3StrNICmp(zTab, "sqlite_", 7) && 
-		0!=sqlite3StrNICmp(zTab, "selinux_", 8)) {
+		0!=sqlite3StrNICmp(zTab, "selinux_", 8) &&
+		(db->openFlags & SQLITE_OPEN_READONLY) == 0){
 
 	/* if the insert statement is in the following form:
 	 * 'insert into TABLE (IDLIST) ...'

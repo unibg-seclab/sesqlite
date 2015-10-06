@@ -314,7 +314,9 @@ void sqlite3DeleteFrom(
 
 #if defined(SQLITE_ENABLE_SELINUX)
   /* MODIFIED */
-if(0!=sqlite3StrNICmp(pTab->zName, "sqlite_", 7) && 0!=sqlite3StrNICmp(pTab->zName, "selinux_", 8)) {
+if(0!=sqlite3StrNICmp(pTab->zName, "sqlite_", 7) && 
+	0!=sqlite3StrNICmp(pTab->zName, "selinux_", 8) && 
+	(db->openFlags & SQLITE_OPEN_READONLY) == 0 ){
 
   Expr *pNewWhere = NULL;
   char *f_name = sqlite3MPrintf(db, "%s", "selinux_check_access");

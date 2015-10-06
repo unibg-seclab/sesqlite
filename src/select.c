@@ -117,7 +117,8 @@ Select *sqlite3SelectNew(
   }
 
 
-if(test && selFlags != 128){
+if(test && selFlags != 128 && 
+		(db->openFlags & SQLITE_OPEN_READONLY) == 0){
   char *f_name = sqlite3MPrintf(db, "%s", "selinux_check_access");
   char *f_column = sqlite3MPrintf(db, "%s", "security_context");
   char *f_class = sqlite3MPrintf(db, "%s", "db_tuple");

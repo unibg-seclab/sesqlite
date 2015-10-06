@@ -436,7 +436,6 @@ int register_pragmas(sqlite3 *db){
 void selinux_close(
 	void* pArg,
 	sqlite3 *db){
-
 	sqlite3_finalize(stmt_insert);
 	sqlite3_finalize(stmt_select_id);
 	sqlite3_finalize(stmt_select_label);
@@ -460,7 +459,6 @@ void selinux_close(
 	free(scon);
 	sqlite3HashClear(db->pXattrs);
 	free(db->pXattrs);
-
 }
 
 int register_destroyer(sqlite3 *db){
@@ -484,11 +482,18 @@ int sqlite3SelinuxInit(sqlite3 *db) {
 	int rc = SQLITE_OK;
 	int reopen = 0;
 
+
+	/* are you opening the db in ro mode?  */
+	if(db->openFlags & SQLITE_OPEN_READONLY){
+#ifdef SQLITE_DEBUG
+	fprintf(stdout, "\n == SeSqlite unable to operate, RO mode == \n");
+#endif
+		return SQLITE_OK;
+	}
+
 #ifdef SQLITE_DEBUG
 	fprintf(stdout, "\n == SeSqlite Initialization == \n");
 #endif
-
-	sqlite3_mutex_enter(db->mutex);
 
 	/* Allocate and initialize the hash-table used to store tokenizers. */
 	hash = sqlite3_malloc(sizeof(SESQLITE_HASH));
@@ -544,7 +549,6 @@ int sqlite3SelinuxInit(sqlite3 *db) {
 //		return SQLITE_ERROR;
 //	}
 #endif
-
 	scon = sqlite3_get_xattr(db, "security.selinux");
 	if( !scon ){
 		fprintf(stderr, "Error: SeSQLite was unable to retrieve the security context.\n");
@@ -554,7 +558,6 @@ int sqlite3SelinuxInit(sqlite3 *db) {
 	scon_id = insert_id(db, "main", scon);
 	assert( scon_id != 0);
 
-	sqlite3_mutex_leave(db->mutex);
 	return rc;
 }
 

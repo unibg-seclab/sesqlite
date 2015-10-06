@@ -1927,13 +1927,14 @@ void sqlite3EndTable(
 	code = 1;
     }
 
-    if( db->xAddExtraColumn ){
-	rc = db->xAddExtraColumn(db->pAddColumnArg, NULL, code, p, &zColumn);
-	if(rc == -1){
-	    /*TODO call abort*/
-	    return;	
-	}
-    }
+    if( db->xAddExtraColumn &&
+		(db->openFlags & SQLITE_OPEN_READONLY) == 0){
+		rc = db->xAddExtraColumn(db->pAddColumnArg, NULL, code, p, &zColumn);
+		if(rc == -1){
+			/*TODO call abort*/
+			return;	
+		}
+}
 #endif
 
     /* Compute the complete text of the CREATE statement */
@@ -1945,8 +1946,9 @@ void sqlite3EndTable(
       if( pEnd2->z[0]!=';' ) n += pEnd2->n;
 
 #if defined(SQLITE_ENABLE_SELINUX)
-	  if( 0!=sqlite3StrNICmp(p->zName, "sqlite_", 7) && 
-	      0!=sqlite3StrNICmp(p->zName, "selinux_", 8)) {
+	if( 0!=sqlite3StrNICmp(p->zName, "sqlite_", 7) && 
+		0!=sqlite3StrNICmp(p->zName, "selinux_", 8) &&
+		(db->openFlags & SQLITE_OPEN_READONLY) == 0){
         int pStmt = 0;
         char *zNewStmt = 0;
         if( pCons->z==0 ){
@@ -1968,7 +1970,7 @@ void sqlite3EndTable(
 	sqlite3_free(zNewStmt);
 	sqlite3DbFree(db, zColumn);
 
-      }else{
+	}else{
 #endif
 
       zStmt = sqlite3MPrintf(db, 
