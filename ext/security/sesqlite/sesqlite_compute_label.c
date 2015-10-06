@@ -36,20 +36,13 @@ int compute_sql_context(
 		}
 	p = p->next;
     }
+
     if(p != NULL)
-		//TODO check for type transition
 		*res = p->security_context;
-    else{
-		/* the sesqlite_context file does not contain a context for the
-		 * table/column we want to store, then compute the default one. */
-		security_context_t p_con = NULL;
-		rc = getcon(&p_con);
-		if(security_compute_create_raw(p_con, p_con, 4, res) < 0){
-			fprintf(stderr, "SELinux could not compute a default context\n");
-			return 0;
-		}
-    }
-    return rc;
+	else
+		rc = SQLITE_ERROR;
+
+	return rc;
 }
 
 
