@@ -41,14 +41,16 @@ static int *avc_deny;
 static int *avc_allow;
 #endif
 
+
 #define SECURITY_CONTEXT_FUNCTION "selinux_check_access"
-#define SECURITY_CONTEXT_CLASS "db_tuple"
-#define SECURITY_CONTEXT_ACTION "select"
-
-
 #define SECURITY_CONTEXT_COLUMN_NAME "security_context"
 #define SECURITY_CONTEXT_COLUMN_TYPE "hidden INT"
 #define SECURITY_CONTEXT_COLUMN_DEFINITION SECURITY_CONTEXT_COLUMN_NAME " " SECURITY_CONTEXT_COLUMN_TYPE
+
+#define SECURITY_CONTEXT_CLASS "db_tuple"
+#define SECURITY_CONTEXT_ACTION_SELECT "select"
+#define SECURITY_CONTEXT_ACTION_UPDATE "update"
+#define SECURITY_CONTEXT_ACTION_DELETE "delete"
 
 #define SELINUX_CONTEXT "selinux_context"
 #define SELINUX_ID "selinux_id"
@@ -98,26 +100,10 @@ const char *authtype[] = { "SQLITE_COPY", "SQLITE_CREATE_INDEX",
 
 extern struct sesqlite_context *contexts;
 
-int lookup_security_context(
-	SESQLITE_BIHASH *hash,
-	char *db_name,
-	char *tbl_name
-);
 
-int lookup_security_label(
-	sqlite3 *db,
-	sqlite3_stmt *stmt,
-	SESQLITE_BIHASH *hash,
-	int type,
-	char *db_name,
-	char *tbl_name,
-	char *col_name
-);
-
-/* */
-int sqlite3SelinuxInit(sqlite3 *db);
 /**
- * Used to store
+ * This struct is used to store the information about a single row read from 
+ * the sesqlite_contexts file.
  */
 struct sesqlite_context_element {
 	char *origin;
@@ -128,6 +114,11 @@ struct sesqlite_context_element {
 	struct sesqlite_context_element *next;
 };
 
+
+/**
+ * This struct is used to store the information retrieved from the 
+ * sesqlite_contexts file.
+ */
 struct sesqlite_context {
 
 	int ndb_context;
@@ -144,7 +135,9 @@ struct sesqlite_context {
 };
 
 
-/* struct for the management of selinux classes and the relative permissions*/
+/**
+ * struct for the management of selinux classes and the relative permissions
+ */
 static struct {
 	const char *c_name;
 	uint16_t c_code;
@@ -195,3 +188,47 @@ static struct {
 		{ "delete", SELINUX_DELETE }, } 
 	}, 
 }; 
+
+
+int sqlite3SelinuxInit(sqlite3 *db);
+
+int lookup_security_context(
+	SESQLITE_BIHASH *hash,
+	char *db_name,
+	char *tbl_name
+);
+
+int lookup_security_label(
+	sqlite3 *db,
+	sqlite3_stmt *stmt,
+	SESQLITE_BIHASH *hash,
+	int type,
+	char *db_name,
+	char *tbl_name,
+	char *col_name
+);
+
+/**
+ * Set of functions used to modify the query
+ *
+ */
+int sesqlite_rewrite_insert(Parse *pParse, 
+		Table *pTab,
+		Select *pSelect,
+		IdList *pColumn,
+		ExprList *pList);
+
+int sesqlite_rewrite_update(Parse *pParse,
+		SrcList *pTabList,
+		Expr **pWhere);
+
+int sesqlite_rewrite_delete(Parse *pParse,
+		SrcList *pTabList,
+		Expr **pWhere);
+
+
+int sesqlite_rewrite_select(Parse *pParse,
+		SrcList *pSrc,
+		Expr **pWhere);
+
+

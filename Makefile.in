@@ -215,7 +215,7 @@ LIBOBJS0 = alter.lo analyze.lo attach.lo auth.lo \
          vdbetrace.lo wal.lo walker.lo where.lo utf.lo vtab.lo \
          sesqlite_hash_impl.lo sesqlite_hash_wrapper.lo sesqlite_hash.lo \
          sesqlite_compute_label.lo sesqlite_init.lo sesqlite_authorizer.lo \
-         sesqlite_vtab.lo
+         sesqlite_rewrite.lo sesqlite_vtab.lo
 
 # Object files for the amalgamation.
 #
@@ -383,6 +383,7 @@ SRC += \
   $(TOP)/ext/security/sesqlite/sesqlite_init.c \
   $(TOP)/ext/security/sesqlite/sesqlite_authorizer.c \
   $(TOP)/ext/security/sesqlite/sesqlite_contexts.c \
+  $(TOP)/ext/security/sesqlite/sesqlite_rewrite.c \
   $(TOP)/ext/security/sesqlite/sesqlite_utils.c
 
 
@@ -981,6 +982,9 @@ sesqlite_authorizer.lo:	$(TOP)/ext/security/sesqlite/sesqlite_authorizer.c $(HDR
 
 sesqlite_contexts.lo:	$(TOP)/ext/security/sesqlite/sesqlite_contexts.c $(HDR) $(EXTHDR)
 	$(LTCOMPILE) -DSQLITE_CORE -c $(TOP)/ext/security/sesqlite/sesqlite_contexts.c
+
+sesqlite_rewrite.lo:	$(TOP)/ext/security/sesqlite/sesqlite_rewrite.c $(HDR) $(EXTHDR)
+	$(LTCOMPILE) -DSQLITE_CORE -c $(TOP)/ext/security/sesqlite/sesqlite_rewrite.c
 
 sesqlite_utils.lo:	$(TOP)/ext/security/sesqlite/sesqlite_utils.c $(HDR) $(EXTHDR)
 	$(LTCOMPILE) -DSQLITE_CORE -c $(TOP)/ext/security/sesqlite/sesqlite_utils.c

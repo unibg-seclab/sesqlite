@@ -730,18 +730,6 @@ void sqlite3AlterFinishAddColumn(Parse *pParse, Token *pColDef){
       zDb, SCHEMA_TABLE(iDb), pNew->addColOffset, zCol, pNew->addColOffset+1,
       zTab
     );
-    sqlite3DbFree(db, zCol);
-    db->flags = savedDbFlags;
-  }
-
-  /* If the default value of the new column is NULL, then set the file
-  ** format to 2. If the default value of the new column is not NULL,
-  ** the file format becomes 3.
-  */
-  sqlite3MinimumFileFormat(pParse, iDb, pDflt ? 3 : 2);
-
-  /* Reload the schema of the modified table. */
-  reloadTableSchema(pParse, pTab, pTab->zName);
 
 #ifndef SQLITE_OMIT_SCHEMACHANGE_NOTIFICATIONS
   if( db->xSchemaChangeCallback ){
@@ -755,6 +743,20 @@ void sqlite3AlterFinishAddColumn(Parse *pParse, Token *pColDef){
     );
   }
 #endif
+
+    sqlite3DbFree(db, zCol);
+    db->flags = savedDbFlags;
+  }
+
+  /* If the default value of the new column is NULL, then set the file
+  ** format to 2. If the default value of the new column is not NULL,
+  ** the file format becomes 3.
+  */
+  sqlite3MinimumFileFormat(pParse, iDb, pDflt ? 3 : 2);
+
+  /* Reload the schema of the modified table. */
+  reloadTableSchema(pParse, pTab, pTab->zName);
+
 
 }
 

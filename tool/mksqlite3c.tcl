@@ -349,6 +349,7 @@ foreach file {
    sesqlite_init.c
    sesqlite_authorizer.c
    sesqlite_contexts.c
+   sesqlite_rewrite.c
    sesqlite_utils.c
 } {
   copy_file tsrc/$file

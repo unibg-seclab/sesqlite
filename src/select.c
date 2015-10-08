@@ -106,122 +106,24 @@ Select *sqlite3SelectNew(
   pNew->pSrc = pSrc;
 
 #if defined(SQLITE_ENABLE_SELINUX)
-
-  int test = 0;
-  int i;
-  for(i = 0; i < pSrc->nAlloc; i++){
-
-    if(0!=sqlite3StrNICmp(pSrc->a[i].zName, "sqlite_", 7) && 0!=sqlite3StrNICmp(pSrc->a[i].zName, "selinux_", 8)) {
-     test = 1; 
-    }
+  Expr *pNewWhere = NULL;
+  if( sesqlite_rewrite_select(pParse, pSrc, &pNewWhere) ){
+    clearSelect(db, pNew);
+    if( pNew!=&standin ) sqlite3DbFree(db, pNew);
+    pNew = 0;
+    assert( pNew!=&standin );
+    return pNew;
   }
 
-
-if(test && selFlags != 128 && 
-		(db->openFlags & SQLITE_OPEN_READONLY) == 0){
-  char *f_name = sqlite3MPrintf(db, "%s", "selinux_check_access");
-  char *f_column = sqlite3MPrintf(db, "%s", "security_context");
-  char *f_class = sqlite3MPrintf(db, "%s", "db_tuple");
-  char *f_action = sqlite3MPrintf(db, "%s", "select");
-
-  for(i = 0; i < pSrc->nAlloc; i++){
-	  char *zName = NULL;
-	  if( pSrc->a[i].zAlias )
-		zName = pSrc->a[i].zAlias;
-	  else
-		zName = pSrc->a[i].zName;
-
-      Expr *pFName = sqlite3DbMallocZero(db, sizeof(Expr) + strlen(f_name) + 1);
-      Expr *pFTable = sqlite3DbMallocZero(db, sizeof(Expr) + strlen(zName) + 1);
-      Expr *pFColumn = sqlite3DbMallocZero(db, sizeof(Expr) + strlen(f_column) + 1);
-      Expr *pFClass = sqlite3DbMallocZero(db, sizeof(Expr) + strlen(f_class) + 1);
-      Expr *pFAction = sqlite3DbMallocZero(db, sizeof(Expr) + strlen(f_action) + 1);
-      Expr *pFDebug = sqlite3DbMallocZero(db, sizeof(Expr) + strlen(pSrc->a[i].zName) + 1);
-
-      Expr *pFunction = sqlite3DbMallocZero(db, sizeof(Expr));
-
-    pFName->op = (u8)153; 
-    pFName->iAgg = -1;
-
-    pFTable->op = (u8)27;
-    pFTable->iAgg = -1;
-
-    pFColumn->op = (u8)27;
-    pFColumn->iAgg = -1;
-
-    pFClass->op = (u8)97;
-    pFClass->iAgg = -1;
-
-    pFAction->op = (u8)97;
-    pFAction->iAgg = -1;
-
-    pFDebug->op = (u8)97;
-    pFDebug->iAgg = -1;
-
-    pFunction->op = (u8)122;
-    pFunction->iAgg = -1;
-
-        pFName->u.zToken = (char*)&pFName[1];
-        pFTable->u.zToken = (char*)&pFTable[1];
-        pFColumn->u.zToken = (char*)&pFColumn[1];
-        pFClass->u.zToken = (char*)&pFClass[1];
-        pFAction->u.zToken = (char*)&pFAction[1];
-        pFDebug->u.zToken = (char*)&pFDebug[1];
-
-    memcpy(pFName->u.zToken, f_name, strlen(f_name));
-    memcpy(pFTable->u.zToken, zName, strlen(zName));
-    memcpy(pFColumn->u.zToken, f_column, strlen(f_column));
-    memcpy(pFClass->u.zToken, f_class, strlen(f_class));
-    memcpy(pFAction->u.zToken, f_action, strlen(f_action));
-    memcpy(pFDebug->u.zToken, zName, strlen(pSrc->a[i].zName));
-
-    pFName->u.zToken[strlen(f_name)] = 0;
-    pFTable->u.zToken[strlen(zName)] = 0;
-    pFColumn->u.zToken[strlen(f_column)] = 0;
-    pFClass->u.zToken[strlen(f_class)] = 0;
-    pFAction->u.zToken[strlen(f_action)] = 0;
-    pFDebug->u.zToken[strlen(pSrc->a[i].zName)] = 0;
-
-    pFName->nHeight = 1;
-    pFTable->nHeight = 1;
-    pFColumn->nHeight = 1;
-    pFClass->nHeight = 1;
-    pFAction->nHeight = 1;
-    pFDebug->nHeight = 1;
-
-    sqlite3ExprAttachSubtrees(db, pFunction, pFTable, pFColumn);
-
-ExprList *pExprFunction;
-pExprFunction = sqlite3ExprListAppend(pParse, 0, pFunction);
-pExprFunction = sqlite3ExprListAppend(pParse, pExprFunction, pFClass);
-pExprFunction = sqlite3ExprListAppend(pParse, pExprFunction, pFAction);
-pExprFunction = sqlite3ExprListAppend(pParse, pExprFunction, pFDebug);
-
-pFName->x.pList = pExprFunction;
-sqlite3ExprSetHeight(pParse, pFName);
-
-	if(pNew->pWhere)
-	    pNew->pWhere = sqlite3ExprAnd(db, pFName, pNew->pWhere);
-	else
-	    pNew->pWhere = pFName;
-
-  }
+  if(pNewWhere){
     if(pWhere)
-	    pNew->pWhere = sqlite3ExprAnd(db, pWhere, pNew->pWhere);
+      pWhere = sqlite3ExprAnd(db, pNewWhere, pWhere);
+    else
+      pWhere = pNewWhere;
+  }
+#endif
 
-  sqlite3DbFree(db, f_name);
-  sqlite3DbFree(db, f_column);
-  sqlite3DbFree(db, f_class);
-  sqlite3DbFree(db, f_action);
-
-}else{
   pNew->pWhere = pWhere;
-}
-
-#else
-  pNew->pWhere = pWhere;
-#endif /* defined(SQLITE_ENABLE_SELINUX) */
-
   pNew->pGroupBy = pGroupBy;
   pNew->pHaving = pHaving;
   pNew->pOrderBy = pOrderBy;

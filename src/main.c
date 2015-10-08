@@ -3569,8 +3569,8 @@ int sqlite3_db_readonly(sqlite3 *db, const char *zDbName){
 **
 */
 int sqlite3_set_xattr(sqlite3 *db, 
-		const char *key, 
-		const char *value){
+		char *key, 
+		char *value){
 
 	int rc = SQLITE_OK;
 	char *copy_value = NULL;
