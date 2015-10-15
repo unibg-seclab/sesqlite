@@ -37,11 +37,3 @@ db_column	*.*.*	unconfined_u:object_r:column_other:s0
 db_tuple	*.*	unconfined_u:object_r:sqlite_tuple_t:s0
 
 # <views>
-#db_view	*			system_u:object_r:sepgsql_view_t
-
-#sqlite_master contiene 
-
-
-#########################
-#tabelle, view, trigger
-#potrei guardare in base alla colonna type
