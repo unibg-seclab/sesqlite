@@ -12,7 +12,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <sqlite3.h>
 #include <assert.h>
 
 #include <CUnit/CUnit.h>

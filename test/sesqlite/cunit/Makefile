@@ -22,6 +22,7 @@ all: $(TEST_SCHEMA) \
 sqlite3.o:
 	@ make all -C $(TOP)
 	cp $(TOP)/build/sqlite3.o .
+	cp $(TOP)/build/sqlite3.h .
 
 $(TEST_SCHEMA): $(OBJS) $(TEST_SCHEMA).o
 	gcc $(CFLAGS) $(OBJS) $(TEST_SCHEMA).o -o $(TEST_SCHEMA) $(LDFLAGS)
