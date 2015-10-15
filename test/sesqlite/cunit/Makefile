@@ -22,6 +22,7 @@ all: $(TEST_SCHEMA) \
 sqlite3.o:
 	@ make all -C $(TOP)
 	cp $(TOP)/build/sqlite3.o .
+	cp $(TOP)/build/sqlite3.h .
 
 $(TEST_SCHEMA): $(OBJS) $(TEST_SCHEMA).o
 	gcc $(CFLAGS) $(OBJS) $(TEST_SCHEMA).o -o $(TEST_SCHEMA) $(LDFLAGS)
@@ -48,6 +49,7 @@ run-tuple: clean-test \
 
 clean: clean-test
 	@- $(RM) $(OBJS)
+	@- $(RM) sqlite3.h
 
 clean-test: 
 	@- $(RM) $(TEST_SCHEMA) $(TEST_SCHEMA).o $(TEST_TUPLE) $(TEST_TUPLE).o $(CUNIT_XML) $(JUNIT_XML) $(CONTEXTS)
