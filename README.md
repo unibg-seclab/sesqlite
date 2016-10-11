@@ -31,12 +31,32 @@ are provided. You can find additional information about the project at:
 
 ## Compiling
 
-* Download the repository, then just run `make` from the repository directory.
-* This creates a `build` directory. If SELinux is installed, the SeSQLite
-  extension will be compiled and the checks integrated inside the SQLite
-  database.
+_You should run SeSQLite on a machine that uses SELinux in enforcing mode,
+all our tests were done on Fedora or Android. Even if you can install
+SELinux in Ubuntu, this will not natively run in enforcing mode, so the
+SELinux checks embedded in SeSQLite may not work out of the box._
 
-See the makefile for additional targets.
+* Download the repository, then just run `make` from the repository directory.
+  This creates a `build` directory. If SELinux and the SELinux development
+  library are installed (`libselinux-devel` package in Fedora), the SeSQLite
+  extension will be compiled and the checks integrated in the SQLite database.
+
+* In order to run the tests in directory `test/sesqlite` you need to install
+  a policy module that defines the SELinux types that you will use in your
+  `sesqlite_contexts` file.
+  
+* A policy module that defines the SELinux types needed to successfully run the
+  cunit tests is contained in the `test/sesqlite/policy` directory.
+  
+  In order to install it:
+  
+   * Navigate to the `test/sesqlite/policy` directory
+   * `make`
+   * `sudo make install`
+   
+  You need the `policycoreutils-python-utils` in order to install the module.
+
+See the makefiles for additional targets.
 
 ## License
 
