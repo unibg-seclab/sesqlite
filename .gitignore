@@ -36,3 +36,6 @@ autom4te.cache/
 
 # ctags cache
 /tags
+
+# vagrant directory
+.vagrant/

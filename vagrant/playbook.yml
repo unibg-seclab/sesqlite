@@ -1,0 +1,52 @@
+---
+- hosts: all
+  become: yes
+  connection: local
+  gather_facts: no
+
+  tasks:
+    - name: Install python2 and python2-dnf
+      raw: dnf install -y python2 python2-dnf
+
+    - name: Gather facts
+      setup:
+
+    - name: Install packages
+      package: name={{item}} state=latest
+      with_items:
+        - git
+        - vim
+        - tmux
+        - gcc
+        - tcl
+        - make
+        - automake
+        - libtool
+        - CUnit
+        - CUnit-devel
+        - libselinux
+        - libselinux-devel
+        - python-pyparsing
+        - policycoreutils
+        - policycoreutils-python-utils
+
+    - name: Clone SeSQLite repository
+      become_user: vagrant
+      git: repo=https://github.com/unibg-seclab/sesqlite.git
+           dest=/home/vagrant/sesqlite
+
+    - name: Clean SeSQLite SELinux module
+      make: chdir=/home/vagrant/sesqlite/test/sesqlite/policy
+            target=clean
+
+    - name: Build SeSQLite SELinux module
+      make: chdir=/home/vagrant/sesqlite/test/sesqlite/policy
+            target=all
+
+    - name: Install SeSQLite SELinux module
+      make: chdir=/home/vagrant/sesqlite/test/sesqlite/policy
+            target=install
+
+#    - name: Run tests
+#      make: chdir=/home/vagrant/sesqlite/test/sesqlite/cunit
+#            target=all
