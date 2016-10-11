@@ -29,6 +29,26 @@ are provided. You can find additional information about the project at:
 
 <http://unibg-seclab.github.io>
 
+## Getting Started
+
+In order to speed-up the development setup, we provide a Fedora
+[vagrant](https://www.vagrantup.com) machine with ansible provisioning.
+In order to start a the vagrant machine you just have to:
+
+* Install [vagrant](https://www.vagrantup.com) and the provisioner of your
+  choice (we used VirtualBox) on your machine.
+  
+* Clone this repository and navigate to the `vagrant` directory.
+
+* Run `vagrant up`.
+
+* Go take a coffee.
+
+When the process is completed you can ssh to the virtual machine with
+`vagrant ssh` and you will find a copy of the repository in the
+`/home/vagrant/sesqlite` directory. Now try to navigate to the
+`test/sesqlite/cunit` sub-directory and run `make` to execute the tests.
+
 ## Compiling
 
 _You should run SeSQLite on a machine that uses SELinux in enforcing mode,
